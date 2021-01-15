@@ -18,10 +18,10 @@ library(osmdata)
 
 
 # BC province -------------------------------------------------------------
-
+#cancensus::list_census_regions("CA16") %>%View()
 province <- 
-  get_census("CA16", regions = list(PR = "59"), geo_format = "sf") %>% 
-  st_transform(32610) %>% 
+  get_census("CA16", regions = list(PR = "35"), geo_format = "sf") %>% 
+  st_transform(32617) %>% 
   select(geometry)
 
 
@@ -29,18 +29,18 @@ province <-
 
 CMA <-
   get_census(
-    dataset = "CA16", regions = list(CMA = "59933"), level = "CSD", 
+    dataset = "CA16", regions = list(CMA = "35535"), level = "CSD", 
     geo_format = "sf") %>% 
-  filter(name != "Vancouver (CY)") %>%
-  st_transform(32610)
+  filter(name != "Toronto (C)") %>%
+  st_transform(32617)
   
 
 # Vancouver CSD -----------------------------------------------------------
 
 city <-
   get_census(
-    dataset = "CA16", regions = list(CSD = "5915022"), geo_format = "sf") %>% 
-  st_transform(32610) %>% 
+    dataset = "CA16", regions = list(CSD = "3520005"), geo_format = "sf") %>% 
+  st_transform(32617) %>% 
   select(GeoUID, Dwellings) %>% 
   set_names(c("GeoUID", "dwellings", "geometry")) %>% 
   st_set_agr("constant")
@@ -50,9 +50,9 @@ city <-
 
 DA <-
   get_census(
-    dataset = "CA16", regions = list(CSD = "5915022"), level = "DA",
+    dataset = "CA16", regions = list(CSD = "3520005"), level = "DA",
     geo_format = "sf") %>% 
-  st_transform(32610) %>% 
+  st_transform(32617) %>% 
   select(GeoUID, Dwellings) %>% 
   set_names(c("GeoUID", "dwellings", "geometry")) %>% 
   st_set_agr("constant")
@@ -60,61 +60,48 @@ DA <-
 
 # Vancouver local areas ---------------------------------------------------
 
-LA <-
-  read_sf("data/shapefiles/local-area-boundary.shp") %>% 
-  select(area = name) %>% 
+NB <-
+  read_sf("data/Neighbourhoods/Neighbourhoods.shp") %>% 
+  select(neighbourhood = FIELD_7) %>% 
   st_set_agr("constant") %>%
   st_as_sf() %>% 
-  st_transform(32610) %>% 
+  st_transform(32617) %>% 
   st_intersection(province)
 
-LA <- 
+NB <- 
   DA %>% 
   select(dwellings) %>% 
-  st_interpolate_aw(LA, extensive = TRUE) %>% 
+  st_interpolate_aw(NB, extensive = TRUE) %>% 
   st_drop_geometry() %>% 
   select(dwellings) %>% 
-  cbind(LA, .) %>% 
+  cbind(NB, .) %>% 
   as_tibble() %>% 
   st_as_sf() %>% 
-  arrange(area)
+  arrange(neighbourhood)
 
 
 # Streets -----------------------------------------------------------------
 
-streets <- 
-  (getbb("Vancouver") * c(1.01, 0.99, 0.99, 1.01)) %>% 
-  opq(timeout = 200) %>% 
-  add_osm_feature(key = "highway") %>% 
-  osmdata_sf()
+#streets <- 
+#  (getbb("Toronto") * c(1.01, 0.99, 0.99, 1.01)) %>% 
+#  opq(timeout = 200) %>% 
+#  add_osm_feature(key = "highway") %>% 
+#  osmdata_sf()
 
-streets <-
-  rbind(
-    streets$osm_polygons %>% st_set_agr("constant") %>% st_cast("LINESTRING"), 
-    streets$osm_lines) %>% 
-  as_tibble() %>% 
-  st_as_sf() %>% 
-  st_transform(32610) %>%
-  st_set_agr("constant") %>%
-  st_intersection(city)
+#streets <-
+#  rbind(
+#    streets$osm_polygons %>% st_set_agr("constant") %>% st_cast("LINESTRING"), 
+#    streets$osm_lines) %>% 
+#  as_tibble() %>% 
+#  st_as_sf() %>% 
+#  st_transform(32617) %>%
+#  st_set_agr("constant") %>%
+#  st_intersection(city)
 
-streets <- 
-  streets %>% 
-  filter(highway %in% c("primary", "secondary")) %>% 
-  select(osm_id, name, highway, geometry)
-
-
-# Import of Skytrain shapefile --------------------------------------------
-
-skytrain <- 
-  read_sf("data/shapefiles/RW_STN_point.shp") %>% 
-  filter(STTN_SR1_M == "Translink Skytrain") %>% 
-  select(station = STTN_NGLSM) %>% 
-  group_by(station) %>% 
-  mutate(id = row_number()) %>% 
-  filter(id == 1) %>% 
-  select(-id) %>% 
-  st_transform(32610)
+#streets <- 
+#  streets %>% 
+#  filter(highway %in% c("primary", "secondary")) %>% 
+#  select(osm_id, name, highway, geometry)
 
 
 # Business licenses ------------------------------------------------------
@@ -166,5 +153,6 @@ BL_expanded <-
 
 # Save output -------------------------------------------------------------
 
-qsavem(province, CMA, DA, city, LA, streets, BL, BL_expanded, skytrain, 
+qsavem(province, CMA, DA, city, NB, 
+       #streets, BL, BL_expanded, skytrain, 
        file = "output/geometry.qsm", nthreads = availableCores())

@@ -63,6 +63,7 @@ DA <-
 NB <-
   read_sf("data/Neighbourhoods/Neighbourhoods.shp") %>%
   select(neighbourhood = FIELD_7) %>%
+  mutate(neighbourhood = sub("\\s+[^ ]+$", "", neighbourhood)) %>% 
   st_set_agr("constant") %>%
   st_as_sf() %>%
   st_transform(32617) %>%

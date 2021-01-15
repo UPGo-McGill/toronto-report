@@ -1,0 +1,1069 @@
+# Short-term rentals in Vancouver: Housing impacts
+
+<style type="text/css">
+  body{
+  font-family: Futura, Helvetica, Arial;
+}
+</style>
+
+<br>
+
+```{r setup, include = FALSE, echo = FALSE}
+
+library(here)
+source(here("R", "01_startup.R"))
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(include = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+
+# Function for checking file modifications
+mtime <- function(files) lapply(Sys.glob(files), function(x) file.info(x)$mtime)
+
+# Set this to TRUE to output PDF figures
+build_figures <- TRUE
+
+```
+
+```{r new_objects, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+qload(here("output", "geometry.qsm"), nthreads = availableCores())
+
+FREH <- 
+  daily %>% 
+  filter(date >= "2016-01-01") %>% 
+  group_by(date) %>% 
+  summarize(across(c(FREH, FREH_3), sum)) %>%
+  filter(substr(date, 9, 10) == "01")
+
+FREH_area <- 
+  daily %>% 
+  filter(date %in% as.Date(c("2018-12-01", "2019-12-01"))) %>% 
+  group_by(area, date) %>% 
+  summarize(FREH = sum(FREH_3)) %>% 
+  mutate(date = if_else(date >= LTM_start_date, 2019, 2018))
+
+FREH_DA <- 
+  daily %>% 
+  filter(date == "2019-12-01") %>% 
+  left_join(select(st_drop_geometry(property), property_ID, GeoUID)) %>% 
+  group_by(GeoUID) %>% 
+  summarize(FREH = sum(FREH_3))
+
+GH_area <- 
+  GH %>% 
+  filter(date %in% as.Date(c(LTM_end_date - years(1), LTM_end_date))) %>% 
+  mutate(geometry = st_centroid(geometry)) %>% 
+  st_join(LA) %>% 
+  st_drop_geometry() %>% 
+  group_by(area, date) %>% 
+  summarize(GH = sum(housing_units, na.rm = TRUE)) %>% 
+  as_tibble() %>% 
+  mutate(date = if_else(date >= LTM_start_date, 2019, 2018))
+
+GH_DA <- 
+  GH %>% 
+  filter(date == LTM_end_date) %>% 
+  mutate(geometry = st_centroid(geometry)) %>% 
+  st_join(DA) %>% 
+  st_drop_geometry() %>% 
+  group_by(GeoUID) %>% 
+  summarize(GH = sum(housing_units, na.rm = TRUE)) %>% 
+  as_tibble()
+
+FREH_total <- 
+  daily %>% 
+  filter(date >= "2016-01-01") %>% 
+  group_by(date) %>% 
+  summarize(across(c(FREH, FREH_3), sum)) %>%
+  filter(substr(date, 9, 10) == "01")
+
+GH_total <-
+  GH %>%
+  st_drop_geometry() %>%
+  filter(status != "B") %>% 
+  group_by(date) %>%
+  summarize(GH = sum(housing_units)) %>%
+  mutate(GH = slide_dbl(GH, mean, .before = 29))
+
+housing_loss <-
+  FREH_total %>%
+  select(date, FREH_3) %>% 
+  left_join(GH_total, by = "date") %>%
+  rename(`Entire home/apt` = FREH_3, `Private room` = GH) %>%
+  pivot_longer(c(`Entire home/apt`, `Private room`), 
+               names_to = "Listing type",
+               values_to = "Housing units") %>% 
+  mutate(`Listing type` = factor(`Listing type`, 
+                                 levels = c("Private room", "Entire home/apt")))  
+
+housing_loss_area <- 
+  LA %>% 
+  left_join(FREH_area) %>% 
+  left_join(GH_area) %>% 
+  mutate(GH = if_else(is.na(GH), 0L, GH),
+         housing_loss_pct = (FREH + GH) / dwellings)
+
+housing_loss_DA <- 
+  DA %>% 
+  left_join(FREH_DA) %>% 
+  left_join(GH_DA) %>% 
+  mutate(GH = if_else(is.na(GH), 0L, GH),
+         housing_loss_pct = (FREH + GH) / dwellings)
+
+LA_housing_table <- 
+  LA %>% 
+  st_drop_geometry() %>% 
+  left_join(FREH_area) %>% 
+  left_join(GH_area) %>%
+  mutate(GH = if_else(is.na(GH), 0L, GH)) %>% 
+  group_by(area) %>% 
+  summarize(
+    dwellings = mean(dwellings),
+    housing_loss_2018 = sum(FREH[date == 2018]) + sum(GH[date == 2018]),
+    housing_loss_2019 = sum(FREH[date == 2019]) + sum(GH[date == 2019]),
+    yoy_change = (housing_loss_2019 - housing_loss_2018) / housing_loss_2018,
+    housing_loss_pct_2019 = housing_loss_2019 / dwellings)
+  
+rm(property, daily, GH, CMA, DA, city, BL, BL_expanded, skytrain)
+
+```
+
+```{r exec_summ, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+# Total housing loss for 2019
+housing_loss_2019 <- 
+  {{FREH %>% 
+    filter(date == "2019-12-01") %>% 
+    pull(FREH_3)} +
+    {GH %>% 
+        filter(date == LTM_end_date) %>% 
+        pull(housing_units) %>% sum()}} %>% 
+  round(digit = -1) %>% 
+  prettyNum(",")
+
+# YOY increase in housing loss
+housing_loss_change <- 
+  {{{FREH %>% filter(date == "2019-12-01") %>% pull(FREH_3)} +
+    {GH %>% filter(date == LTM_end_date) %>% pull(housing_units) %>% sum()}} /
+  {{FREH %>% filter(date == "2018-12-01") %>% pull(FREH_3)} +
+      {GH %>% filter(date == LTM_end_date - years(1)) %>% 
+          pull(housing_units) %>% sum()}}} %>% 
+  {. - 1} %>% 
+  round(3) %>% 
+  scales::percent(0.1)
+
+housing_loss_pct_dwelling <- 
+  {{{FREH %>% filter(date == "2019-12-01") %>% pull(FREH_3)} +
+    {GH %>% filter(date == LTM_end_date) %>% pull(housing_units) %>% sum()}} /
+  sum(LA$dwellings)} %>% 
+  round(3) %>% 
+  scales::percent(0.1)
+
+# Housing loss in Downtown, Riley Park, and Shaughnessy
+housing_loss_pct_LA <- 
+  LA %>% 
+  left_join(FREH_area) %>% 
+  left_join(GH_area) %>% 
+  filter(date == "2019") %>% 
+  mutate(GH = if_else(is.na(GH), 0L, GH),
+         housing_loss_per_dwelling = (FREH + GH) / dwellings,
+         housing_loss_per_dwelling = round(housing_loss_per_dwelling, 3)) %>% 
+  st_drop_geometry() %>% 
+  filter(area %in% c("Downtown", "Riley Park", "Shaughnessy"))
+
+housing_loss_pct_downtown <- 
+  housing_loss_pct_LA %>% 
+  filter(area == "Downtown") %>% 
+  pull(housing_loss_per_dwelling) %>% 
+  scales::percent(0.1)
+
+housing_loss_pct_riley <- 
+  housing_loss_pct_LA %>% 
+  filter(area == "Riley Park") %>% 
+  pull(housing_loss_per_dwelling) %>% 
+  scales::percent(0.1)
+
+housing_loss_pct_shaughnessy <- 
+  housing_loss_pct_LA %>% 
+  filter(area == "Shaughnessy") %>% 
+  pull(housing_loss_per_dwelling) %>% 
+  scales::percent(0.1)
+
+
+rm(property, daily, GH)
+
+```
+
+**Short-term rentals removed `r housing_loss_2019` housing units from Vancouver’s long-term market in 2019 — an increase of `r housing_loss_change` from 2018. The 2018 regulations returned between 300 and 500 dedicated STRs to the long-term market in the early days of their existence, but those gains have since been partially offset by a rapid growth in dedicated STRs throughout 2019. Almost two thirds of all entire-home listings and four in ten private-room listings are dedicated STRs. In the Downtown area, `r housing_loss_pct_downtown` of all housing has been converted to dedicated STRs, while the figure is `r housing_loss_pct_riley` in Riley Park and `r housing_loss_pct_shaughnessy` in Shaughnessy. Between 2015 and 2019, STRs have been responsible for a 2.1% increase in average monthly rent, and the average renter household in Vancouver has paid an additional $1,390 in rent because of the impact of STRs.**
+
+<br>
+
+## STR-induced housing loss
+
+Vancouver’s housing market has been under considerable stress in the past years, with housing prices and rents rising, and rental vacancy rates falling. These are symptoms of a market where the supply of housing is insufficient to meet demand. One possible explanation for both the insufficient supply and elevated demand for housing in Vancouver is the growth in short-term rentals. Tourists are now able to compete with residents for housing—adding demand to the local housing market—while landlords are now able to shift their properties out of the conventional housing market to become dedicated STRs—reducing the supply of conventional housing. Research has found that renting a housing unit on the STR market frequently offers landlords greater potential revenue than conventional leases (Wachsmuth & Weisler 2018), especially in transit-accessible neighborhoods (Deboosere et al. 2019). Multiple studies have also found that Airbnb and other STR platforms increase housing costs (Barron, Kung, & Proserpio 2017; Horn & Merante 2017; Garcia-Lopez et al. 2019).
+
+One of the major considerations when gauging the impacts of short-term rentals (STRs) on a city, therefore, is the extent to which STRs are removing long-term housing from the market. This process can occur either directly, where tenants of a unit are evicted or not replaced at the end of a lease and the unit is converted to a STR, or indirectly by absorbing new construction or investment properties which otherwise would have gone onto the long-term market. To obtain the exact number of units that have been occupied as STRs, landlords or units would need to be individually surveyed, which is infeasible because STR hosts are mostly anonymous on major STR platforms such as Airbnb and VRBO. Instead, we use the daily activity of listings, alongside structural characteristics such as listing type and location, to estimate which listings are operating as dedicated STRs and are therefore not available as conventional long-term housing.
+
+_Frequently Rented Entire-Home (FREH) listings:_ The number of frequently-rented units is one way to estimate STR-induced housing loss. If a STR is available for reservations the majority of the year and receives many bookings, it is reasonable to assume that it is not serving as an individual’s principal residence at the same time. Along these lines, we define frequently rented entire-home (FREH) listings as entire-home listings which were available on Airbnb or VRBO the majority of the year (at least 183 nights) and were booked a minimum of 90 nights. We then apply a statistical model (described in the appendix) to the FREH data in order to generate an estimate of FREH activity based on three months of listing activity. This allows us to detect listings which are operating in a full-time manner but have not yet been listed for an entire year, and allows us to account for relatively short-term changes in market conditions.
+
+_Ghost hostels:_ In addition to FREH listings, it is possible that entire housing units have been subdivided into multiple private-room listings, each of which appearing to be a spare bedroom or the like, while actually collectively representing an apartment removed from the long-term housing market. We call these clusters of private-room listings “ghost hostels”, building on the advocacy group Fairbnb.ca’s term “ghost hotels”—multiple FREH listings located in a single building, collectively serving as de facto hotels instead of long-term housing (Wieditz 2017). We detect ghost hostels by finding clusters of three or more private-room listings operated by a single host, whose reported locations are close enough to each other that they are likely to have originated in the same actual housing unit. (Airbnb and VRBO obfuscate listing locations by shifting them randomly up to 200 m.)
+
+```{r para_1, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+# FREH in 2019-12
+FREH_2019 <- 
+  FREH %>% 
+  filter(date == "2019-12-01") %>% 
+  pull(FREH_3) %>% 
+  round(digit = -1) %>% 
+  prettyNum(",")
+
+# GH in 2019-12
+GH_2019 <- 
+  GH %>% 
+  filter(date == LTM_end_date) %>% 
+  pull(housing_units) %>% 
+  sum() %>% 
+  round(digit = -1) %>% 
+  prettyNum(",")
+
+# Change in listings
+active_yoy_change <- 
+  daily %>% 
+  filter(housing, status != "B", date >= LTM_start_date - years(1), 
+         date <= LTM_end_date) %>% 
+  group_by(year_2019 = date >= LTM_start_date) %>% 
+  summarize(active_listings = n() / 365,
+            revenue = sum(price[status == "R"]), .groups = "drop") %>% 
+  summarize(across(c(active_listings, revenue), ~{(.x[2] - .x[1]) / .x[1]}),
+            .groups = "drop")
+
+# YOY listing change
+active_yoy_listings <- 
+  active_yoy_change$active_listings %>% 
+  {. * -1} %>% 
+  scales::percent(accuracy = 0.1)
+
+# Total housing loss for 2018
+housing_loss_2018 <- 
+  {{FREH %>% 
+      filter(date == "2018-12-01") %>% 
+      pull(FREH_3)} +
+    {GH %>% 
+        filter(date == LTM_end_date - years(1)) %>% 
+        pull(housing_units) %>% 
+        sum()}} %>% 
+  round(digit = -1) %>% 
+  prettyNum(",")
+
+# Monthly figures associated with new regulations
+housing_loss_aug_2018 <- 
+  housing_loss %>% 
+  filter(date == "2018-08-01") %>% 
+  pull(`Housing units`) %>% 
+  sum() %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+housing_loss_sep_2018 <- 
+  housing_loss %>% 
+  filter(date == "2018-09-01") %>% 
+  pull(`Housing units`) %>% 
+  sum() %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+housing_loss_jan_2019 <- 
+  housing_loss %>% 
+  filter(date == "2019-01-01") %>% 
+  pull(`Housing units`) %>% 
+  sum() %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+rm(property, daily, GH)
+
+```
+
+
+``` {r make_fig_2_1}
+
+figure_2_1_fun <- function(regular = "", condensed = "") {
+  
+  housing_loss %>% 
+    ggplot(aes(date, `Housing units`, fill = `Listing type`)) +
+    geom_col(lwd = 0) +
+    annotate("segment", x = key_date_covid, xend = key_date_covid,
+             y = 0, yend = Inf, alpha = 0.3) +
+    annotate("curve", x = as.Date("2019-08-01"), 
+             xend = key_date_covid - days(10),
+             y = 3000, yend = 2700, curvature = -.2, lwd = 0.25,
+             arrow = arrow(length = unit(0.05, "inches"))) +
+    annotate("text", x = as.Date("2019-05-01"), y = 3000,
+           label = "COVID-19 \nAirbnb's response", family = condensed) +
+    annotate("segment", x = key_date_regulations, xend = key_date_regulations,
+             y = 0, yend = Inf, alpha = 0.3) +
+    annotate("curve", x = as.Date("2018-06-01"), 
+             xend = key_date_regulations - days(10),
+             y = 3200, yend = 3100, curvature = -.2, lwd = 0.25,
+             arrow = arrow(length = unit(0.05, "inches"))) +
+    annotate("text", x = as.Date("2018-02-01"), y = 3200,
+             label = "Regulations", family = condensed) +
+    scale_fill_manual(values = col_palette[c(2, 3)]) +
+    scale_x_date(name = NULL, limits = c(as.Date("2016-10-01"), NA)) +
+    scale_y_continuous(name = NULL, label = scales::comma) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular, 
+                                      size = 10),
+          legend.text = element_text( size = 10, family = regular))
+  
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_2_1.pdf"), 
+         plot = figure_2_1_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_2_1.pdf"))
+}
+
+```
+
+At the end of 2019, there were `r FREH_2019` FREH listings in the City of Vancouver, and `r GH_2019` more housing units which were operating as ghost hostels. In total, therefore, short-term rentals removed `r housing_loss_2019` housing units from Vancouver’s long-term market last year (Figure \@ref(fig:fig-2-1)). Notably, while the number of active daily listings declined by `r active_yoy_listings` over 2019, the number of housing units which STRs took off of Vancouver’s housing market increased by `r housing_loss_change` in that same time period, from `r housing_loss_2018` to `r housing_loss_2019`. This high growth rate reflects a rebound following a previous substantial decline in dedicated STRs associated with the introduction of the 2018 regulations. On the eve of Airbnb’s mass removal of non-compliant listings (August 2018), `r housing_loss_aug_2018` housing units were operating as dedicated STRs, and this number dropped by more than `r housing_loss_sep_2018` the following month, before ultimately bottoming out at `r housing_loss_jan_2019` in January 2019. Taking the seasonality of the underlying pattern into account, this nevertheless implies that between 300 and 450 housing units were (at least temporarily) restored to the long-term rental market by the introduction of the 2018 regulations—something between 12 and 24% of the total.
+
+
+``` {r fig-2-1, include = TRUE, fig.cap = '(ref:fig-2-1)', fig.align = "center"}
+
+figure_2_1_fun()
+
+```
+
+(ref:fig-2-1) _Housing units converted to dedicated STRs in the City of Vancouver (monthly average)_
+
+```{r para_2, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+# End-of-year summaries
+housing_loss_summaries <- 
+  daily %>% 
+  filter(housing, status != "B", listing_type %in% c("Entire home/apt",
+                                                     "Private room")) %>% 
+  group_by(date) %>% 
+  summarize(eh = mean(FREH_3[listing_type == "Entire home/apt"] > 0.5),
+            pr = mean(GH[listing_type == "Private room"])) %>% 
+  mutate(across(c(eh, pr), slide_dbl, mean, .before = 30)) %>% 
+  filter(date %in% as.Date(c("2016-12-31", "2019-12-31")))
+
+eh_housing_loss <- 
+  housing_loss_summaries %>% 
+  filter(date == "2019-12-31") %>% 
+  pull(eh) %>% 
+  scales::percent(0.1)
+
+pr_housing_loss <- 
+  housing_loss_summaries %>% 
+  filter(date == "2019-12-31") %>% 
+  pull(pr) %>% 
+  scales::percent(0.1)
+
+eh_housing_loss_2016 <- 
+  housing_loss_summaries %>% 
+  filter(date == "2016-12-31") %>% 
+  pull(eh) %>%
+  scales::percent(0.1)
+
+pr_housing_loss_2016 <- 
+  housing_loss_summaries %>% 
+  filter(date == "2016-12-31") %>% 
+  pull(pr) %>% 
+  scales::percent(0.1)
+
+# Table for figure
+housing_loss_share <- 
+  daily %>% 
+  filter(housing, status != "B", listing_type %in% c("Entire home/apt",
+                                                     "Private room")) %>% 
+  group_by(date) %>% 
+  summarize(
+    `Entire home/apt` = mean(FREH_3[listing_type == "Entire home/apt"] > 0.5),
+    `Private room` = mean(GH[listing_type == "Private room"])) %>% 
+  filter(date >= "2016-10-01") %>% 
+  pivot_longer(-date, names_to = "Listing type", 
+               values_to = "housing_loss_pct") %>% 
+  group_by(`Listing type`) %>% 
+  mutate(housing_loss_pct = slide_dbl(housing_loss_pct, mean, .before = 13))
+
+rm(property, daily, GH)
+
+```
+
+``` {r make_fig_2_2}
+
+figure_2_2_fun <- function(regular = "", condensed = "") {
+  
+  housing_loss_share %>% 
+    ggplot(aes(date, housing_loss_pct, colour = `Listing type`)) +
+    geom_line(lwd = 1) +
+    annotate("segment", x = key_date_covid, xend = key_date_covid,
+             y = 0, yend = Inf, alpha = 0.3) +
+    annotate("segment", x = key_date_regulations, xend = key_date_regulations,
+             y = 0, yend = Inf, alpha = 0.3) +
+    scale_y_continuous(name = NULL, labels = scales::percent) +
+    scale_colour_manual(values = col_palette[c(2, 3)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          panel.grid.minor.x = element_blank(),
+          text = element_text(family = regular, face = "plain"),
+          legend.title = element_text(family = regular, face = "bold"),
+          legend.text = element_text(family = regular))
+  
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_2_2.pdf"), 
+         plot = figure_2_2_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_2_2.pdf"))
+}
+
+```
+
+However, the result of falling numbers of listings but increasing numbers of listings contributing to housing loss is that the proportion of all active listings which are either FREH or ghost hostels has increased enormously from 2018 to 2019. At the end of 2019 close to two thirds (`r eh_housing_loss`) of entire-home listings and more than four in ten (`r pr_housing_loss`) private-room listings were taking housing off the market in Vancouver (Figure \@ref(fig:fig-2-2)). Three years earlier, the proportions were only `r eh_housing_loss_2016` and `r pr_housing_loss_2016` respectively. It is possible but highly unlikely that FREH listings were operating out of their host’s principal residences, since these are cases where the entire home is available for rent most of the year. FREH listings, like multilistings, are thus a probable indicator of non-conformity with the City’s regulations.
+
+``` {r fig-2-2, include = TRUE, fig.cap = '(ref:fig-2-2)', fig.align = "center"}
+
+figure_2_2_fun()
+
+```
+
+(ref:fig-2-2) _The percentage of active STR listings contributing to housing loss each day in Vancouver (14-day average)_
+
+Table \@ref(tab:tab-2-1) summarizes STR-induced housing loss patterns by neighbourhood. It demonstrates that the City-wide trend of shrinking total numbers of active listings but growing numbers of dedicated STRs also holds in most neighbourhoods. Also, year-over-year growth of housing loss has been evenly distributed between virtually all areas, with an average of 45.0% city-wide, returning, in absolute numbers, to 2017 levels already by the end of 2019. This indicates that, although the regulations might have decreased the number of commercial operations in the short run (2018), there seems to be a return to business-as-usual in 2019.
+
+``` {r tab-2-1, include = TRUE}
+
+library(kableExtra)
+
+LA_housing_table %>% 
+  summarize(
+    dwellings = sum(dwellings),
+    housing_loss_2018 = sum(housing_loss_2018),
+    housing_loss_2019 = sum(housing_loss_2019),
+    yoy_change = (housing_loss_2019 - housing_loss_2018) / housing_loss_2018,
+    housing_loss_pct_2019 = housing_loss_2019 / dwellings) %>% 
+  mutate(area = "City of Vancouver") %>% 
+  bind_rows(LA_housing_table) %>% 
+  relocate(area) %>% 
+  select(-dwellings) %>% 
+  filter(housing_loss_2019 > 50) %>% 
+  mutate(across(c(housing_loss_2018, housing_loss_2019), round, -1)) %>% 
+  mutate(across(c(yoy_change, housing_loss_pct_2019), round, 4)) %>% 
+  arrange(desc(housing_loss_2019)) %>%
+  rename(Area = area,
+         `Housing loss (2019)` = housing_loss_2019,
+         `Housing loss (2018)` = housing_loss_2018,
+         `Annual growth (%)` = yoy_change,
+         `% of housing lost (2019)` = housing_loss_pct_2019) %>% 
+  kbl(caption = paste0("STR-induced housing loss by local area in the City", 
+                       "of Vancouver (for boroughs with at least 50 housing ",
+                       "units lost in 2019)"),
+      align = "lrrrr") %>%
+  kable_styling(latex_options = "scale_down") %>%
+  row_spec(1, background = paste0(col_palette[2], "50"))
+
+```
+
+```{r para_3, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "cmhc.qsm"), nthreads = availableCores())
+
+# Vacancy rate downtown
+vacancy_downtown <- 
+  annual_vacancy %>% 
+  filter(dwelling_type == "Total",
+         bedroom == "Total",
+         zone %in% c(3),
+         !is.na(vacancy)) %>% 
+  group_by(zone) %>% 
+  filter(date == max(date)) %>% 
+  ungroup() %>% 
+  pull(vacancy) %>% 
+  scales::percent(0.1)
+
+```
+
+``` {r make_fig_2_3}
+
+figure_2_3_fun <- function(regular = "", condensed = "") {
+  
+  left_map <- 
+    housing_loss_area %>% 
+    ggplot() +
+    geom_sf(data = province, colour = "transparent", fill = "grey93") +
+    geom_sf(aes(fill = housing_loss_pct), colour = "white") +
+    scale_fill_gradientn(colors = col_palette[c(2, 3, 1, 4)], 
+                         na.value = "grey80",
+                         limits = c(0, 0.03), oob = scales::squish, 
+                         labels = scales::percent)  +
+    guides(fill = guide_colourbar(title = "% housing\nlost to STR",
+                                  title.vjust = 1)) + 
+    gg_bbox(housing_loss_DA) +
+    theme_void() +
+    theme(text = element_text(family = regular, face = "plain"),
+          legend.title = element_text(family = regular, face = "bold", 
+                                      size = 7),
+          legend.title.align = 0.9,
+          legend.text = element_text(family = regular, size = 5))
+  
+  right_map <- 
+    housing_loss_DA %>% 
+    ggplot() +
+    geom_sf(data = province, colour = "transparent", fill = "grey93") +
+    geom_sf(aes(fill = housing_loss_pct), colour = "transparent") +
+    scale_fill_gradientn(colors = col_palette[c(2, 3, 1, 4)], 
+                         na.value = "grey80",
+                         limits = c(0, 0.03), oob = scales::squish, 
+                         labels = scales::percent)  +
+    guides(fill = guide_colourbar(title = "% housing\nlost to STR",
+                                  title.vjust = 1)) + 
+    gg_bbox(housing_loss_DA) +
+    theme_void() +
+    theme(text = element_text(family = regular, face = "plain"),
+          legend.title = element_text(family = regular, face = "bold", 
+                                      size = 7),
+          legend.title.align = 0.9,
+          legend.text = element_text(family = regular, size = 5))
+  
+  left_map + right_map + plot_layout(guides = 'collect') & 
+    theme(legend.position = "bottom")
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_2_3.pdf"), 
+         plot = figure_2_3_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 4.2, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_2_3.pdf"))
+}
+
+```
+
+The `r housing_loss_2019` housing units taken off of Vancouver’s housing market in 2019 are `r housing_loss_pct_dwelling` of the total amount of housing in the city, and this housing loss has been concentrated in small parts of the city. This is more or less the same in relative to the total housing stock: Figure \@ref(fig:fig-2-3) shows the proportion of each area or dissemination area’s housing stock which was operated as a dedicated short-term rental as of the end of 2019. The maps show a tale of two cities: in most of Vancouver, there are relatively few dedicated STRs, while in the center of the city as well as Downtown, they are ubiquitous. In the Downtown area, `r housing_loss_pct_downtown` of all housing units have been converted to dedicated STRs. The figure is `r housing_loss_pct_riley` for Riley Park and `r housing_loss_pct_shaughnessy` for Shaughnessy. In Downtown, the rental vacancy rate was `r vacancy_downtown` in 2019. This means that there are more dedicated STRs in this neighbourhood than there are vacant apartments for rent.
+
+``` {r fig-2-3, include = TRUE, fig.cap = '(ref:fig-2-3)', fig.align = "center"}
+
+figure_2_3_fun()
+
+```
+
+(ref:fig-2-3) _The percentage of housing units converted to dedicated STRs in the City of Vancouver, by local area (L) and dissemination area (R)_
+
+## The impact of STRs on rental housing supply and vacancy rates
+
+```{r para_4, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+qload(here("output", "cmhc.qsm"), nthreads = availableCores())
+
+# 2019 city vacancy
+city_vacancy_2019 <- 
+  city_vacancy %>% 
+  filter(bedroom == "Total", date == 2019) %>% 
+  pull(vacancy) %>% 
+  scales::percent(0.1)
+
+# Highest LA vacancy
+highest_vacancy_LA <- 
+  annual_vacancy %>% 
+  filter(date == 2019, dwelling_type == "Total", bedroom == "Total", 
+         quality == "a") %>% 
+  filter(vacancy == max(vacancy)) %>% 
+  pull(zone_name)
+
+# Highest LA vacancy rate
+highest_vacancy_LA_rate <- 
+  annual_vacancy %>% 
+  filter(date == 2019, dwelling_type == "Total", bedroom == "Total", 
+         quality == "a") %>% 
+  filter(vacancy == max(vacancy)) %>% 
+  pull(vacancy) %>% 
+  scales::percent(0.1)
+
+# Highest LA vacancy rental units
+highest_vacancy_LA_apts <- 
+  annual_units %>% 
+  filter(zone_name == highest_vacancy_LA, 
+         date == 2019, dwelling_type == "Total", 
+         bedroom == "Total") %>% 
+  pull(units) %>%
+  round(-2) %>% 
+  prettyNum(",")
+
+# Highest LA vacancy vacant rental units
+highest_vacancy_LA_vac_apts <- 
+    annual_units %>% 
+  filter(zone_name == highest_vacancy_LA_apts, 
+         date == 2019, dwelling_type == "Total", 
+         bedroom == "Total") %>% 
+  pull(units) %>%
+  {. * parse_number(highest_vacancy_LA_rate) / 100} %>% 
+  round(-2) %>% 
+  prettyNum(",")
+
+# 3+ bedroom vacancy rate Downtown
+downtown_vac_3_bed <- 
+  annual_vacancy %>% 
+  filter(zone_name == "Downtown", date == 2019, dwelling_type == "Total",
+         bedroom == "3 Bedroom +") %>% 
+  pull(vacancy) %>% 
+  scales::percent(0.1)
+
+# Southeast Vancouver renter %
+southgran_renters_pct <- 
+  cmhc %>% 
+  as_tibble() %>% 
+  select(-geometry) %>% 
+  mutate(p_renter = renter_households / total_households) %>% 
+  select(zone_name, p_renter) %>% 
+  filter(zone_name == "South Granville/Oak") %>% 
+  pull(p_renter) %>% 
+  scales::percent(0.1)
+
+# Southeast Vancouver owner %
+southgran_owners_pct <- 
+  cmhc %>% 
+  as_tibble() %>% 
+  select(-geometry) %>% 
+  mutate(p_renter = renter_households / total_households) %>% 
+  select(zone_name, p_renter) %>% 
+  filter(zone_name == "South Granville/Oak") %>% 
+  pull(p_renter) %>% 
+  {1 - .} %>% 
+  scales::percent(0.1)
+
+# Calculations for figure
+renter_zone <- 
+  cmhc %>% 
+  as_tibble() %>% 
+  select(-geometry) %>% 
+  mutate(p_renter = renter_households / total_households) %>% 
+  select(zone, p_renter)
+
+daily_cmhc <- 
+  property %>% 
+  st_intersection(cmhc) %>% 
+  st_drop_geometry() %>% 
+  select(property_ID, zone) %>% 
+  left_join(daily, .) %>% 
+  filter(housing, date %in% as.Date(c("2019-12-01", "2019-12-31", "2018-12-01",
+                                      "2018-12-31"))) %>% 
+  mutate(FREH_3 = if_else(substr(date, 9, 9) == 0, FREH_3, 0),
+         GH     = if_else(substr(date, 9, 9) == 3, GH, FALSE)) %>% 
+  mutate(date = as.integer(substr(date, 1, 4))) %>% 
+  group_by(zone, date) %>% 
+  summarize(housing_loss = sum(FREH_3) + sum(GH)) %>% 
+  ungroup()
+
+strs_by_zone <- 
+  property %>% 
+  st_intersection(cmhc) %>% 
+  st_drop_geometry() %>% 
+  select(property_ID, zone) %>% 
+  left_join(daily, .) %>% 
+  filter(housing, date >= LTM_start_date, date <= LTM_end_date, 
+         status != "B") %>% 
+  count(zone) %>% 
+  mutate(active_strs = n / 365)
+
+unit_change <-
+  annual_units %>% 
+  filter(dwelling_type == "Total", bedroom == "Total") %>% 
+  arrange(desc(date)) %>% 
+  distinct(date, zone_name, .keep_all = TRUE) %>% 
+  inner_join(daily_cmhc) %>% 
+  left_join(renter_zone) %>%
+  mutate(housing_loss = housing_loss * p_renter) %>%
+  group_by(zone) %>% 
+  summarize(unit_change = units[date == 2019] - units[date == 2018],
+            housing_loss_change = housing_loss[date == 2019] - 
+              housing_loss[date == 2018]) %>% 
+  mutate(net_unit_change = unit_change - housing_loss_change) %>% 
+  left_join(strs_by_zone) %>% 
+  arrange(-active_strs) %>% 
+  slice(1:10) %>% 
+  left_join(st_drop_geometry(cmhc)) %>% 
+  select(zone, zone_name, unit_change:net_unit_change)
+
+total_unit_change <- 
+  sum(unit_change$unit_change) %>% 
+  round(-1)
+
+# Vacancy calculations for map
+vacancy_for_map <-
+  annual_vacancy %>% 
+  filter(dwelling_type == "Total", bedroom == "Total", !is.na(vacancy),
+         quality == "a") %>% 
+  group_by(zone) %>% 
+  filter(date == max(date)) %>% 
+  ungroup() %>% 
+  left_join(cmhc) %>% 
+  mutate(vacant_units = vacancy * renter_households) %>% 
+  left_join(select(filter(daily_cmhc, date == 2019), zone, housing_loss)) %>% 
+  left_join(renter_zone) %>% 
+  filter(housing_loss >= 50) %>% 
+  arrange(zone) %>% 
+  mutate(units_returning = housing_loss * p_renter,
+         new_vacant = vacant_units + units_returning,
+         new_vacancy = new_vacant / renter_households) %>% 
+  select(zone, zone_name, vacancy, new_vacancy, geometry) %>% 
+  rename(`Current vacancy rate` = vacancy, 
+         `Dedicated STRs back to market` = new_vacancy) %>% 
+  pivot_longer(-c(zone, zone_name, geometry), names_to = "status",
+               values_to = "vacancy") %>% 
+  st_as_sf()
+
+
+rm(property, daily, GH, annual_avg_rent, annual_units, annual_vacancy, 
+   city_avg_rent, city_units, city_vacancy, cmhc)
+
+```
+
+In 2019, the City of Vancouver’s rental vacancy rate stood at only `r city_vacancy_2019`—a crisis-level rate, albeit slightly higher than the previous few years. The standard rule of thumb is that a healthy rental market should have a vacancy rate of at least 3%, and all 10 of the CMHC's zones in Vancouver are substantially below that. `r highest_vacancy_LA` has the highest vacancy rate at only `r highest_vacancy_LA_rate`, which means that, of the zone’s approximately `r highest_vacancy_LA_apts` rental apartments, fewer than `r highest_vacancy_LA_vac_apts` were available to be rented by prospective tenants in October 2019, when CMHC’s survey was conducted. In general, vacancy rates are even lower for family-sized housing units (defined by CMHC as units with two or more bedrooms). For example, the vacancy rate for units with three or more bedrooms was `r downtown_vac_3_bed` for the Downtown zone.
+
+Given the thousands of housing units which we have documented as having been converted to dedicated STRs in Vancouver, it is highly likely that the STR market is negatively affecting rental housing supply and the vacancy rate. One way to evaluate this possibility is to compare the net change in rental housing units in an area with the effective reductions in rental housing supply caused by the growth in dedicated STRs. Figure \@ref(fig:fig-2-4) makes this comparison, showing the change in primary rental housing units (i.e. apartments and townhouses, but not condominiums being used as rentals) per CMHC zone between 2018 and 2019, and the effective change in housing units once the impact of STRs taking housing off of the market is factored in. We assume that STR conversions happen in the same proportion as existing tenure arrangements in the neighbourhood. For example, in the South Granville/Oak zone, `r southgran_renters_pct` of households are renters, so we assume that `r southgran_renters_pct` of housing units converted to dedicated STRs would have been rental housing, and the remaining `r southgran_owners_pct` would have been ownership housing. (We also assume CMHC has not removed dedicated STRs from their counts of primary rental units. In principle CMHC would not consider dedicated STRs to be rental units, but the difficulty in identifying dedicated STRs implies that the safest approach is to assume that dedicated STRs remain in the CMHC rental count.)
+
+``` {r make_fig_2_4}
+
+figure_2_4_fun <- function(regular = "", condensed = "") {
+  
+  unit_change %>%
+    mutate(zone_name = factor(zone_name, levels = zone_name)) %>% 
+    select(-zone) %>% 
+    pivot_longer(-zone_name) %>% 
+    filter(name != "housing_loss_change") %>%
+    mutate(name = factor(name, 
+                         levels = c("unit_change", "net_unit_change"))) %>% 
+    ggplot() +
+    geom_col(aes(zone_name, value, fill = name),
+             position = position_dodge(width = 0.5)) +
+    geom_segment(data = unit_change, 
+                 mapping = aes(x = zone_name, xend = zone_name, y = unit_change, 
+                               yend = net_unit_change),
+                 size = 1.2,
+                 arrow = arrow(length = unit(0.3, "cm")),
+                 position = position_nudge(x = -0.125)) +
+    scale_fill_manual(name = NULL, values = col_palette[c(3, 1)], labels = c(
+      "Rental unit change", "Rental unit change with STRs")) +
+    scale_y_continuous(name = NULL, breaks = c(-200, 0, 200, 400, 600)) +
+    scale_x_discrete(name = NULL,
+                     labels = unit_change$zone_name %>% 
+                       str_replace_all("/", "/\n") %>% 
+                       str_replace("east V", "east\nV") %>% 
+                       str_replace("st H", "st\nH")) +
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          text = element_text(family = regular),
+          axis.text.x = element_text(family = regular, size = 7),
+          panel.grid.minor.x = element_blank(),
+          panel.grid.major.x = element_blank())
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_2_4.pdf"), 
+         plot = figure_2_4_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_2_4.pdf"))
+}
+
+```
+
+Between 2018 and 2019, the City of Vancouver as a whole saw an `r total_unit_change`-unit increase, more than half of which occurred in Southeast Vancouver. In a zone like Downtown, where there is a high concentration of STR operations and a growth in housing loss, the zone’s net rental housing change is greatly affected by new STR conversions in 2019. In almost every single of the ten CMHC zones (shown in Figure \@ref(fig:fig-2-4)), new STR conversions in 2019 either mostly cancelled out new rental housing production, or substantially decreased the net rental housing supply from 2018 to 2019.
+
+``` {r fig-2-4, include = TRUE, fig.cap = '(ref:fig-2-4)', fig.align = "center"}
+
+figure_2_4_fun()
+
+```
+
+(ref:fig-2-4) _Nominal and effective changes in rental housing supply, 2018-2019, by CMHC zone_
+
+``` {r make_fig_2_5}
+
+figure_2_5_fun <- function(regular = "", condensed = "") {
+  
+  vacancy_for_map %>% 
+  mutate(label = scales::percent(vacancy, accuracy = 0.1)) %>% 
+  ggplot() +
+  geom_sf(data = province, colour = "transparent", fill = "grey93") +
+  # geom_sf(data = streets, size = 0.2, colour = "white") +
+  geom_sf(aes(fill = vacancy), colour = "white", alpha = 0.7) +
+  geom_sf_label(aes(label = label), size = 2, family = regular) +
+  scale_fill_gradientn(colors = col_palette[c(1, 3, 2)], 
+                       na.value = "grey80",
+                       labels = scales::percent)  +
+  guides(fill = guide_colourbar(title = "% housing\nlost to STR",
+                                title.vjust = 1)) + 
+  facet_wrap(vars(status), nrow = 1) +
+  gg_bbox(vacancy_for_map) +
+  theme_void() +
+  theme(legend.position = "none",
+        text = element_text(family = regular, face = "plain"),
+        legend.title = element_text(family = regular, face = "bold",
+                                    size = 7),
+        legend.title.align = 0.9,
+        legend.text = element_text(family = regular, size = 5),
+        strip.text = element_text(family = regular, face = "bold", size = 12),
+        # panel.border = element_rect(colour = "white", size = 2)
+        )
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_2_5.pdf"), 
+         plot = figure_2_5_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 4.2, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_2_5.pdf"))
+}
+
+```
+
+Another way to contextualize the impact of housing units being converted to dedicated STRs is to examine the relationship between the quantity of dedicated STRs and the rental vacancy rate. The left panel of Figure \@ref(fig:fig-2-5) displays the 2019 rental vacancy rate in the 10 CMHC zones with the largest number of active STR listings. The right panel displays a hypothetical vacancy rate if all dedicated STRs returned to the long-term market in these neighbourhoods. As with the calculations of net housing supply changes above, we assume that these units return to the market in the same proportion as existing tenure arrangements in the neighbourhood. The map shows that, in virtually every zone, the number of dedicated STRs is enough to dramatically increase housing supply if they were to be returned to the housing market. In every zone, the vacancy rate could double. 
+
+``` {r fig-2-5, include = TRUE, fig.cap = '(ref:fig-2-5)', fig.align = "center"}
+
+figure_2_5_fun()
+
+```
+
+(ref:fig-2-5) _Current rental vacancy rate in the City of Vancouver (L), and hypothetical vacancy rate if dedicated STRs returned to rental market (R), by CMHC zone_
+
+To be clear, in a scenario where thousands of dedicated STRs returned to the long-term market, these units would not actually remain vacant, but would be absorbed into the rental housing supply. Eventually the result would be a combination of lower rents and a vacancy rate lower than depicted in the map but higher than the current vacancy rate. Nevertheless, Figure \@ref(fig:fig-2-5) demonstrates that the number of housing units which have left Vancouver’s long-term market to be operated as STRs is sufficient to significantly constrain housing availability in the city.
+
+## The impact of STRs on residential rents
+
+```{r rents, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+qload(here("output", "cmhc.qsm"), nthreads = availableCores())
+qload(here("output", "rent_increases.qsm"), nthreads = availableCores())
+
+# Total rent increase in 2019
+avg_rent_increase_2019 <- 
+  city_avg_rent %>% 
+  filter(bedroom == "Total", date >= 2018) %>% 
+  summarize(rent_inc = avg_rent[2] / avg_rent[1] - 1) %>% 
+  pull(rent_inc) %>% 
+  scales::percent(0.1)
+
+# STR induced rent increase
+str_rent_increase <- 
+  rent_increase %>% 
+  filter(!is.na(rent_increase)) %>% 
+  summarize(total = prod(1 + rent_increase)) %>% 
+  pull(total) %>% 
+  {1 - .} %>% 
+  scales::percent(0.1)
+
+# Total rent increase
+total_rent_increase <- 
+  city_avg_rent %>% 
+  filter(bedroom == "Total") %>% 
+  filter(date >= 2014) %>% 
+  mutate(increase = slide_dbl(avg_rent, ~{.x[2] / .x[1]}, .before = 1)) %>% 
+  slice(-1) %>% 
+  pull(increase) %>% 
+  prod() %>% 
+  {. - 1} %>% 
+  scales::percent(0.1)
+
+rent_increase_share <- 
+  {parse_number(str_rent_increase) / parse_number(total_rent_increase)} %>% 
+  scales::percent(1)
+
+# Extra rent payment
+extra_rent_paid <- 
+  city_avg_rent %>% 
+  filter(bedroom == "Total") %>% 
+  mutate(date = as.character(date)) %>% 
+  left_join(rent_increase, by = c("date" = "year_created")) %>% 
+  filter(date >= "2015") %>% 
+  select(date, avg_rent, rent_increase) %>% 
+  mutate(rent_plus_1 = 1 + rent_increase,
+         cumulative_increase = slide_dbl(rent_plus_1, prod, .before = 4),
+         extra_rent = (cumulative_increase - 1) * avg_rent * 12) %>% 
+  pull(extra_rent) %>% 
+  sum() %>% 
+  round(-1) %>% 
+  scales::dollar()
+
+# Calculations for table
+strs_by_zone <- 
+  property %>% 
+  st_intersection(cmhc) %>% 
+  st_drop_geometry() %>% 
+  select(property_ID, zone) %>% 
+  left_join(daily, .) %>% 
+  filter(housing, date >= LTM_start_date, date <= LTM_end_date, 
+         status != "B") %>% 
+  count(zone) %>% 
+  mutate(active_strs = n / 365)
+
+# Rent table
+rent_table <- 
+  annual_avg_rent %>% 
+  filter(bedroom == "Total", occupied_status == "Occupied Units") %>% 
+  select(-bedroom, -occupied_status, -quality, -occ_rent_higher) %>% 
+  mutate(date = as.character(date)) %>% 
+  left_join(rent_increase_zone, by = c("zone", "date" = "year_created")) %>% 
+  group_by(zone, zone_name) %>%
+  mutate(rent_plus_1 = 1 + rent_increase,
+         cumulative_increase = slide_dbl(rent_plus_1, prod, .before = 4),
+         extra_rent = (cumulative_increase - 1) * avg_rent * 12) %>% 
+  summarize(avg_rent_2015 = avg_rent[date == 2015],
+            avg_rent_2019 = avg_rent[date == 2019],
+            rent_change = (avg_rent_2019 - avg_rent_2015) / avg_rent_2015,
+            str_rent_increase = prod(rent_plus_1) - 1,
+            str_share = str_rent_increase / rent_change,
+            extra_rent = sum(extra_rent)) %>% 
+  ungroup() %>% 
+  left_join(strs_by_zone) %>% 
+  relocate(active_strs, .after = zone_name) %>% 
+  select(-zone, -n) %>% 
+  add_row(
+    tibble_row(
+      zone_name = "City of Vancouver",
+      active_strs = nrow(
+        filter(daily, housing, status != "B", date >= LTM_start_date, 
+               date <= LTM_end_date)) / 365,
+      avg_rent_2015 = (filter(city_avg_rent, date == 2015, 
+                              bedroom == "Total"))$avg_rent,
+      avg_rent_2019 = (filter(city_avg_rent, date == 2019, 
+                              bedroom == "Total"))$avg_rent,
+      rent_change = (avg_rent_2019 - avg_rent_2015) / avg_rent_2015,
+      str_rent_increase = (rent_increase %>% 
+                             slice(-1) %>% 
+                             mutate(rent_increase = rent_increase + 1) %>% 
+                             pull(rent_increase) %>% 
+                             prod()) - 1,
+      str_share = str_rent_increase / rent_change,
+      extra_rent = city_avg_rent %>% 
+        filter(bedroom == "Total") %>% 
+        mutate(date = as.character(date)) %>% 
+        left_join(rent_increase, by = c("date" = "year_created")) %>% 
+        filter(date >= "2015") %>% 
+        select(date, avg_rent, rent_increase) %>% 
+        mutate(rent_plus_1 = 1 + rent_increase,
+               cumulative_increase = slide_dbl(rent_plus_1, prod, .before = 4),
+               extra_rent = (cumulative_increase - 1) * avg_rent * 12) %>% 
+        pull(extra_rent) %>% 
+        sum())) %>% 
+  arrange(-active_strs)
+
+rm(property, daily, GH, annual_units, annual_vacancy, city_avg_rent, city_units, 
+   city_vacancy)
+
+```
+
+Residential rents are rising rapidly in Vancouver. Between 2018 and 2019, CMHC recorded a `r avg_rent_increase_2019` increase in average rents in the City of Vancouver, with even higher numbers for studios and 1-bedrooms—increases which far outstripped inflation or local income growth. Are STRs responsible for any of this growth in rents? STRs could plausibly affect rents in the long-term housing market through two channels. On the one hand, if housing units which otherwise could house residents are converted into tourist accommodations, this will shrink the size of the local rental market, which, in the face of constant demand, will result in higher rents. Second, by offering a new revenue stream to homeowners and potentially some tenants who are willing to become part-time home sharers, STRs can increase the economic value of residential properties. Both phenomena would be expected to increase housing costs and rents, since there is less available housing stock, and since the economic potential of the existing stock is increased.
+
+``` {r make_fig_2_6}
+
+figure_2_6_fun <- function(regular = "", condensed = "") {
+  
+  qload(here("output", "geometry.qsm"), nthreads = availableCores())
+
+  rent_for_map <- 
+    rent_increase_zone %>% 
+    group_by(zone) %>% 
+    slice(-1) %>% 
+    mutate(rent_increase = 1 + rent_increase) %>% 
+    summarize(total_rent_increase = prod(rent_increase)) %>% 
+    mutate(total_rent_increase = total_rent_increase - 1) %>% 
+    left_join(cmhc, .) %>% 
+    mutate(label = scales::percent(total_rent_increase, accuracy = 0.1)) %>% 
+    filter(total_rent_increase < 0.026)
+  
+  rent_for_map %>% 
+    ggplot() +
+    geom_sf(data = province, colour = "transparent", fill = "grey93") +
+    geom_sf(data = streets, size = 0.2, colour = "white") +
+    geom_sf(aes(fill = total_rent_increase), colour = "white", alpha = 0.8) +
+    geom_sf_label(aes(label = label), size = 2, family = regular) +
+    scale_fill_gradientn(name = "2015-2019 rent increase",
+                         colors = col_palette[c(2, 3)], 
+                         na.value = "grey80",
+                         # limits = c(0.01, 0.04),
+                         labels = scales::label_percent(accuracy = 0.1)) +
+    gg_bbox(rent_for_map) +
+    theme_void() +
+    theme(legend.position = "none",
+          text = element_text(family = regular, face = "plain"),
+          legend.title = element_text(family = regular, face = "bold",
+                                      size = 7),
+          legend.title.align = 0.9,
+          legend.text = element_text(family = regular, size = 5),
+          panel.border = element_rect(colour = "white", size = 2))
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_2_6.pdf"), 
+         plot = figure_2_6_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_2_6.pdf"))
+}
+
+```
+
+A US study evaluated the impact of STR growth on housing prices and rents using an analysis of STR listings across the United States from 2012 to 2016 (Barron et al. 2017). The researchers found that 1% growth in the number of STR listings predicts a 0.018% increase in monthly rents and 0.026% increase in house prices. While these numbers may seem small, they were multiplied by STR listing growth rates, which had been quite high over the study period. This model was developed to account for a wide range of locations, so we are able to apply the average values of their model to Vancouver to obtain a rough estimate of the impact which STR growth has had on residential rents. Between 2015 and 2019, we estimate that STRs have been responsible for a `r str_rent_increase` increase in the average monthly rent. As average rents have risen `r total_rent_increase` in this time period, this implies that approximately `r rent_increase_share` of the total rent increases over the last five years have been caused by the growth of STRs. Put differently, from 2015 to 2019, the average renter household in Vancouver has paid an additional `r extra_rent_paid` in rent because of the impact of STRs on the housing market. Figure \@ref(fig:fig-2-6) shows the estimated rent increases by CMHC zone, for the zones where enough data is present to make reliable calculations. Table \@ref(tab:tab-rent) summarizes our rent increase estimates and other related data by CMCH zone. (These results, along with those in the previous paragraph, should be interpreted as rough estimates, as the parameters of the model were developed in the United States.)
+
+``` {r fig-2-6, include = TRUE, fig.cap = '(ref:fig-2-6)', fig.align = "center"}
+
+figure_2_6_fun()
+
+```
+
+(ref:fig-2-6) _Estimated cumulative asking rent increases in the City of Vancouver, by CMHC zone_
+
+``` {r tab-rent, include = TRUE}
+
+library(kableExtra)
+
+rent_table %>% 
+  slice(1:8) %>% 
+  mutate(active_strs = prettyNum(round(active_strs, -1), ",")) %>% 
+  mutate(across(c(avg_rent_2015, avg_rent_2019, extra_rent),
+                scales::dollar, 10)) %>% 
+  mutate(across(c(rent_change, str_rent_increase, str_share), 
+                scales::percent, 0.1)) %>% 
+  set_names(c("CMHC Zone", "Active listings (2019)", 
+              "Avg. rent (2015)", "Avg. rent (2019)",
+              "Rent increase (2015-2019)", 
+              "STR-induced rent increase (2015-2019)",
+              "STR share of rent increase",
+              "Avg. extra rent paid due to STRs (2015-2019")) %>% 
+  kbl(caption = paste0("STR impacts on residential rents in the City of ", 
+                       "of Vancouver, by CMHC zone"),
+      align = "lrrrrrrr") %>%
+  kable_styling(latex_options = "scale_down") %>%
+  row_spec(1, background = paste0(col_palette[2], "50"))
+
+```
+
+\newpage

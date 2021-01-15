@@ -1,0 +1,14 @@
+# Introduction {-}
+
+In October 2020, the Urban Politics and Governance research group (UPGo) at McGill University was commissioned by the City of Vancouver to conduct market research and analysis on the impact of the City’s April 2018 regulations on short-term rentals as well as the impact of the COVID-19 pandemic on the short-term rental market in the City of Vancouver. The group also investigated the possibility that short-term rentals are returning to the long-term market because of the pandemic. This report will shed light on the following topics: 
+
+- A general market overview of short-term rentals (STRs) in Vancouver, including the volume, revenue, type, size and distribution of units, and the presence of dedicated commercial operations.
+- The impact of STRs on Vancouver’s housing market, in particular the number of housing units taken off the long-term market as well as their impact on housing supply, rental vacancy rates, and rents.
+- The impact of the City of Vancouver’s STR registration system on the operation of short-term rentals in the City.
+- The impact of COVID-19 on short-term rentals in Vancouver, including the decrease in active listings, reservations and nightly prices.
+
+Information about STRs returning to the LTR market, including the number of listings that have returned; their spatial distribution, size and asking rents; the extent to which they are commercial operations or casual home sharing operations; and whether they are likely to return to the STR market when conditions improve.
+
+Data and methodology are discussed in the Appendix, and all the code used to generate the analysis in the report is available online at https://github.com/UPGo-McGill/vancouver-analysis. 
+
+\newpage

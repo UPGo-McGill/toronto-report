@@ -1,0 +1,1561 @@
+# Covid-19: STRs returning to the long-term market
+
+<style type="text/css">
+  body{
+  font-family: Futura, Helvetica, Arial;
+}
+</style>
+
+<br>
+
+```{r setup, include = FALSE, echo = FALSE}
+
+library(here)
+source(here("R", "01_startup.R"))
+library(imager)
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(include = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+
+# Function for checking file modifications
+mtime <- function(files) lapply(Sys.glob(files), function(x) file.info(x)$mtime)
+
+# Set this to TRUE to output PDF figures
+build_figures <- TRUE
+
+```
+
+```{r new_objects, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+ltr <- qread("output/ltr_processed.qs", nthreads = availableCores())
+qload(here("output", "geometry.qsm"), nthreads = availableCores())
+
+# distinct LTR listings
+ltr_unique <- 
+  ltr %>% 
+  st_drop_geometry() %>% 
+  arrange(desc(scraped)) %>% 
+  distinct(id, .keep_all = TRUE)
+
+# Unique STR matches with their information on longer-term market
+ltr_unique_property_ID <-
+  ltr %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(property_ID)) %>% 
+  unnest(property_ID) %>% 
+  arrange(desc(scraped)) %>% 
+  distinct(property_ID) %>% 
+  inner_join(unnest(filter(ltr, !is.na(property_ID)), property_ID), 
+             by = "property_ID") %>% 
+  arrange(desc(scraped)) %>% 
+  distinct(property_ID, .keep_all = T)
+
+# Possible private rooms or housing swaps in the LTR market scrape
+ltr_PR <- 
+  ltr_unique %>% 
+  mutate(title = tolower(title)) %>% 
+  filter(str_detect(title, paste0("(^| |/)(room|chambre|swap|exchange|1 ",
+                                  "bedroom for rent|1 bdrm|1 fully furnished ",
+                                  "bedroom|échange|lease transfer|spacious ","
+                                  bedroom)( |$|/)")))
+
+rm(ltr, DA, BL, BL_expanded, skytrain)
+
+```
+
+**Using image recognition techniques, we identified 1,339 unique Airbnb listings which were posted as long-term rentals (LTRs) on Craigslist or Kijiji between March and September 2020. These former STRs have asking rents on average 25.6% higher than other LTR listings, but are correlated with a 13.5% decrease in overall asking rents in Vancouver. The evidence suggests that the overwhelming majority of STR listings transferred to LTR platforms are commercial operations. We estimate that 30.6% have fully transitioned back to the long-term market, 35.3% have been temporarily blocked on Airbnb and may return to being STRs in the future, and 34.1% failed to be rented on LTR platforms and instead remain active on Airbnb.**
+
+## How many STR listings have returned to the long-term market?
+
+```{r photo_prep, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+ltr <- qread("output/ltr_processed.qs", nthreads = availableCores())
+qload("output/matches_raw.qsm", nthreads = availableCores())
+
+first_photo_pair <- 
+  cl_matches %>% 
+  filter(confirmation == "match") %>% 
+  filter(x_name == "/Volumes/Data 2/Scrape photos/vancouver/ab/ab-18753643.jpg")
+
+second_photo_pair <- 
+  cl_matches %>% 
+  filter(confirmation == "match") %>% 
+  filter(x_name == "/Volumes/Data 2/Scrape photos/vancouver/ab/ab-10972081.jpg")
+
+titles <- list(
+  
+  first_photo_pair$x_name %>% 
+    str_extract('ab-.*(?=\\.jpg)') %>% 
+    {filter(property, property_ID == .)} %>% 
+    pull(listing_title),
+  
+  first_photo_pair$y_name %>% 
+    str_extract('cl-.*(?=-[:digit:]\\.jpg)') %>% 
+    {filter(ltr, id == .)} %>% 
+    slice(1) %>% 
+    pull(title) %>% 
+    str_remove(' \\|.*'),
+  
+  second_photo_pair$x_name %>% 
+    str_extract('ab-.*(?=\\.jpg)') %>% 
+    {filter(property, property_ID == .)} %>% 
+    pull(listing_title),
+  
+  second_photo_pair$y_name %>% 
+    str_extract('cl-.*(?=-[:digit:]\\.jpg)') %>% 
+    {filter(ltr, id == .)} %>% 
+    slice(1) %>% 
+    pull(title) %>% 
+    str_remove(' - apts.*')
+)
+
+
+rm(property, daily, GH, ltr, ab_matches, cl_matches, kj_matches)
+
+```
+
+``` {r make_fig_6_1}
+
+figure_6_1_fun <- function(regular = "", condensed = "") {
+  
+  pmap(list(list(first_photo_pair$x_name, first_photo_pair$y_name, 
+                 second_photo_pair$x_name, second_photo_pair$y_name), 
+              titles, c("A", "B", "C", "D")), 
+         ~{.x %>% 
+             load.image() %>% 
+             as.data.frame(wide = "c") %>% 
+             mutate(rgb = rgb(c.1, c.2, c.3)) %>% 
+             ggplot(aes(x, y)) +
+             geom_raster(aes(fill = rgb)) + 
+             scale_fill_identity() +
+             scale_y_continuous(trans = scales::reverse_trans()) +
+             ggtitle(paste0(..3, ". ", case_when(
+               str_detect(..1, "ab-") ~ "Airbnb",
+               str_detect(..1, "cl-") ~ "Craigslist",
+               str_detect(..1, "kj-") ~ "Kijiji")),
+               subtitle = paste0('"', ..2, '"')) +
+             theme_void() +
+             theme(plot.title = element_text(family = regular, 
+                                             face = "bold", size = 9),
+                   plot.subtitle = element_text(family = condensed,
+                                                face = "plain", size = 9))}) %>% 
+    wrap_plots()
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_6_1.pdf"), 
+         plot = figure_6_1_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_6_1.pdf"))
+}
+
+```
+
+As demonstrated in section 5, the COVID-19 pandemic has caused an unprecedented decline in STR activity in Vancouver. Under these circumstances, it would be reasonable to imagine that some STR hosts—particularly commercial operators who had come to expect large income streams from their properties—may have decided to return their listings to the long-term housing market, either temporarily or permanently. To investigate this possibility, we collected listing images from all properties posted to Craigslist and Kijiji in Vancouver between March and September 2020, and used image recognition analysis to match STR listings on Airbnb and Vrbo to long-term rental (LTR) listings on Craigslist and Kijiji. These latter two platforms represent only a portion of the LTR market, but provide useful insight into how STR hosts have responded to the collapse in accommodation demand during the COVID-19 pandemic. If the exact same photo of an apartment’s living room was uploaded to Airbnb in August 2019 and then to Craigslist in April 2020, this provides proof that the property in question has moved from the STR market to the LTR market. The image recognition software we developed is able to identify matches between images which are identical, but also images which the host has modified slightly, and thus allows us to reliably identify every match which exists between STR and LTR platforms (Figure \@ref(fig:fig-6-1)).
+
+``` {r fig-6-1, include = TRUE, fig.cap = '(ref:fig-6-1)', fig.align = "center"}
+
+figure_6_1_fun()
+
+```
+
+(ref:fig-6-1) _Examples of listings matched between STR and LTR platforms. The first pair of images (A & B) is matched despite the images being tinted differently. The second pair of images (C&D) is matched despite the first image being digitally altered._
+
+```{r matching, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+ltr <- qread("output/ltr_processed.qs", nthreads = availableCores())
+
+# Unique STR matches
+unique_str_matches <- 
+  property %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  nrow() %>% 
+  prettyNum(",")
+
+# Unique LTR matches
+unique_ltr_matches <- 
+  ltr %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(property_ID)) %>% 
+  unnest(property_ID) %>% 
+  filter(!is.na(property_ID)) %>%
+  group_by(id) %>% 
+  slice(1) %>% 
+  ungroup() %>% 
+  nrow() %>% 
+  prettyNum(",")
+
+# KJ/CL split
+kj_cl_split <- 
+  ltr %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(property_ID)) %>% 
+  unnest(property_ID) %>% 
+  filter(!is.na(property_ID)) %>%
+  group_by(id) %>% 
+  slice(1) %>% 
+  ungroup() %>% 
+  count(kj) %>% 
+  mutate(pct = n/sum(n))
+
+unique_CL_matches <- 
+  kj_cl_split %>% 
+  filter(!kj) %>% 
+  pull(n) %>% 
+  prettyNum(",")
+
+unique_CL_pct <- 
+  kj_cl_split %>% 
+  filter(!kj) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+unique_KJ_matches <- 
+  kj_cl_split %>% 
+  filter(kj) %>% 
+  pull(n) %>% 
+  prettyNum(",")
+
+unique_KJ_pct <- 
+  kj_cl_split %>% 
+  filter(kj) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+#' [4] Unique STR matches active in 2020
+property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  count(active = active >= "2020-01-01" | created >= "2020-01-01") %>% 
+  mutate(pct = n / sum(n))
+
+str_matches_still_active <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  count(active = active >= "2020-01-01" | created >= "2020-01-01") %>% 
+  mutate(pct = n / sum(n)) %>% 
+  filter(active) %>% 
+  pull(n) %>% 
+  prettyNum(",")
+
+str_matches_still_active_pct <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  count(active = active >= "2020-01-01" | created >= "2020-01-01") %>% 
+  mutate(pct = n / sum(n)) %>% 
+  filter(active) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+kj_matches <- 
+  ltr_unique_property_ID %>%
+  group_by(kj) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(pct = n / sum(n)) %>% 
+  filter(kj) %>% 
+  pull(n) %>% 
+  prettyNum(",")
+
+kj_matches_ltr_pct <- 
+  ltr_unique_property_ID %>%
+  filter(kj) %>%
+  count(short_long) %>%
+  mutate(perc = n / sum(n)) %>% 
+  filter(short_long == "long") %>% 
+  pull(perc) %>% 
+  scales::percent(0.1)
+
+kj_matches_str_pct <- 
+    ltr_unique_property_ID %>%
+  filter(kj) %>%
+  count(short_long) %>%
+  mutate(perc = n / sum(n)) %>% 
+  filter(short_long == "short") %>% 
+  pull(perc) %>% 
+  scales::percent(0.1)
+
+kj_lease_one_year <- 
+  ltr_unique_property_ID %>%
+  filter(kj) %>%
+  count(type) %>%
+  mutate(perc = n / sum(n)) %>% 
+  filter(type == "1 Year") %>% 
+  pull(perc) %>% 
+  scales::percent()
+
+kj_lease_month <- 
+  ltr_unique_property_ID %>%
+  filter(kj) %>%
+  count(type) %>%
+  mutate(perc = n / sum(n)) %>% 
+  filter(type == "Month-to-month") %>% 
+  pull(perc) %>% 
+  scales::percent()
+
+kj_lease_NA <- 
+  ltr_unique_property_ID %>%
+  filter(kj) %>%
+  count(type) %>%
+  mutate(perc = n / sum(n)) %>% 
+  filter(is.na(type)) %>% 
+  pull(perc) %>% 
+  scales::percent()
+
+rm(property, daily, GH, ltr)
+
+```
+
+Our image matching algorithm recognized `r unique_str_matches` unique Airbnb listings which matched with `r unique_ltr_matches` different LTR listings (as some units are posted multiple times) in the City of Vancouver. The matching LTR listings were predominantly found on Craigslist (`r unique_CL_matches` listings, or `r unique_CL_pct`), with a small portion posted on Kijiji (`r unique_KJ_matches` listings, or `r unique_KJ_pct`). Out of the `r unique_str_matches` matching Airbnb listings, `r str_matches_still_active_pct` (`r str_matches_still_active` listings) were created or still active in 2020. We suspect that many or most of the remaining properties were also still active under a different listing ID and with a different photo, since commercial STRs are delisted and relisted quite frequently, and we thus consider the `r unique_str_matches` Airbnb listings which we matched to Craigslist and Kijiji to be a lower bound for the number of unique housing units that went from the STR market to the LTR market due to the COVID-19 pandemic. (Each listing which we matched is guaranteed to have been listed first on Airbnb and then on either Kijiji or Craigslist, but there are certain to be additional listings which we did not match because they did not reuse the same photographs.) 
+
+All of the Craigslist listings we matched were long-term rentals. Out of the `r kj_matches` Airbnb listings which we matched to Kijiji, `r kj_matches_ltr_pct` were identified by their hosts as “long-term rentals” and `r kj_matches_str_pct` were identified as “short-term rentals”. Among matched Kijiji listings, `r kj_lease_one_year` specified lease lengths of one year, `r kj_lease_month` specified month-to-month, and `r kj_lease_NA` did not specify.
+
+## When did STR listings move to the long-term market?
+
+```{r listing_transfer, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "ltr_processed.qsm"))}
+
+ltr <- qread("output/ltr_processed.qs", nthreads = availableCores())
+
+peak_listing_transfer <- 
+  ltr %>% 
+  st_drop_geometry() %>% 
+  unnest(property_ID) %>% 
+  filter(!is.na(property_ID)) %>% 
+  arrange(created) %>% 
+  distinct(property_ID, .keep_all = TRUE) %>% 
+  count(created, sort = TRUE) %>%
+  slice(1) %>% 
+  pull(n) %>% 
+  prettyNum(",")
+
+march_peak_listings_transfer <- 
+  ltr %>% 
+  st_drop_geometry() %>% 
+  unnest(property_ID) %>% 
+  filter(!is.na(property_ID)) %>% 
+  arrange(created) %>% 
+  distinct(property_ID, .keep_all = TRUE) %>% 
+  filter(created >= "2020-03-22", created <= "2020-03-31") %>% 
+  count(created, sort = TRUE) %>% 
+  slice(1) %>% 
+  pull(n) %>% 
+  prettyNum(",")
+
+avg_transfer_may_sep <- 
+  ltr %>% 
+  st_drop_geometry() %>% 
+  unnest(property_ID) %>% 
+  filter(!is.na(property_ID)) %>% 
+  arrange(created) %>% 
+  distinct(property_ID, .keep_all = TRUE) %>% 
+  count(created, kj) %>% 
+  filter(created >= "2020-05-01", created <= "2020-09-30") %>% 
+  summarize(avg = round(mean(n), 1))
+
+first_ltr_listing <-
+  ltr %>% 
+  st_drop_geometry() %>% 
+  unnest(property_ID) %>% 
+  filter(!is.na(property_ID)) %>% 
+  arrange(created) %>% 
+  distinct(property_ID, .keep_all = TRUE) %>% 
+  count(created, kj)
+
+rm(ltr)
+
+```
+
+``` {r make_fig_6_2}
+
+figure_6_2_fun <- function(regular = "", condensed = "") {
+  
+  first_ltr_listing %>% 
+  group_by(kj) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 2)) %>% 
+  ungroup() %>% 
+  filter(created >= "2020-03-01", created <= "2020-09-30") %>% 
+  ggplot(aes(created, n, fill = kj)) +
+  geom_col(lwd = 0) +
+  scale_x_date(name = NULL) +
+  scale_y_continuous(name = NULL, label = scales::comma) +
+  scale_fill_manual(name = NULL, labels = c("Craigslist", "Kijiji"), 
+                    values = col_palette[c(1, 3)]) +
+  theme_minimal() +
+  theme(legend.position = "bottom", 
+        panel.grid.minor.x = element_blank(),
+        text = element_text(face = "plain", family = regular),
+        legend.title = element_text(face = "bold", family = regular, size = 10),
+        legend.text = element_text( size = 10, family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_6_2.pdf"), 
+         plot = figure_6_2_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 4.2, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_6_2.pdf"))
+}
+
+```
+
+The first COVID-19 case in Vancouver was confirmed on January 28, 2020, but the pandemic did not fully erupt until the second week of March 2020, when public facilities and private businesses began to close, culminating in a Provincial declaration of public emergency on March 12. Consistent with this timeline, what was in early March a trickle of Airbnb listings moving to Craigslist or Kijiji began to accelerate in the middle of the month (Figure \@ref(fig:fig-6-2)). By the end of the March, the number of daily transfers reached `r march_peak_listings_transfer` listings. Daily numbers remained high through April (its peak being `r peak_listing_transfer` listings transferred on April 21), but even from May through September an average of `r avg_transfer_may_sep` new Airbnb listings were transferred to Craigslist or Kijiji each day.
+
+``` {r fig-6-2, include = TRUE, fig.cap = '(ref:fig-6-2)', fig.align = "center"}
+
+figure_6_2_fun()
+
+```
+
+(ref:fig-6-2) _The date on which matched Airbnb listings were first detected on Craigslist or Kijiji in the City of Vancouver (3-day average)_
+
+## Spatial distribution of matched listings
+
+```{r spatial_distribution, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "ltr_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+ltr <- qread("output/ltr_processed.qs", nthreads = availableCores())
+
+matches_by_area <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  count(area) %>% 
+  mutate(pct = round(n / sum(n), 3)) %>% 
+  arrange(-pct) %>% 
+  slice(1:4)
+
+downtown_str_match_pct <- 
+  matches_by_area %>% 
+  filter(area == "Downtown") %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+west_end_str_match_pct <- 
+  matches_by_area %>% 
+  filter(area == "West End") %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+kits_str_match_pct <- 
+  matches_by_area %>% 
+  filter(area == "Kitsilano") %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+mt_pleasant_str_match_pct <- 
+  matches_by_area %>% 
+  filter(area == "Mount Pleasant") %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+downtown_match_as_pct_mar <- 
+  {{property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  count(area) %>% 
+  mutate(pct = n / sum(n)) %>% 
+  slice(2) %>% 
+  pull(n)} /
+  {daily %>% 
+      filter(housing, area == "Downtown", status != "B", 
+             date == "2020-03-01") %>% 
+      nrow}} %>% 
+  scales::percent(0.1)
+
+downtown_match_as_pct_2020 <- 
+  {{property %>% 
+    st_drop_geometry() %>% 
+    filter(!is.na(ltr_ID)) %>% 
+    count(area) %>% 
+    mutate(pct = n / sum(n)) %>% 
+    slice(2) %>% 
+    pull(n)} /
+  {daily %>% 
+      filter(housing, area == "Downtown", status != "B", 
+             date >= "2020-01-01") %>% 
+      pull(property_ID) %>% 
+      unique() %>% 
+      length()}} %>% 
+  scales::percent(0.1)
+
+matches_as_pct_of_str <- 
+  ltr_unique_property_ID %>% 
+    select(-geometry) %>% 
+    count(area) %>% 
+    left_join(count(filter(daily, housing, status != "B", date == "2020-03-01"), 
+                    area), by = "area") %>% 
+    mutate(pct = n.x / n.y) %>% 
+    left_join(LA, .)
+
+rm(property, daily, GH, ltr)
+
+```
+
+``` {r make_fig_6_3}
+
+figure_6_3_fun <- function(regular = "", condensed = "") {
+  
+  fig_left <-
+    ltr_unique_property_ID %>% 
+    select(-geometry) %>% 
+    count(area) %>% 
+    left_join(LA, .) %>% 
+    ggplot() +
+    geom_sf(data = province, colour = "transparent", fill = "grey93") +
+    geom_sf(aes(fill = n), colour = "white") +
+    scale_fill_gradientn(colors = col_palette[c(3, 4)],
+                         limits = c(0, 650),
+                         breaks = c(0, 300, 600, 900, 1200, 1500),
+                         na.value = "grey80")  +
+    guides(fill = guide_colourbar(title = "Total STR to\nLTR matches",
+                                  title.vjust = 1)) + 
+    gg_bbox(LA) +
+    theme_void() +
+    theme(legend.position = "bottom",
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular, 
+                                      size = 7), 
+          legend.title.align = 0.9,
+          legend.text = element_text(size = 5, family = regular),
+          panel.border = element_rect(colour = "white", size = 2))
+  
+  fig_right <-
+    matches_as_pct_of_str %>%
+    ggplot() +
+    geom_sf(data = province, colour = "transparent", fill = "grey93") +
+    geom_sf(aes(fill = pct), colour = "white") +
+    scale_fill_gradientn(colors = col_palette[c(2, 5)], 
+                         na.value = "grey80",
+                         limits = c(0.05, .55),
+                         breaks = c(0, 0.1, .2, .3, .4, .5),
+                         label = scales::label_percent(accuracy = 1)) +
+    guides(fill = guide_colourbar(title = "Matches as %\nof active STRs",
+                                  title.vjust = 1)) + 
+    gg_bbox(LA) +
+    theme_void() +
+    theme(legend.position = "bottom",
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular, 
+                                      size = 7), 
+          legend.title.align = 0.9,
+          legend.text = element_text(size = 5, family = regular),
+          panel.border = element_rect(colour = "white", size = 2))
+  
+  fig_left + fig_right
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_6_3.pdf"), 
+         plot = figure_6_3_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 4.2, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_6_3.pdf"))
+}
+
+```
+
+Out of the `r unique_str_matches` unique STR listings matched to LTR listings in the City of Vancouver, nearly half (`r downtown_str_match_pct`) were located in the Downtown area, with the remaining matches more evenly split between the other areas. `r west_end_str_match_pct` of matches were in West End, following by `r kits_str_match_pct` in Kitsilano and `r mt_pleasant_str_match_pct` in Mount Pleasant. This distribution is distorted compared to general distribution of STR listings in the city: Downtown is highly over-represented in these matches. When controlling for the density of STR listings, Downtown is still slightly over-represented with respect to the number of STRs being relisted as long-term rentals. However, other areas have a listing density close to Downtown’s (Figure \@ref(fig:fig-6-3)). The number of STR listings matched to LTR listings in Downtown is equivalent to more than half (`r downtown_match_as_pct_mar`) of all the STR listings active in the area on March 1, 2020, and `r downtown_match_as_pct_2020` of all the listings active in the borough in 2020. 
+
+``` {r fig-6-3, include = TRUE, fig.cap = '(ref:fig-6-3)', fig.align = "center"}
+
+figure_6_3_fun()
+
+```
+
+(ref:fig-6-3) _Total number of STR listings matched to LTR listings (L), and matched STR listings as a percentage of daily active listings on 2020-03-01 (R), by local area_
+
+## Asking rents
+
+```{r asking_rents, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "ltr_processed.qsm"))}
+
+ltr <- qread("output/ltr_processed.qs", nthreads = availableCores())
+
+asking_rents <- 
+  ltr_unique %>% 
+  filter(price > 425, price < 8000) %>% 
+  mutate(matched = if_else(!is.na(property_ID), TRUE, FALSE)) %>% 
+  group_by(matched, created) %>%
+  summarize(avg_price = mean(price)) %>% 
+  mutate(avg_price = slide_dbl(avg_price, mean, .before = 6)) %>% 
+  ungroup() %>% 
+  mutate(status = if_else(matched, "Matched to STR", "Not matched"), 
+         .before = created) %>% 
+  select(-matched)
+
+asking_rents <- 
+  ltr_unique %>% 
+  filter(price > 425, price < 8000) %>% 
+  mutate(matched = if_else(!is.na(property_ID), TRUE, FALSE)) %>% 
+  group_by(created) %>%
+  summarize(avg_price = mean(price)) %>% 
+  mutate(avg_price = slide_dbl(avg_price, mean, .before = 6)) %>% 
+  ungroup() %>% 
+  mutate(status = "All listings", .before = created) %>% 
+  bind_rows(asking_rents) %>% 
+  mutate(geography = "City of Vancouver")
+
+asking_rents_dt <- 
+  ltr_unique %>% 
+  filter(price > 425, price < 8000, area == "Downtown") %>% 
+  mutate(matched = if_else(!is.na(property_ID), TRUE, FALSE)) %>% 
+  group_by(matched, created) %>%
+  summarize(avg_price = mean(price)) %>% 
+  mutate(avg_price = slide_dbl(avg_price, mean, .before = 6)) %>% 
+  ungroup() %>% 
+  mutate(status = if_else(matched, "Matched to STR", "Not matched"), 
+         .before = created) %>% 
+  select(-matched)
+
+asking_rents <- 
+  ltr_unique %>% 
+  filter(price > 425, price < 8000, area == "Downtown") %>% 
+  mutate(matched = if_else(!is.na(property_ID), TRUE, FALSE)) %>% 
+  group_by(created) %>%
+  summarize(avg_price = mean(price)) %>% 
+  mutate(avg_price = slide_dbl(avg_price, mean, .before = 6)) %>% 
+  ungroup() %>% 
+  mutate(status = "All listings", .before = created) %>% 
+  bind_rows(asking_rents_dt) %>% 
+  mutate(geography = "Downtown") %>% 
+  bind_rows(asking_rents)
+
+asking_rent_mar_13 <- 
+  asking_rents %>% 
+  filter(geography == "City of Vancouver", created >= "2020-03-13",
+         created <= "2020-04-30") %>% 
+  group_by(created) %>% 
+  summarize(city = avg_price[status == "All listings"],
+            match = avg_price[status == "Matched to STR"],
+            dif = avg_price[status == "Matched to STR"] - 
+              avg_price[status == "All listings"],
+            dif_pct = match / city - 1, .groups = "drop") %>% 
+  filter(dif == max(dif)) %>% 
+  pull(city) %>% 
+  scales::dollar(1)
+
+asking_rent_mar_13_match <- 
+  asking_rents %>% 
+  filter(geography == "City of Vancouver", created >= "2020-03-13",
+         created <= "2020-04-30") %>% 
+  group_by(created) %>% 
+  summarize(city = avg_price[status == "All listings"],
+            match = avg_price[status == "Matched to STR"],
+            dif = avg_price[status == "Matched to STR"] - 
+              avg_price[status == "All listings"],
+            dif_pct = match / city - 1, .groups = "drop") %>% 
+  filter(dif == max(dif)) %>% 
+  pull(match) %>% 
+  scales::dollar(1)
+
+asking_rent_mar_13_match_dif_pct <- 
+  asking_rents %>% 
+  filter(geography == "City of Vancouver", created >= "2020-03-13",
+         created <= "2020-04-30") %>% 
+  group_by(created) %>% 
+  summarize(city = avg_price[status == "All listings"],
+            match = avg_price[status == "Matched to STR"],
+            dif = avg_price[status == "Matched to STR"] - 
+              avg_price[status == "All listings"],
+            dif_pct = match / city - 1, .groups = "drop") %>% 
+  filter(dif == max(dif)) %>% 
+  pull(dif_pct) %>% 
+  scales::percent(0.1)
+
+asking_rent_jul_31 <- 
+  asking_rents %>% 
+  filter(geography == "City of Vancouver", created == "2020-07-31") %>% 
+  filter(status == "All listings") %>% 
+  pull(avg_price) %>% 
+  scales::dollar(1)
+
+asking_rent_jul_31_match <- 
+  asking_rents %>% 
+  filter(geography == "City of Vancouver", created == "2020-07-31") %>% 
+  filter(status == "Matched to STR") %>% 
+  pull(avg_price) %>% 
+  scales::dollar(1)
+
+rent_dif_apr_jul <- 
+  asking_rents %>% 
+  filter(geography == "City of Vancouver", created >= "2020-04-01",
+         created <= "2020-07-31") %>% 
+  group_by(status) %>% 
+  summarize(avg_price = mean(avg_price)) %>% 
+  mutate(pct_higher = avg_price / min(avg_price) - 1) %>% 
+  filter(status == "Matched to STR") %>% 
+  pull(pct_higher) %>% 
+  scales::percent(0.1)
+
+rent_dif_apr_jul_downtown <- 
+  asking_rents %>% 
+  filter(geography == "Downtown", created >= "2020-03-13", 
+         created <= "2020-07-31", status != "All listings") %>% 
+  group_by(status) %>% 
+  summarize(avg_price = mean(avg_price)) %>% 
+  summarize(dif = max(avg_price) / min(avg_price) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+rent_decline_pct <- 
+  asking_rents %>% 
+  filter(geography == "City of Vancouver" & status == "All listings" &
+           ((created >= "2020-03-25" & created <= "2020-03-31") | 
+           (created >= "2020-07-25" & created <= "2020-07-31"))) %>% 
+  group_by(july = created >= "2020-07-25") %>% 
+  summarize(avg = mean(avg_price)) %>% 
+  summarize(dif = avg[1]/avg[2] - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+asking_rent_mar <- 
+  asking_rents %>% 
+  filter(geography == "City of Vancouver", created >= "2020-03-25", 
+         created <= "2020-03-31", status == "All listings") %>% 
+  summarize(avg = mean(avg_price)) %>% 
+  pull(avg) %>% 
+  scales::dollar(1)
+
+asking_rent_july <- 
+  asking_rents %>% 
+  filter(geography == "City of Vancouver", created >= "2020-07-25", 
+         created <= "2020-07-31", status == "All listings") %>% 
+  summarize(avg = mean(avg_price)) %>% 
+  pull(avg) %>% 
+  scales::dollar(1)
+
+rm(ltr)
+
+```
+
+``` {r make_fig_6_4}
+
+figure_6_4_fun <- function(regular = "", condensed = "") {
+  
+  asking_rents %>% 
+    filter(created >= "2020-03-13", created <= "2020-07-31") %>% 
+    ggplot(aes(created, avg_price, color = status)) +
+    geom_line(lwd = 1) +
+    scale_x_date(name = NULL, limits = c(as.Date("2020-03-01"), NA)) +
+    scale_y_continuous(name = NULL, limits = c(1500, 3800), 
+                       label = scales::dollar) +
+    scale_color_manual(name = NULL, values = col_palette[c(5, 1, 3)]) +
+    facet_wrap(vars(geography)) +
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          text = element_text(face = "plain", family = regular), 
+          legend.title = element_text(face = "bold", family = regular,
+                                      size = 10),
+          legend.text = element_text(size = 10, family = regular), 
+          strip.text = element_text(face = "bold", family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_6_4.pdf"), 
+         plot = figure_6_4_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_6_4.pdf"))
+}
+
+```
+
+The left panel of Figure \@ref(fig:fig-6-4) shows the average asking rents of listings posted to Craigslist and Kijiji between March and July 2020. (We do not have complete asking rent data for August and September, so those months are excluded.) The asking rents have remained dramatically higher than non-matched LTR listings. On March 13, when the average asking rent on LTR platforms in the City of Vancouver was `r asking_rent_mar_13`, the average asking rent among listings which we matched to Airbnb was `r asking_rent_mar_13_match`— `r asking_rent_mar_13_match_dif_pct` higher. Over the course of March, average asking rents for LTR listings matched to Airbnb declined sharply, before increasing gradually for the next few months. At the end of July, the average asking rent was `r asking_rent_jul_31` for all Craigslist and Kijiji listings and `r asking_rent_jul_31_match` for the matches. Overall, from April to July, asking rents for properties matched to STR listings were `r rent_dif_apr_jul` higher than the city-wide average.
+
+``` {r fig-6-4, include = TRUE, fig.cap = '(ref:fig-6-4)', fig.align = "center"}
+
+figure_6_4_fun()
+
+```
+
+(ref:fig-6-4) _Average asking rents on Craigslist and Kijiji in the City of Vancouver (L) and Downtown (R) (7-day average)_
+
+The right panel of Figure \@ref(fig:fig-6-4) shows asking rents only in Downtown. A large portion of the divergence in asking rents between LTR listings matched to Airbnb and listings not matched is a compositional effect of the much greater frequency of a Downtown location (which commands higher prices than the rest of the city) among matched listings. Even in Downtown, however, LTR listings matched to Airbnb have been on average `r rent_dif_apr_jul_downtown` higher than listings not matched. Overall STRs returning to the long-term market are correlated with a significant decline in asking rents. The average city-wide asking rent on Craigslist and Kijiji declined `r rent_decline_pct` from `r asking_rent_mar` in late March 2020 to `r asking_rent_july` in late July 2020.
+
+## Listing amenities
+
+```{r bedrooms, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "ltr_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+ltr <- qread("output/ltr_processed.qs", nthreads = availableCores())
+qload("output/cmhc.qsm", nthreads = availableCores())
+
+#' Table 5.1 
+bedroom_match_table <-
+  city_units %>% 
+  filter(date == 2019) %>% 
+  slice(1:4) %>% 
+  mutate(pct = round(units / sum(units), 3)) %>% 
+  mutate(bedrooms = c("Studio", "1-bedroom", "2-bedroom", "3+-bedroom")) %>% 
+  select(bedrooms, pct) %>% 
+  mutate(Category = "City of Vancouver rental stock", .before = bedrooms)
+
+bedroom_match_table <-
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(housing, active >= "2019-01-01", created <= "2019-12-31") %>% 
+  count(bedrooms) %>% 
+  filter(!is.na(bedrooms)) %>% 
+  rowwise() %>% 
+  mutate(group = min(bedrooms, 3, na.rm = TRUE)) %>% 
+  group_by(group) %>% 
+  summarize(pct = sum(n)) %>% 
+  rename(bedrooms = group) %>% 
+  mutate(pct = round(pct / sum(pct), 3)) %>% 
+  mutate(bedrooms = c("Studio", "1-bedroom", "2-bedroom", "3+-bedroom")) %>% 
+  mutate(Category = "STR market (2019)", .before = bedrooms) %>% 
+  bind_rows(bedroom_match_table, .)
+
+bedroom_match_table <-
+  ltr_unique_property_ID %>% 
+  count(bedrooms) %>% 
+  filter(!is.na(bedrooms)) %>% 
+  rowwise() %>% 
+  mutate(group = min(bedrooms, 3, na.rm = TRUE)) %>% 
+  group_by(group) %>% 
+  summarize(pct = sum(n)) %>% 
+  rename(bedrooms = group) %>% 
+  mutate(pct = round(pct / sum(pct), 3)) %>% 
+  mutate(bedrooms = c("Studio", "1-bedroom", "2-bedroom", "3+-bedroom")) %>% 
+  mutate(Category = "LTRs matched to STR", .before = bedrooms) %>% 
+  bind_rows(bedroom_match_table, .)
+
+bedroom_match_table <-
+  ltr %>% 
+  st_drop_geometry() %>% 
+  filter(is.na(property_ID)) %>% 
+  group_by(id) %>% 
+  slice(1) %>% 
+  ungroup() %>% 
+  count(bedrooms) %>% 
+  filter(!is.na(bedrooms)) %>% 
+  rowwise() %>% 
+  mutate(group = min(bedrooms, 3, na.rm = TRUE)) %>% 
+  group_by(group) %>% 
+  summarize(pct = sum(n)) %>% 
+  rename(bedrooms = group) %>% 
+  mutate(pct = round(pct / sum(pct), 3)) %>% 
+  mutate(bedrooms = c("Studio", "1-bedroom", "2-bedroom", "3+-bedroom")) %>% 
+  mutate(Category = "LTRs not matched", .before = bedrooms) %>% 
+  bind_rows(bedroom_match_table, .)
+
+bedroom_match_table <- 
+  bedroom_match_table %>% 
+  pivot_wider(values_from = pct, names_from = bedrooms)
+
+match_2br_pct <- 
+  bedroom_match_table %>% 
+  filter(Category == "LTRs matched to STR") %>% 
+  pull(`2-bedroom`) %>% 
+  scales::percent(0.1)
+
+nonmatch_2br_pct <- 
+  bedroom_match_table %>% 
+  filter(Category == "LTRs not matched") %>% 
+  pull(`2-bedroom`) %>% 
+  scales::percent(0.1)
+
+str_2br_pct <- 
+  bedroom_match_table %>% 
+  filter(Category == "STR market (2019)") %>% 
+  pull(`2-bedroom`) %>% 
+  scales::percent(0.1)
+
+city_2br_pct <- 
+  bedroom_match_table %>% 
+  filter(Category == "City of Vancouver rental stock") %>% 
+  pull(`2-bedroom`) %>% 
+  scales::percent(0.1)
+
+match_studio_pct <- 
+  bedroom_match_table %>% 
+  filter(Category == "LTRs matched to STR") %>% 
+  pull(Studio) %>% 
+  scales::percent(0.1)
+
+nonmatch_studio_pct <- 
+  bedroom_match_table %>% 
+  filter(Category == "LTRs not matched") %>% 
+  pull(Studio) %>% 
+  scales::percent(0.1)
+
+str_studio_pct <- 
+  str_2br_pct <- 
+  bedroom_match_table %>% 
+  filter(Category == "STR market (2019)") %>% 
+  pull(Studio) %>% 
+  scales::percent(0.1)
+
+city_studio_pct <- 
+  bedroom_match_table %>% 
+  filter(Category == "City of Vancouver rental stock") %>% 
+  pull(Studio) %>% 
+  scales::percent(0.1)
+
+
+rm(property, daily, GH, ltr)
+
+```
+
+_Size:_ Table \@ref(tab:tab-bedrooms) shows the distribution of units by number of bedrooms for entire-home STRs, as well as all the units that were posted for rent on LTR platforms (both the ones that matched with an STR listing and the ones that did not match), and for the City of Vancouver’s overall primary (i.e. apartment and townhouse) rental housing stock. Two-bedrooms were overrepresented in both the matches (`r match_2br_pct`) and the non-matches (`r nonmatch_2br_pct`) compared to the STR market (`r str_2br_pct`) and the City (`r city_2br_pct`). Studios were overrepresented among LTR listings which matched to Airbnb or Vrbo (`r match_studio_pct`) compared with LTR listings which did not match (`r nonmatch_studio_pct`) and STR listings (`r str_studio_pct`), but were underrepresented when compared to Vancouver’s rental stock of studios (`r city_studio_pct`. Units with three bedrooms or more were far more common on STR and LTR platforms than their prevalence in the city would predict, while one-bedroom units were significantly less common on STR platforms than on LTR platforms or among all city apartments. The implication is that two-bedrooms and studios apartments were disproportionately likely to be moved from STR platforms to the long-term rental market, while one-bedroom apartments were disproportionately likely not to have been moved.
+
+``` {r tab-bedrooms, include = TRUE}
+
+library(kableExtra)
+
+bedroom_match_table %>% 
+  mutate(across(where(is.numeric), scales::percent, 0.1)) %>%  
+  kbl(caption = "STR and LTR listings by bedroom count", align = "lrrrr") %>% 
+  kable_styling()
+
+```
+
+```{r furnished, cache = TRUE, cache.lazy = FALSE}
+
+total_ltr_listings <- 
+  ltr_unique %>% 
+  nrow() %>% 
+  prettyNum(",")
+
+furnished_pct <- 
+  ltr_unique %>% 
+  count(furnished) %>% 
+  mutate(pct = n / sum(n)) %>% 
+  filter(furnished) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+unfurnished_pct <- 
+  ltr_unique %>% 
+  count(furnished) %>% 
+  mutate(pct = n / sum(n)) %>% 
+  filter(!furnished) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+furnished_match_pct <- 
+  ltr_unique_property_ID %>% 
+  count(furnished) %>% 
+  mutate(pct = n / sum(n)) %>% 
+  filter(furnished) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+unfurnished_match_pct <- 
+  ltr_unique_property_ID %>% 
+  count(furnished) %>% 
+  mutate(pct = n / sum(n)) %>% 
+  filter(!furnished) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+```
+
+_Furnished vs. unfurnished:_ To accommodate temporary guests, STR properties are overwhelmingly furnished. Unsurprisingly, properties that have moved from the STR to LTR market during the pandemic are listed as furnished at much higher rates than other listings on Craigslist and Kijiji. Of the `r total_ltr_listings` LTR listings we analyzed, `r furnished_pct` were listed as furnished and `r unfurnished_pct` as unfurnished (The remainder did not provide this information.) Listings which matched with STRs had a significantly higher proportion classified as furnished: `r furnished_match_pct` furnished and `r unfurnished_match_pct` unfurnished. These proportions suggest that, in approximately three quarters of the cases of STR operators listing their units on LTR platforms, the operators may intend to return their units to the STR market when demand returns, while in a quarter of cases the move to the LTR market appears to be reasonably permanent, since the host has gone through the effort of emptying the unit of furniture.
+
+## Are matched listings commercial operations?
+
+```{r commercial_operators, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "ltr_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+ltr <- qread("output/ltr_processed.qs", nthreads = availableCores())
+
+match_listing_breakdown <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(property_ID %in% ltr_unique_property_ID$property_ID) %>% 
+  count(listing_type) %>% 
+  mutate(pct = round(n / sum(n), 3))
+
+match_eh <- 
+  match_listing_breakdown %>% 
+  filter(listing_type == "Entire home/apt") %>% 
+  pull(n) %>% 
+  prettyNum(",")
+
+match_eh_pct <- 
+  match_listing_breakdown %>% 
+  filter(listing_type == "Entire home/apt") %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+match_pr <- 
+  match_listing_breakdown %>% 
+  filter(listing_type == "Private room") %>% 
+  pull(n) %>% 
+  prettyNum(",")
+
+match_pr_pct <- 
+  match_listing_breakdown %>% 
+  filter(listing_type == "Private room") %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+commercial_match_status <- 
+  daily %>% 
+  filter(property_ID %in% ltr_unique_property_ID$property_ID,
+         listing_type == "Entire home/apt") %>% 
+  group_by(property_ID) %>% 
+  summarize(FREH = as.logical(sum(FREH_3 > 0.5)),
+            ML = as.logical(sum(multi))) %>% 
+  summarize(total = 
+              property %>% 
+              st_drop_geometry() %>% 
+              filter(property_ID %in% ltr_unique_property_ID$property_ID, 
+                     listing_type == "Entire home/apt") %>% 
+              nrow(),
+            FREH_pct = sum(FREH) / total,
+            ML_pct = sum(ML) / total,
+            either_pct = sum(ceiling((FREH + ML) / 2)) / total)
+
+match_eh_FREH_pct <- 
+  commercial_match_status %>% 
+  pull(FREH_pct) %>% 
+  scales::percent(0.1)
+
+r_match_eh_multi_pct <- 
+  commercial_match_status %>% 
+  pull(ML_pct) %>% 
+  scales::percent(0.1)
+
+match_eh_commercial_pct <- 
+  commercial_match_status %>% 
+  pull(either_pct) %>% 
+  scales::percent(0.1)
+
+ltr_pr_wrong <- 
+  property %>% 
+  filter(listing_type == "Private room",
+         property_ID %in% unlist(ltr_PR$property_ID)) %>% 
+  nrow()
+
+ltr_pr_wrong_pct <- 
+  scales::percent(ltr_pr_wrong / as.numeric(match_pr), 0.1)
+
+match_pr_gh <- 
+  property %>% 
+  filter(listing_type == "Private room") %>% 
+  filter(property_ID %in% ltr_unique_property_ID$property_ID) %>% 
+  filter(property_ID %in% unlist(GH$property_IDs)) %>% 
+  nrow()
+
+match_pr_gh_pct <- 
+  scales::percent(match_pr_gh / as.numeric(match_pr), 0.1)
+
+match_pr_leftover <- 
+  as.numeric(match_pr) - ltr_pr_wrong - match_pr_gh
+
+match_eh_commercial_2020_transfer_pct <- 
+  {{property %>% 
+    filter(property_ID %in% ltr_unique_property_ID$property_ID, 
+           listing_type == "Entire home/apt") %>% 
+    nrow()} /
+    {daily %>% 
+    filter(listing_type == "Entire home/apt", status != "B", 
+           date >= "2020-01-01", (FREH_3 > 0.5 | multi == TRUE)) %>% 
+    count(property_ID) %>% 
+    nrow()}} %>% 
+  scales::percent(0.1)
+
+match_eh_commercial_march_transfer_pct <- 
+  {{property %>% 
+  filter(property_ID %in% ltr_unique_property_ID$property_ID, 
+         listing_type == "Entire home/apt") %>% 
+  nrow()} /
+  {daily %>% 
+  filter(listing_type == "Entire home/apt", status != "B", date == "2020-03-01", 
+         (FREH_3 > 0.5 | multi == TRUE)) %>% 
+  nrow()}} %>% 
+  scales::percent(0.1)
+
+first_listing <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(active > "2020-01-01") %>% 
+  transmute(property_ID,
+            active_length = as.numeric(round((active - created) / 30) / 12),
+            matched = if_else(!is.na(ltr_ID), "Matched to LTR", "Not matched"))
+
+rm(property, daily, GH, ltr)
+
+```
+
+Nearly all of the STR listings which we matched to LTR listings on Craigslist or Kijiji are likely to have been dedicated, commercial STRs. This is because it is highly unlikely that a casual home sharer operating a STR out of their principal residence would decide to vacate their home, list it on Craigslist or Kijiji, and reuse the photo they had used to advertise the short-term rental. It is therefore also likely that the STR listings found on LTR platform were non-compliant with the City's STR regulations, since the fact that they were commercial operators makes it extremely difficult to also have the listing be operated out of a principal residence. We can test this intuition by examining the characteristics of the STR listings which we matched to an LTR platform.
+
+Of the `r unique_str_matches` unique STR listings that matched with the LTR market, `r match_eh` (`r match_eh_pct`) are entire-home listings and `r match_pr` (`r match_pr_pct`) are private-room listings. Examining the entire-home listings, `r match_eh_FREH_pct` of them were identified as frequently rented entire-home (FREH) listings at some point, which means they were almost certainly operated commercially. Moreover, `r_match_eh_multi_pct` of entire-home STR listings which matched to LTR listings were multilistings at some point, which means they were operated by hosts controlling multiple listings simultaneously. In total, two thirds (`r match_eh_commercial_pct`) of entire-home listings had one of these two strong indicators of commercial activity.
+
+The `r match_pr` private-room listings require some further analysis, because each of these listings matched to a Craigslist or Kijiji listing advertised as an entire housing unit. Our analysis suggests that these listings break down into three categories. The first is miscategorizations. `r ltr_pr_wrong` (`r ltr_pr_wrong_pct`) of the LTR listings that matched to STR private-room listings had titles such as “1 fully furnished bedroom” or “swap”. This suggests either that these listings were rooms located in the host’s principal residence incorrectly listed as entire homes, or that images of the Airbnb private room listing were reused to conduct an exchange of leases between tenants. These STR listings are not commercial listings and their appearance on LTR platforms likewise does not constitute housing being returned to the market.
+
+The second category of private-room Airbnb listings matched to entire-home LTR listings is ghost hostels—clusters of private-room listings which may appear as a series of “spare bedrooms” on Airbnb or Vrbo but are in fact one or more housing units converted to a dedicated STR. `r match_pr_gh` (`r match_pr_gh_pct`) of the `r match_pr` private-room listings which matched to Craigslist or Kijiji belong to ghost hostels in Vancouver. The remaining `r match_pr_leftover` private-room Airbnb listings which matched to Craigslist or Kijiji are likely to be ghost hostels which our algorithms failed to identify, or smaller housing units similarly subdivided into private rooms. (Our procedure for identifying ghost hostels only considers clusters of three or more private rooms, but two-bedrooms apartments can also be listed as pairs of private rooms.) On balance, the likelihood is that these listings also represent commercial STRs returning to the long-term market.
+
+Focusing on the unambiguous case of the entire-home listings which matched between STR and LTR platforms, `r match_eh_commercial_2020_transfer_pct` of the commercial listings active at any point in 2020 have been transferred to Craigslist or Kijiji since March. But, given the rapidity with which individual listings are posted and removed, this significantly understates the scope of listings moving from Airbnb to the long-term market. Expressed as a percentage of the commercial listings active on March 1, 2020, at the onset of the pandemic, the matches represent `r match_eh_commercial_march_transfer_pct` of these listings. In other words, something between a quarter and a half of Vancouver’s commercial short-term rentals may have shifted to the long-term rental market between March and September.
+
+``` {r make_fig_6_5}
+
+figure_6_5_fun <- function(regular = "", condensed = "") {
+  
+  first_listing %>% 
+    ggplot(aes(active_length, after_stat(width * density), fill = matched)) +
+    geom_histogram(bins = 27) +
+    scale_x_continuous(name = "Years of activity", limits = c(NA, 10),
+                       breaks = c(0:2 * 5)) +
+    scale_y_continuous(name = "Percentage of listings",
+                       labels = scales::percent_format(accuracy = 1)) +
+    scale_fill_manual(name = NULL, values = col_palette[c(1, 3)]) +
+    facet_wrap(vars(matched)) +
+    theme_minimal() +
+    theme(legend.position = "none",
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          text = element_text(family = regular, face = "plain"),
+          legend.title = element_text(family = regular, face = "bold", 
+                                      size = 10),
+          legend.text = element_text(family = regular, size = 10),
+        strip.text = element_text(face = "bold", family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_6_5.pdf"), 
+         plot = figure_6_5_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 2.5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_6_5.pdf"))
+}
+
+```
+
+Figure \@ref(fig:fig-6-5) shows the age in years of STR listings which matched a LTR platform (left panel) and which did not match (right panel). The age distribution of matched listings is skewed to the left, which means that a large proportion of matched listings are less than a year old. By contrast, STR listings which did not match tend to be older. This pattern suggests that newer commercial STR listings may have been in a weaker financial position at the onset of the pandemic, prompting their hosts to change strategies more rapidly than established hosts.
+
+``` {r fig-6-5, include = TRUE, fig.cap = '(ref:fig-6-5)', fig.align = "center"}
+
+figure_6_5_fun()
+
+```
+
+(ref:fig-6-5) _STR listing age distributions for listings matched to LTR listings (L) and not matched (R)_
+
+## Which STR hosts transferred their listings to Craigslist and Kijiji?
+
+```{r host_matches, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "ltr_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+ltr <- qread("output/ltr_processed.qs", nthreads = availableCores())
+
+unique_hosts <- 
+  property %>%
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID), !is.na(host_ID)) %>% 
+  count(host_ID, sort = TRUE) %>% 
+  nrow() 
+
+host_multi_ltr <- 
+  property %>%
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID), !is.na(host_ID)) %>% 
+  count(host_ID, sort = TRUE) %>% 
+  filter(n > 1) %>%
+  summarize(total = n()) %>% 
+  pull(total) %>% 
+  prettyNum(",")
+
+host_multi_match_pct <- 
+  {nrow(ltr_unique_property_ID) / 
+    property %>% 
+    st_drop_geometry() %>% 
+    filter(host_ID %in% (filter(property, !is.na(ltr_ID)))$host_ID, 
+           scraped >= "2020-01-01") %>% 
+    nrow()} %>% 
+  scales::percent(0.1)
+
+revenue_2019 <- 
+  daily %>%
+  filter(housing,
+         date <= LTM_end_date, date >= LTM_start_date,
+         status == "R", !is.na(host_ID)) %>%
+  group_by(property_ID) %>%
+  summarize(revenue_LTM = sum(price)) %>% 
+  inner_join(property, .) %>% 
+  st_drop_geometry() %>% 
+  select(property_ID, host_ID, listing_type:active, revenue_LTM)
+
+quarter_mil_ltr <- 
+  revenue_2019 %>% 
+  group_by(host_ID) %>% 
+  summarize(host_rev = sum(revenue_LTM)) %>% 
+  filter(host_rev > 250000)
+
+median_listing_rev <- 
+  revenue_2019$revenue_LTM %>% 
+  median() %>% 
+  round(-2) %>% 
+  scales::dollar()
+
+median_host_rev_match <- 
+  revenue_2019 %>% 
+  group_by(host_match = host_ID %in% (filter(property, 
+                                             !is.na(ltr_ID)))$host_ID,
+           host_ID) %>%
+  summarize(host_rev = sum(revenue_LTM)) %>% 
+  summarize("median_rev" = scales::dollar(round(median(host_rev), -2))) %>% 
+  filter(host_match) %>% 
+  pull(median_rev)
+
+median_host_rev_no_match <- 
+  revenue_2019 %>% 
+  group_by(host_match = host_ID %in% (filter(property, 
+                                             !is.na(ltr_ID)))$host_ID,
+           host_ID) %>%
+  summarize(host_rev = sum(revenue_LTM)) %>% 
+  summarize("median_rev" = scales::dollar(round(median(host_rev), -2))) %>% 
+  filter(!host_match) %>% 
+  pull(median_rev)
+
+host_250k_match <- 
+  quarter_mil_ltr %>% 
+  summarize(
+    total = n(),
+    host_match = sum(
+      host_ID %in% (filter(property, property_ID %in% 
+                             ltr_unique_property_ID$property_ID)$host_ID))) %>% 
+  pull(host_match)
+
+host_250k <- 
+  quarter_mil_ltr %>% 
+  summarize(
+    total = n(),
+    host_match = sum(
+      host_ID %in% (filter(property, property_ID %in% 
+                             ltr_unique_property_ID$property_ID)$host_ID))) %>% 
+  pull(total)
+
+host_250k_match_n_units <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>%
+  count(host_ID) %>% 
+  group_by(host_match = host_ID %in% quarter_mil_ltr$host_ID) %>% 
+  summarize(avg = round(mean(n), 1)) %>% 
+  filter(host_match) %>% 
+  pull(avg)
+
+host_all_match_n_units <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>%
+  count(host_ID) %>% 
+  group_by(host_match = host_ID %in% quarter_mil_ltr$host_ID) %>% 
+  summarize(avg = round(mean(n), 1)) %>% 
+  filter(!host_match) %>% 
+  pull(avg)
+
+annual_revenue <- 
+  daily %>%
+  filter(housing,
+         date <= LTM_end_date, date >= LTM_start_date,
+         status == "R") %>%
+  group_by(property_ID) %>%
+  summarize(revenue_LTM = sum(price)) %>% 
+  inner_join(property, .) %>%
+  st_drop_geometry() %>% 
+  mutate(matched = if_else(
+    host_ID %in% (filter(property, property_ID %in% 
+                           ltr_unique_property_ID$property_ID))$host_ID, 
+    "Matched to LTR", "Not matched")) %>%
+  group_by(host_ID, matched) %>% 
+  summarize(host_rev = sum(revenue_LTM))
+
+
+rm(property, daily, GH, ltr)
+
+```
+
+In Vancouver, `r unique_hosts` unique Airbnb and Vrbo host IDs were linked to the `r unique_str_matches` STR listings which we matched to LTR listings. `r host_multi_ltr` of these hosts posted more than one of their STR units on Craigslist or Kijiji. Almost two-thirds (`r host_multi_match_pct`) of the active properties of these `r host_multi_ltr` hosts were found on either Kijiji, Craigslist, or both. The fact that only a portion of the hosts’ listings were found on LTR platforms suggests that the matches we have identified might be an underestimate of the total quantity of STRs that were posted on LTR platforms since the COVID-19 pandemic began. It would be intuitive to assume that a host who decides to post several of its listings on a LTR platform would post all or most of them. There are several factors which were likely at work here: some listings may have been posted, rented, and removed in between our weekly scrapes so we did not detect them; hosts may have not posted their higher-performing STR listings; and hosts may have used updated photographs for some of their listings, making it impossible to detect matches through our image matching algorithm. 
+
+``` {r make_fig_6_6}
+
+figure_6_6_fun <- function(regular = "", condensed = "") {
+  
+  annual_revenue %>% 
+    ggplot(aes(host_rev, after_stat(width * density), fill = matched)) +
+    geom_histogram(bins = 30) +
+    scale_x_continuous(name = "Annual host revenue", limits = c(0, 100000),
+                       labels = scales::dollar_format(scale = 0.001, 
+                                                      suffix = "k")) +
+    scale_y_continuous(name = "Percentage of hosts", limits = c(NA, .25),
+                       labels = scales::percent_format(accuracy = 1)) +
+    scale_fill_manual(name = NULL, values = col_palette[c(1, 3)]) +
+    facet_wrap(vars(matched)) +
+    theme_minimal() +
+    theme(legend.position = "none",
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          text = element_text(face = "plain", family = regular), 
+          legend.title = element_text(face = "bold", family = regular,
+                                      size = 10),
+          legend.text = element_text(size = 10, family = regular),
+          strip.text = element_text(face = "bold", family = regular))
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_6_6.pdf"), 
+         plot = figure_6_6_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 2.5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_6_6.pdf"))
+}
+
+```
+
+STR hosts which transferred listings to the long-term rental market had substantially higher STR revenue in 2019 than hosts who did not transfer listings. The median listing revenue was `r median_listing_rev` in the entire City of Vancouver in 2019. The annual median revenue of hosts who transferred listings to the LTR market was `r median_host_rev_match`, while the median revenue of hosts who did not transfer listings was somewhat less at `r median_host_rev_no_match`. Moreover, many of Vancouver’s highest earning STR hosts turned to LTR platforms during the COVID-19 pandemic. For example, `r host_250k_match` of the `r host_250k` hosts that made more than $250,000 in the past year listed at least one of their STR units on an LTR platform. On average these top earning hosts listed `r host_250k_match_n_units` units on LTR platforms, compared to `r host_all_match_n_units` units for all other hosts. Figure \@ref(fig:fig-6-6) compares the 2019 annual revenue distribution of STR hosts that shifted listings to the long-term market and hosts that did not. Hosts whose STR listings matched to LTR listings have a revenue distribution shifted substantially to the right, indicating that they earned more money.
+
+``` {r fig-6-6, include = TRUE, fig.cap = '(ref:fig-6-6)', fig.align = "center"}
+
+figure_6_6_fun()
+
+```
+
+(ref:fig-6-6) _STR host revenue distributions for hosts whose listings matched to LTR listings (L) and did not match (R)_
+
+## Are matched listings successfully rented, or still active on Airbnb?
+
+```{r listings_still_active, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "ltr_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+length_of_stay <- 
+  ltr_unique %>% 
+  mutate(active_length = scraped - created) %>% 
+  mutate(matched = if_else(!is.na(property_ID), "Matched to STR", 
+                           "Not matched"))
+
+listing_length_match <- 
+  ltr_unique %>% 
+  group_by(matched = !is.na(property_ID)) %>% 
+  summarize(time = round(mean(scraped - created, na.rm = TRUE), 1)) %>% 
+  filter(matched) %>% 
+  pull(time) %>% 
+  as.numeric()
+
+listing_length_non_match <- 
+  ltr_unique %>% 
+  group_by(matched = !is.na(property_ID)) %>% 
+  summarize(time = round(mean(scraped - created, na.rm = TRUE), 1)) %>% 
+  filter(!matched) %>% 
+  pull(time) %>% 
+  as.numeric()
+
+matches_present_table <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  filter(scraped >= "2020-01-01") %>% 
+  summarize(total = n(),
+            total_pct = total / nrow(filter(property, !is.na(ltr_ID))),
+            n_scraped = sum(scraped >= "2020-09-30"),
+            pct_scraped = mean(scraped >= "2020-09-30"),
+            not_scraped = total - n_scraped,
+            pct_not_scraped = 1 - pct_scraped,
+            n_gone = pct_not_scraped * nrow(filter(property, !is.na(ltr_ID))),
+            n_active = pct_scraped * nrow(filter(property, !is.na(ltr_ID))))
+
+matches_present_jan <- 
+  matches_present_table$total
+
+matches_present_jan_pct <- 
+  matches_present_table$total_pct %>% 
+  scales::percent(0.1)
+
+matches_present_sep <- 
+    matches_present_table$n_scraped
+
+matches_present_sep_pct <- 
+  matches_present_table$pct_scraped %>% 
+  scales::percent(0.1)
+
+matches_deactivated <- 
+  matches_present_table$not_scraped
+
+matches_deactivated_pct <- 
+  matches_present_table$pct_not_scraped %>% 
+  scales::percent(0.1)
+
+extrapolated_deactivated <- 
+  matches_present_table$n_gone
+
+extrapolated_active <- 
+  matches_present_table$n_active
+
+furnished_matches_pct <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  filter(scraped >= "2020-01-01", scraped < "2020-09-30") %>% 
+  left_join(select(ltr_unique_property_ID, property_ID, furnished)) %>% 
+  filter(!is.na(furnished)) %>% 
+  summarize(furnished = scales::percent(mean(furnished), 0.1)) %>% 
+  pull(furnished)
+
+matches_active_jan_and_sep <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID), scraped >= "2020-09-30") %>% 
+  summarize(total = n(),
+            n_inactive = total - sum(active >= "2020-09-01", na.rm = TRUE) +
+              sum(is.na(active)),
+            pct_inactive = n_inactive / total) %>% 
+  pull(total)
+
+matches_active_jan_and_sep_blocked <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID), scraped >= "2020-09-30") %>% 
+  summarize(total = n(),
+            n_inactive = total - sum(active >= "2020-09-01", na.rm = TRUE) +
+              sum(is.na(active)),
+            pct_inactive = n_inactive / total) %>% 
+  pull(n_inactive)
+
+matches_active_jan_and_sep_blocked_pct <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID), scraped >= "2020-09-30") %>% 
+  summarize(total = n(),
+            n_inactive = total - sum(active >= "2020-09-01", na.rm = TRUE) +
+              sum(is.na(active)),
+            pct_inactive = n_inactive / total) %>% 
+  pull(pct_inactive) %>% 
+  scales::percent(0.1)
+
+deactivated_pct <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  filter(scraped >= "2020-01-01") %>% 
+  summarize(pct_not_scraped = 1 - mean(scraped >= "2020-09-01")) %>% 
+  pull(pct_not_scraped)
+
+blocked_pct <-
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  filter(scraped >= "2020-01-01") %>% 
+  summarize(pct_blocked = (sum(active < "2020-09-01" & scraped >= "2020-09-01", 
+                               na.rm = TRUE) + sum(is.na(active) & scraped >= 
+                                                     "2020-09-01")) / n()) %>% 
+  pull(pct_blocked)
+
+total_table <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  summarize(total = n(),
+            deactivated = total * deactivated_pct,
+            blocked = total * blocked_pct,
+            active = total - deactivated - blocked) %>% 
+  mutate(across(where(is.numeric), round, 0)) %>% 
+  pivot_longer(-total) %>% 
+  mutate(pct = round(value / sum(value), 3))
+
+total_deactivated <- 
+  total_table %>% 
+  filter(name == "deactivated") %>% 
+  pull(value)
+
+total_deactivated_pct <- 
+  total_table %>% 
+  filter(name == "deactivated") %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+  
+total_blocked <- 
+  total_table %>% 
+  filter(name == "blocked") %>% 
+  pull(value)
+
+total_blocked_pct <- 
+  total_table %>% 
+  filter(name == "blocked") %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+total_active <- 
+  total_table %>% 
+  filter(name == "active") %>% 
+  pull(value)
+
+total_active_pct <- 
+  total_table %>% 
+  filter(name == "active") %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+rm(property, daily, GH, ltr)
+
+```
+
+The mere presence of current or former Airbnb listings on LTR platforms is no guarantee that the actual housing units have shifted back onto the long-term market. In particular, these listings might have been posted but not successfully rented. It is not possible to determine with certainty whether a given listing was rented and therefore permanently transferred from the short-term to the long-term market, but we can use two indicators to estimate this: the length of time the listing was posted on an LTR platform, and the current activity status of the listing on the STR market.
+
+``` {r make_fig_6_7}
+
+figure_6_7_fun <- function(regular = "", condensed = "") {
+  
+  length_of_stay %>% 
+    ggplot(aes(active_length, after_stat(width * density), fill = matched)) +
+    geom_histogram(bins = 27) +
+    scale_x_continuous(name = "Days online") +
+    scale_y_continuous(name = "Percentage of listings",
+                       labels = scales::percent_format(accuracy = 1)) +
+    scale_fill_manual(name = NULL, values = col_palette[c(1, 3)]) +
+    facet_wrap(vars(matched)) +
+    theme_minimal() +
+    theme(legend.position = "none",
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular,
+                                      size = 10),
+          legend.text = element_text(size = 10, family = regular),
+          strip.text = element_text(face = "bold", family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_6_7.pdf"), 
+         plot = figure_6_7_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 2.5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_6_7.pdf"))
+}
+
+```
+
+On average, the STR matches found on LTR platforms stayed longer than the non-matches. STR matches were listed an average of `r listing_length_match` days on LTR platforms, while non-matches were listed only three quarters as long—`r listing_length_non_match` days on average. This simplest plausible explanation for this disparity is the fact that listings coming from the STR market were both significantly more expensive than other listings and much more likely to be furnished, both of which factors may have decreased their viability in the rental market. Figure \@ref(fig:fig-6-7) shows the distribution of the length of stay for both matches and non-matches. The figure reveals quantitatively and qualitatively different patterns among matched and non-matched listings. Most non-matched listings were present for less than a week on Craigslist or Kijiji before being removed (and presumably rented), and the number of listings still present declines relatively smoothly as the length of time increases. By contrast, most matched listings were not rented after a week, and in fact the proportion which took a month or more to be taken down is higher not lower than the proportion which were taken down after several weeks. Our conclusion is that, regardless of their host’s intentions, STR units listed on LTR platforms have been relatively unsuccessful at transitioning back to long-term rentals.
+
+``` {r fig-6-7, include = TRUE, fig.cap = '(ref:fig-6-7)', fig.align = "center"}
+
+figure_6_7_fun()
+
+```
+
+(ref:fig-6-7) _LTR listing posting length distributions for listings matched to STR listings (L) and not matched (R)_
+
+Further evidence about the extent to which STR hosts are successfully transferring their listings to the long-term market can be found by examining the activity of the STR listings themselves. Are hosts planning on renting on the long-term only temporarily, leaving the STR listing running for future bookings? Or have they deactivated the STR listing? Out of the total `r unique_str_matches` STR listings which we identified on LTR platforms, `r matches_present_jan` (`r matches_present_jan_pct`) were present on Airbnb or Vrbo at the beginning of 2020. Out of this number, `r matches_present_sep` (`r matches_present_sep_pct`) were still present on September 30, while the other `r matches_deactivated` (`r matches_deactivated_pct`) had been deactivated. Extrapolating this proportion across the entire set of matched listings we identified, we estimate that `r extrapolated_deactivated` matched listings have been deactivated from Airbnb or Vrbo during the pandemic, while `r extrapolated_active` remain on the platforms. Listings removed from STR platforms are likely to have been durably shifted to the long-term market. However, `r furnished_matches_pct` of these listings were rented as furnished rentals on Craigslist or Kijiji. These listings should therefore be considered at relatively high risk of returning to the STR market if demand recovers.
+
+Listings which remain on Airbnb and Vrbo can nevertheless be inactive. If a host successfully rents their listing on Craigslist for several months, they can choose to block their calendar on their STR platform to make sure no new reservations occur, while keeping the listing intact for when the STR market recovers. Of the `r matches_active_jan_and_sep` matched listings present on Airbnb or Vrbo at the beginning of 2020 and still present by the end of Sep, `r matches_active_jan_and_sep_blocked` (`r matches_active_jan_and_sep_blocked_pct`) were blocked for the entirety of the month of September. This suggests that these listings are not active on the STR market and therefore have been rented on the LTR market, but the fact that the STR listings have not been taken down suggests that the hosts may plan to reactivate their units once STR demand recovers.
+
+In total, taking into account the matched listings which have continued to see activity on Airbnb or Vrbo, we estimate that, of the total `r unique_str_matches` STR listings which were advertised on Craigslist or Kijiji, `r total_deactivated` (`r total_deactivated_pct`) have been deactivated from Airbnb and Vrbo and have likely transitioned back to long-term housing (albeit often as furnished rentals which could be reconverted to STRs), `r total_blocked` (`r total_blocked_pct`) have been temporarily blocked on the STR platforms and have likely been rented in the long-term market but may return to being STRs in the future, and `r total_active` (`r total_active_pct`) failed to be rented on LTR platforms and instead remain active as STRs.
+
+\newpage

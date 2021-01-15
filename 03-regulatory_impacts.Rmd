@@ -1,0 +1,1824 @@
+# Short-term rentals in Vancouver: Regulatory impacts
+
+<style type="text/css">
+  body{
+  font-family: Futura, Helvetica, Arial;
+}
+</style>
+
+<br>
+
+```{r setup, include = FALSE, echo = FALSE}
+
+library(here)
+source(here("R", "01_startup.R"))
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(include = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+
+# Function for checking file modifications
+mtime <- function(files) lapply(Sys.glob(files), function(x) file.info(x)$mtime)
+
+# Set this to TRUE to output PDF figures
+build_figures <- TRUE
+
+```
+
+```{r new_objects, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+qload(here("output", "geometry.qsm"), nthreads = availableCores())
+
+displayed_listings <-
+  daily %>% 
+  filter(housing) %>% 
+  count(date, blocked = status == "B") %>% 
+  group_by(blocked) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6, .complete = TRUE)) %>% 
+  ungroup() %>% 
+  drop_na() %>% 
+  group_by(date) %>% 
+  mutate(n = if_else(blocked == TRUE, sum(n), n)) %>% 
+  ungroup() %>% 
+  mutate(blocked = if_else(blocked == TRUE, "Displayed listings", 
+                           "Active listings"))
+
+active_listings <- 
+  daily %>% 
+  filter(housing, status != "B") %>% 
+  count(date, listing_type) %>% 
+  group_by(listing_type) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6, .complete = TRUE)) %>% 
+  ungroup()
+
+active_listings <- 
+  daily %>% 
+  filter(housing, status != "B") %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6, .complete = TRUE),
+         listing_type = "All listings") %>% 
+  bind_rows(active_listings) %>% 
+  arrange(date, listing_type)
+
+rm(property, daily, GH, DA, BL, BL_expanded, skytrain)
+
+```
+
+```{r exec_summ, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+# qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+
+rm(property, daily, GH)
+
+```
+
+**The 2018 implementation of the City of Vancouver's STR licensing system created a one-time negative shock in the number of STR listings in Vancouver, which was disproportionately concentrated among listings which were present on STR platforms but not actively being rented. The longer-term impact of the regulations on the number of active STR listings in Vancouver plausibly ranges from between 600 and 1,510 listings removed, or 14.2% to 35.8% of the total number of listings. The plausible range for the longer-term impact on commercial listings is between 80 and 980 commercial listings removed, or 3.0% to 35.0% of the total commercial listings. Comparisons with other jurisdictions uniformly suggest that the real impact of the City's STR regulations is at the higher end of the trend analysis scenarios. Among commercial STR operations, multilistings have been particularly constrained by the City's regulations, while dedicated FREH listings have grown less than they otherwise would have, but at something closer to the rate expected in the absence of regulations. We estimate that the City's regulations have returned between 300 and 500 units of housing to the long-term market.**
+
+<br>
+
+## The City of Vancouver's STR regulations
+
+In April 2018, the City of Vancouver enacted regulations on the operations of short-term rentals in the City, definied as rentals offered for thirty or fewer consecutive days (City of Vancouver, 2020a). Under these regulations, each STR operator is required to obtain a license for their rental unit; these licenses are only issued for STRs operated out of a host’s principal residence, and are valid for a single calendar year. Licensed listings can either be the entire principal residence or individual rooms within the residence. Although the regulations apply to STRs listed on any platform, Airbnb is the only STR platform that agreed to require hosts in Vancouver to fill out a license field in their online listing, to engage in data sharing, and to undertake operator education (City of Vancouver, 2020b). In August 2018, shortly before the City's announced start date for enforcement of the registration system, Airbnb removed approximately 2,400 listings which had not received licenses.
+
+The regulations put in place by the City significantly constrain the type of STRs which are permitted to be operated in Vancouver. In particular, what we define as "multilistings" (listings operated by hosts who are simultaneously operating other listings) are by definition non-compliant, since multiple different listings cannot be simultaneously operated out of a principal residence. Moreover, frequently rented entire-home (FREH) listings are also highly likely to be non-compliant, since listings which are operated the majority of the year would be unlikely to also be a valid principal residence (excepting rare cases of very frequent travellers, for example).
+
+In what follows we assemble evidence about the of the City's regulations on the STR market. Given the significant restraints which the regulations impose on the market, their impacts should be highly visible if the regulations have been effective. If, by contrast, few impacts can be discerned, that implies that the regulations have not been effective. We carry out this task by analyzing the trajectory of STR activity in the City of Vancouver over time, and by comparing the City with a set of peer jurisdictions. This analysis collectively demonstrates that the City’s STR regulations have been effective at reducing STR activity and growth in Vancouver, and have accomplished that reduction in part by driving incoming visits to other municipalities within Metro Vancouver. However, the most significant impacts of the regulations were relatively short lived: both total active listings and commercial listings returned to pre-regulation levels within a year of the regulations being implemented. 
+
+## The trajectory of post-regulation STR activity in Vancouver
+
+```{r trajectory, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+# Drop in displayed listings
+displayed_drop <- 
+  displayed_listings %>% 
+  filter(date >= "2018-08-20", date <= "2018-09-07") %>% 
+  group_by(blocked) %>% 
+  summarize(decline = 1 - min(n) / max(n)) %>% 
+  filter(blocked == "Displayed listings") %>% 
+  pull(decline) %>% 
+  scales::percent(0.1)
+
+# Drop in active listings
+active_drop <- 
+  displayed_listings %>% 
+  filter(date >= "2018-08-20", date <= "2018-09-07") %>% 
+  group_by(blocked) %>% 
+  summarize(decline = 1 - min(n) / max(n)) %>% 
+  filter(blocked == "Active listings") %>% 
+  pull(decline) %>% 
+  scales::percent(0.1)
+
+```
+
+``` {r make_fig_3_1}
+
+figure_3_1_fun <- function(regular = "", condensed = "") {
+  
+  displayed_listings %>% 
+    ggplot(aes(date, n, colour = blocked)) +
+    annotate("segment", x = key_date_covid, xend = key_date_covid,
+             y = -Inf, yend = Inf, alpha = 0.3) +
+    annotate("segment", x = key_date_regulations, xend = key_date_regulations,
+             y = -Inf, yend = Inf, alpha = 0.3) +
+    geom_line(lwd = 1.5) +
+    scale_y_continuous(name = NULL, label = scales::comma) +
+    scale_x_date(name = NULL, limits = c(as.Date("2016-01-01"), NA)) +
+    scale_colour_manual(name = NULL, values = col_palette[c(5, 1:3)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom", panel.grid.minor.x = element_blank(),
+          text = element_text(family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_3_1.pdf"), 
+         plot = figure_3_1_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_3_1.pdf"))
+}
+
+```
+
+The impact of the City's regulations can be directly measured in two ways: changes in the total number of listings on STR platforms in Vancouver, and changes in commercial listings which are highly likely to be non-compliant. Because all Vancouver STR listings are required to be licensed whether or not they are active, in Figure \@ref(fig:fig-3-1) we show the total number of listings displayed each day alongside our standard metric of active daily listings. Displayed listings comprise active listings (i.e. listings which are either reserved or available for reservation) and inactive (blocked) listings which are visible on Airbnb or VRBO. Both indicators show a sharp drop following Airbnb's mass removal of non-licensed listings in August 2018, but the decline is proportionally twice as large for displayed listings, which decreased `r displayed_drop` from August 20 to September 7, as it is for active listings, which decreased `r active_drop` over the same date range. Furthermore, displayed listings have never come close to regaining their pre-regulation numbers in Vancouver, while active listings had mostly recovered by the summer of 2019, a year after Airbnb's mass removal. Put differently, a disproportionate share of the large decline in STRs which followed Airbnb's mass removal was listings which were not actually in use on the platform anymore.
+
+``` {r fig-3-1, include = TRUE, fig.cap = '(ref:fig-3-1)', fig.align = "center"}
+
+figure_3_1_fun()
+
+```
+
+(ref:fig-3-1) _Displayed and active listings in the City of Vancouver (7-day average)_
+
+```{r active_trend, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+library(feasts)
+library(fabletools)
+
+# Get seasonal trend components
+active_components <- 
+  daily %>% 
+  filter(housing, status != "B") %>% 
+  count(date) %>% 
+  tsibble::as_tsibble() %>% 
+  tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
+  summarize(n = sum(n, na.rm = TRUE)) %>% 
+  filter(yearmon >= tsibble::yearmonth("2015-04")) %>%
+  filter(yearmon <= tsibble::yearmonth("2018-03")) %>%
+  model(x11 = feasts:::X11(n, type = "additive")) %>% 
+  components()
+
+# Get linear trend from last two years
+active_linear_coefficients <- 
+  active_components %>% 
+  filter(yearmon >= tsibble::yearmonth("2016-04")) %>% 
+  mutate(id = 1:24) %>% 
+  lm(trend ~ id, data = .) %>% 
+  `$`("coefficients")
+
+# Get seasonal component from April
+active_seasonal <- 
+  active_components %>% 
+  filter(yearmon >= tsibble::yearmonth("2016-04")) %>% 
+  mutate(month = lubridate::month(yearmon)) %>% 
+  slice_tail(n = 12) %>% 
+  as_tibble() %>% 
+  select(month, seasonal)
+
+# Set number of months to project out
+months_to_project <- 21
+
+# Build monthly projections
+active_monthly_projection <-
+  tibble(
+    id = 24 + seq_len(months_to_project),
+    yearmon = seq(tsibble::yearmonth("2018-04"), length.out = months_to_project, 
+                  by = 1),
+    month = lubridate::month(yearmon),
+    trend_growth = 
+      active_linear_coefficients[[1]] + id * active_linear_coefficients[[2]],
+    trend_no_growth = 
+      active_linear_coefficients[[1]] + 24 * active_linear_coefficients[[2]]
+  ) %>% 
+  left_join(active_seasonal, by = "month") %>% 
+  mutate(projected_growth = trend_growth + seasonal,
+         projected_no_growth = trend_no_growth + seasonal)
+
+# Convert to daily values for month midpoints
+active_daily_projection <-
+  active_monthly_projection %>% 
+  mutate(days = days_in_month(month),
+         date = as.Date(yearmon) + 15,
+         projected_growth = round(projected_growth / days),
+         projected_no_growth = round(projected_no_growth / days)) %>% 
+  select(date, projected_growth, projected_no_growth)
+
+# Integrate into actual data
+active_listings_trend <- 
+  daily %>% 
+  filter(housing, status != "B") %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6)) %>% 
+  filter(date >= "2016-01-01") %>% 
+  left_join(active_daily_projection) %>% 
+  mutate(projected_growth = if_else(date == "2018-04-01", n, projected_growth),
+         projected_no_growth = if_else(date == "2018-04-01", 
+                                       n, projected_no_growth)) %>%
+  filter(date >= "2018-04-01", date <= "2019-12-16") %>%
+  mutate(projected_growth = zoo::na.approx(projected_growth),
+         projected_no_growth = zoo::na.approx(projected_no_growth))
+
+# Rbind with previous data
+active_listings_trend <- 
+  daily %>% 
+  filter(housing, status != "B") %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-03-31") %>% 
+  bind_rows(active_listings_trend)
+
+# Listing differences
+listing_difs <- 
+  active_listings_trend %>% 
+  filter(date >= "2019-07-01") %>% 
+  mutate(growth_df = projected_growth - n,
+         no_growth_df = projected_no_growth - n) %>% 
+  summarize(avg_growth = mean(growth_df),
+            avg_growth_pct = avg_growth / mean(n),
+            avg_no_growth = mean(no_growth_df),
+            avg_no_growth_pct = avg_no_growth / mean(n))
+
+growth_dif <- 
+  listing_difs %>% 
+  pull(avg_growth) %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+growth_dif_pct <- 
+  listing_difs %>% 
+  pull(avg_growth_pct) %>% 
+  scales::percent(0.1)
+
+no_growth_dif <- 
+  listing_difs %>% 
+  pull(avg_no_growth) %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+no_growth_dif_pct <- 
+  listing_difs %>% 
+  pull(avg_no_growth_pct) %>% 
+  scales::percent(0.1)
+
+rm(property, daily, GH)
+```
+
+``` {r make_fig_3_2}
+
+figure_3_2_fun <- function(regular = "", condensed = "") {
+  
+  active_listings_trend %>%
+    pivot_longer(-date) %>% 
+    filter(!is.na(value)) %>%
+    ggplot() +
+    geom_ribbon(aes(x = date, ymin = n, ymax = projected_no_growth, group = 1),
+                data = filter(active_listings_trend, !is.na(projected_growth)), 
+                fill = col_palette[6], alpha = 0.3) +
+    geom_ribbon(aes(x = date, ymin = projected_no_growth, 
+                    ymax = projected_growth, group = 1),
+                data = filter(active_listings_trend, !is.na(projected_growth)), 
+                fill = col_palette[3], alpha = 0.3) +
+    geom_line(aes(date, value, color = name), lwd = 1.5) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = NULL, labels = scales::comma) +
+    scale_color_manual(name = NULL, 
+                       labels = c("Actual active listings", 
+                                  "Expected with previous growth",
+                                  "Expected with no growth"), 
+                       values = col_palette[c(5, 1, 4)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular,
+                                      size = 10),
+          legend.text = element_text( size = 10, , family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_3_2.pdf"), 
+         plot = figure_3_2_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_3_2.pdf"))
+}
+
+```
+
+Trend analysis allows for a more precise estimate of the impact of regulation on active listings. Figure \@ref(fig:fig-3-2) compares the actual number of active listings with two scenarios for the listings which would have been expected based on pre-August-2018 trends. The higher, red line is a scenario where the growth rate of active listings from the previous two years continued into 2019. The lower, blue line is a scenario where aggregate growth in active listings stops, although seasonal variation continues. These two scenarios represent the plausible upper and lower bounds for what "natural" STR listing growth in Vancouver might have looked like in the absence of regulations. (As the subsequent section discusses, the continued-growth scenario is similar to Toronto's actual STR market trajectory, while the no-growth scenario is similar to Montreal's STR market trajectory.)
+
+``` {r fig-3-2, include = TRUE, fig.cap = '(ref:fig-3-2)', fig.align = "center"}
+
+figure_3_2_fun()
+
+```
+
+(ref:fig-3-2) _Actual and expected active listings after implementation of regulations_
+
+What Figure \@ref(fig:fig-3-2) demonstrates is that, under either scenario, the City's regulations have had two different impacts on the number of active listings in Vancouver. The first is a one-time negative shock corresponding to Airbnb's mass listing removal, which has proven to be temporary. As of mid-2019, active listings had recovered to something close to their post-shock level. The second impact is a more durable shift downward in the STR listing growth curve. In the second half of 2019, the average difference between actual active listings and the two no-regulation counterfactuals was `r growth_dif` under the continued-growth scenario, and `r no_growth_dif` under the no-growth scenario. Our conclusion is therefore that the City's STR regulations have, in the long-term, resulted in between `r no_growth_dif` and `r growth_dif` fewer active listings in Vancouver's STR market each day. These numbers represent between `r no_growth_dif_pct` and `r growth_dif_pct` of the total number of active STRs in the city.
+
+```{r commercial_trend, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+# Get commercial listings
+commercial_listings <- 
+  daily %>% 
+  filter(status != "B", date >= "2015-01-01") %>% 
+  mutate(commercial = if_else(FREH_3 < 0.5 & !multi, FALSE, TRUE)) %>% 
+  count(date, commercial) %>% 
+  ungroup()
+
+# Get seasonal trend components
+commercial_components <- 
+  commercial_listings %>% 
+  filter(commercial) %>% 
+  select(-commercial) %>% 
+  tsibble::as_tsibble() %>% 
+  tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
+  summarize(n = sum(n, na.rm = TRUE)) %>% 
+  filter(yearmon >= tsibble::yearmonth("2015-01")) %>%
+  filter(yearmon <= tsibble::yearmonth("2018-03")) %>%
+  model(x11 = feasts:::X11(n, type = "additive")) %>% 
+  components()
+
+# Get linear trend from last two years
+commercial_linear_coefficients <- 
+  commercial_components %>% 
+  filter(yearmon >= tsibble::yearmonth("2016-04")) %>% 
+  mutate(id = 1:24) %>% 
+  lm(trend ~ id, data = .) %>% 
+  `$`("coefficients")
+
+# Get seasonal component from April
+commercial_seasonal <- 
+  commercial_components %>% 
+  filter(yearmon >= tsibble::yearmonth("2016-04")) %>% 
+  mutate(month = lubridate::month(yearmon)) %>% 
+  slice_tail(n = 12) %>% 
+  as_tibble() %>% 
+  select(month, seasonal)
+
+# Set number of months to project out
+months_to_project <- 21
+
+# Build monthly projections
+commercial_monthly_projection <-
+  tibble(
+    id = 24 + seq_len(months_to_project),
+    yearmon = seq(tsibble::yearmonth("2018-04"), length.out = months_to_project, 
+                  by = 1),
+    month = lubridate::month(yearmon),
+    trend_growth = 
+      commercial_linear_coefficients[[1]] + id * commercial_linear_coefficients[[2]],
+    trend_no_growth = 
+      commercial_linear_coefficients[[1]] + 24 * commercial_linear_coefficients[[2]]
+  ) %>% 
+  left_join(commercial_seasonal, by = "month") %>% 
+  mutate(projected_growth = trend_growth + seasonal,
+         projected_no_growth = trend_no_growth + seasonal)
+
+# Convert to daily values for month midpoints
+commercial_daily_projection <-
+  commercial_monthly_projection %>% 
+  mutate(days = days_in_month(month),
+         date = as.Date(yearmon) + 15,
+         projected_growth = round(projected_growth / days),
+         projected_no_growth = round(projected_no_growth / days)) %>% 
+  select(date, projected_growth, projected_no_growth)
+
+# Integrate into actual data
+commercial_listings_trend <- 
+  commercial_listings %>% 
+  filter(commercial) %>% 
+  select(-commercial) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6)) %>% 
+  filter(date >= "2016-01-01") %>% 
+  left_join(commercial_daily_projection) %>% 
+  mutate(projected_growth = if_else(date == "2018-04-01", n, projected_growth),
+         projected_no_growth = if_else(date == "2018-04-01", 
+                                       n, projected_no_growth)) %>%
+  filter(date >= "2018-04-01", date <= "2019-12-16") %>%
+  mutate(projected_growth = zoo::na.approx(projected_growth),
+         projected_no_growth = zoo::na.approx(projected_no_growth))
+
+# Rbind with previous data
+commercial_listings_trend <- 
+  commercial_listings %>% 
+  filter(commercial) %>% 
+  select(-commercial) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-03-31") %>% 
+  bind_rows(commercial_listings_trend)
+
+# Listing differences
+com_listing_difs <- 
+  commercial_listings_trend %>% 
+  filter(date >= "2019-07-01") %>% 
+  mutate(growth_df = projected_growth - n,
+         no_growth_df = projected_no_growth - n) %>% 
+  summarize(avg_growth = mean(growth_df),
+            avg_growth_pct = avg_growth / mean(n),
+            avg_no_growth = mean(no_growth_df),
+            avg_no_growth_pct = avg_no_growth / mean(n))
+
+com_growth_dif <- 
+  com_listing_difs %>% 
+  pull(avg_growth) %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+com_growth_dif_pct <- 
+  com_listing_difs %>% 
+  pull(avg_growth_pct) %>% 
+  scales::percent(0.1)
+
+com_no_growth_dif <- 
+  com_listing_difs %>% 
+  pull(avg_no_growth) %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+com_no_growth_dif_pct <- 
+  com_listing_difs %>% 
+  pull(avg_no_growth_pct) %>% 
+  scales::percent(0.1)
+
+# Commercial properties removed
+taken_down_properties <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(scraped >= "2018-08-23", scraped <= "2018-08-31") %>% 
+  pull(property_ID)
+
+commercial_pct_removed <- 
+  {{
+    daily %>% 
+      filter(housing, 
+             property_ID %in% taken_down_properties,
+             date >= key_date_regulations,
+             FREH_3 >= 0.5 | multi) %>% 
+      distinct(property_ID) %>% 
+      nrow()
+    } / {
+      commercial_listings %>% 
+        filter(date == key_date_regulations, commercial) %>% 
+        pull(n)
+      }} %>% 
+  scales::percent(0.1)
+
+# Peak commercial listings in 2019
+peak_2019_commercial <- 
+  commercial_listings %>% 
+  filter(commercial, date >= "2019-01-01", date <= "2019-12-31") %>% 
+  filter(n == max(n)) %>% 
+  pull(n) %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+rm(property, daily, GH)
+
+```
+
+```{r FREH_trend, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+FREH_listings <- 
+  daily %>% 
+  filter(housing, status != "B") %>% 
+  group_by(date) %>% 
+  summarize(n = sum(FREH_3, na.rm = TRUE))
+
+# Get seasonal trend components
+FREH_components <- 
+  FREH_listings %>% 
+  tsibble::as_tsibble() %>% 
+  tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
+  summarize(n = sum(n, na.rm = TRUE)) %>% 
+  filter(yearmon >= tsibble::yearmonth("2015-01")) %>%
+  filter(yearmon <= tsibble::yearmonth("2018-03")) %>%
+  model(x11 = feasts:::X11(n, type = "additive")) %>% 
+  components()
+
+# Get linear trend from last two years
+FREH_linear_coefficients <- 
+  FREH_components %>% 
+  filter(yearmon >= tsibble::yearmonth("2016-04")) %>% 
+  mutate(id = 1:24) %>% 
+  lm(trend ~ id, data = .) %>% 
+  `$`("coefficients")
+
+# Get seasonal component from April
+FREH_seasonal <- 
+  FREH_components %>% 
+  filter(yearmon >= tsibble::yearmonth("2016-04")) %>% 
+  mutate(month = lubridate::month(yearmon)) %>% 
+  slice_tail(n = 12) %>% 
+  as_tibble() %>% 
+  select(month, seasonal)
+
+# Set number of months to project out
+months_to_project <- 21
+
+# Build monthly projections
+FREH_monthly_projection <-
+  tibble(
+    id = 24 + seq_len(months_to_project),
+    yearmon = seq(tsibble::yearmonth("2018-04"), length.out = months_to_project, 
+                  by = 1),
+    month = lubridate::month(yearmon),
+    trend_growth = 
+      FREH_linear_coefficients[[1]] + id * FREH_linear_coefficients[[2]],
+    trend_no_growth = 
+      FREH_linear_coefficients[[1]] + 24 * FREH_linear_coefficients[[2]]
+  ) %>% 
+  left_join(FREH_seasonal, by = "month") %>% 
+  mutate(projected_growth = trend_growth + seasonal,
+         projected_no_growth = trend_no_growth + seasonal)
+
+# Convert to daily values for month midpoints
+FREH_daily_projection <-
+  FREH_monthly_projection %>% 
+  mutate(days = days_in_month(month),
+         date = as.Date(yearmon) + 15,
+         projected_growth = round(projected_growth / days),
+         projected_no_growth = round(projected_no_growth / days)) %>% 
+  select(date, projected_growth, projected_no_growth)
+
+# Integrate into actual data
+FREH_listings_trend <- 
+  FREH_listings %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6)) %>% 
+  filter(date >= "2016-01-01") %>% 
+  left_join(FREH_daily_projection) %>% 
+  mutate(projected_growth = if_else(date == "2018-04-01", n, projected_growth),
+         projected_no_growth = if_else(date == "2018-04-01", 
+                                       n, projected_no_growth)) %>%
+  filter(date >= "2018-04-01", date <= "2019-12-16") %>%
+  mutate(projected_growth = zoo::na.approx(projected_growth),
+         projected_no_growth = zoo::na.approx(projected_no_growth))
+
+# Rbind with previous data
+FREH_listings_trend <- 
+  FREH_listings %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-03-31") %>% 
+  bind_rows(FREH_listings_trend)
+
+# Listing differences
+FREH_listing_difs <- 
+  FREH_listings_trend %>% 
+  filter(date >= "2019-07-01") %>% 
+  mutate(growth_df = projected_growth - n,
+         no_growth_df = projected_no_growth - n) %>% 
+  summarize(avg_growth = mean(growth_df),
+            avg_growth_pct = avg_growth / mean(n),
+            avg_no_growth = mean(no_growth_df),
+            avg_no_growth_pct = avg_no_growth / mean(n))
+
+FREH_growth_dif <- 
+  FREH_listing_difs %>% 
+  pull(avg_growth) %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+FREH_growth_dif_pct <- 
+  FREH_listing_difs %>% 
+  pull(avg_growth_pct) %>% 
+  scales::percent(0.1)
+
+FREH_no_growth_dif <- 
+  FREH_listing_difs %>% 
+  pull(avg_no_growth) %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+FREH_no_growth_dif_pct <- 
+  FREH_listing_difs %>% 
+  pull(avg_no_growth_pct) %>% 
+  scales::percent(0.1)
+
+rm(property, daily, GH)
+
+```
+
+``` {r make_fig_3_3}
+
+figure_3_3_fun <- function(regular = "", condensed = "") {
+  
+  commercial_listings %>% 
+    group_by(commercial) %>% 
+    mutate(n = slide_dbl(n, mean, .before = 6)) %>% 
+    ungroup() %>% 
+    filter(date >= "2016-01-01") %>% 
+    ggplot() +
+    geom_line(aes(date, n, color = commercial), lwd = 1.5) +
+    annotate("segment", x = key_date_covid, xend = key_date_covid,
+             y = -Inf, yend = Inf, alpha = 0.3) +
+    annotate("segment", x = key_date_regulations, xend = key_date_regulations,
+             y = -Inf, yend = Inf, alpha = 0.3) +
+    scale_x_date(name = NULL, limits = c(as.Date("2016-01-01"), NA)) +
+    scale_y_continuous(name = NULL) +
+    scale_colour_manual(name = "Listing type",
+                        values = col_palette[c(5, 1)],
+                        labels = c("Non-commercial", "Commercial")) +
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          panel.grid.minor.x = element_blank(),
+          text = element_text(family = regular, face = "plain"),
+          legend.title = element_text(family = regular, face = "bold"),
+          legend.text = element_text(family = regular))
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_3_3.pdf"), 
+         plot = figure_3_3_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_3_3.pdf"))
+}
+
+```
+
+Since the 2018 regulations do not prohibit short-term rentals but merely limit them to hosts' principal residences, the fact that active listings in Vancouver have been significantly reduced by the regulations is not on its own decisive evidence of the effectiveness of the regulations. A harder to measure—but arguably more important—metric is the number of commercial STRs operating in Vancouver, given that they are necessarily non-compliant with the City's regulations. Figure \@ref(fig:fig-3-3) decomposes the trajectory of active listings shown above (in Figure \@ref(fig:fig-3-1)) into commercial and non-commercial listings. The former are all listings which are either frequently rented entire-home (FREH) listings or multilistings. The graph shows that non-commercial listings experienced a noticable drop when Airbnb carried out its August 2018 mass listing removal, but that the number of these listings was already in decline. The quantity of commercial listings, meanwhile, experienced a much sharper drop in August 2018 (`r commercial_pct_removed` of all commercial listings were removed by Airbnb) and continued to decline for the rest of 2018. Commercial operations recovered throughout 2019, however, and reached a new all-time high (`r peak_2019_commercial`) by the end of 2019.
+
+``` {r fig-3-3, include = TRUE, fig.cap = '(ref:fig-3-3)', fig.align = "center"}
+
+figure_3_3_fun()
+
+```
+
+(ref:fig-3-3) _Non-commercial and commercial active daily listings in Vancouver (7-day average)_
+
+``` {r make_fig_3_4}
+
+figure_3_4_fun <- function(regular = "", condensed = "") {
+  
+  commercial_listings_trend %>%
+    pivot_longer(-date) %>% 
+    filter(!is.na(value)) %>%
+    ggplot() +
+    geom_ribbon(aes(x = date, ymin = n, ymax = projected_no_growth, group = 1),
+                data = filter(commercial_listings_trend, !is.na(projected_growth)), 
+                fill = col_palette[6], alpha = 0.3) +
+    geom_ribbon(aes(x = date, ymin = projected_no_growth, 
+                    ymax = projected_growth, group = 1),
+                data = filter(commercial_listings_trend, !is.na(projected_growth)), 
+                fill = col_palette[3], alpha = 0.3) +
+    geom_line(aes(date, value, color = name), lwd = 1.5) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = NULL, labels = scales::comma) +
+    scale_color_manual(name = NULL, 
+                       labels = c("Actual commercial listings", 
+                                  "Expected with previous growth",
+                                  "Expected with no growth"), 
+                       values = col_palette[c(5, 1, 4)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular,
+                                      size = 10),
+          legend.text = element_text( size = 10, , family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_3_4.pdf"), 
+         plot = figure_3_4_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_3_4.pdf"))
+}
+
+```
+
+Figure \@ref(fig:fig-3-4) offers a closer look at how the actual number of commercial listings compares with two scenarios where the mid-2018 regulations are not enacted: a growth-as-usual scenario where the growth trend from the previous two years continues, and a no-growth scenario where commercial growth had stopped by the time that the City's regulations were enacted. Unlike the trend analysis of all active listings, above, where under both scenarios the regulations are likely to have substantially reduced the number of daily active listings, the effect of the City's regulations on commercial listings is highly sensitive to the scenario chosen. In the second half of 2019, the average difference between actual commercial listings and the two no-regulation counterfactuals was `r com_growth_dif` under the continued-growth scenario, and `r com_no_growth_dif` under the no-growth scenario. This is an enormous, twelve-fold difference. Under the assumption that commercial listing growth would have continued on its pre-regulation trend, we estimate that regulations have reduced the number of commercial operators by `r com_growth_dif_pct`. But under the assumption that commercial listing growth had leveled off when the regulations were introduced, we estimate that the City's regulations have only reduced the number of commercial operators by `r com_no_growth_dif_pct`. Applying the same modelling to the narrower question of FREH listings implicated in housing loss, we estimate that the City's regulations have reduced the number of housing units converted to dedicated STRs by between `r FREH_no_growth_dif` in the no-growth scenario and `r FREH_growth_dif` in the continued-growth scenario. This is between `r FREH_no_growth_dif_pct` and `r FREH_growth_dif_pct` of the total amount of housing units we estimate have been converted to dedicated STRs.
+
+To be clear, however, the correct value for the "actual commercial listings" line in Figure \@ref(fig:fig-3-4) should be zero, given that all non-principal-residence STRs are forbidden under Vancouver's regulations. Even allowing for some error in the measurement of commercial operators, at the end of 2019 there were almost certainly 2,500 or more listings operating in violation of the City's principal residence rules.
+
+``` {r fig-3-4, include = TRUE, fig.cap = '(ref:fig-3-4)', fig.align = "center"}
+
+figure_3_4_fun()
+
+```
+
+(ref:fig-3-4) _Actual and expected commercial listings after implementation of regulations_
+
+## The City of Vancouver in comparison with Montreal and Toronto
+
+```{r montreal_toronto, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "cma_comparison.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+qload(here("output", "cma_comparison.qsm"), nthreads = availableCores())
+
+active_montreal <- 
+  daily_montreal %>% 
+  filter(housing, status != "B") %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Montreal",
+         type = "active")
+
+active_toronto <- 
+  daily_toronto %>% 
+  filter(housing, status != "B") %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Toronto",
+         type = "active")
+
+active_vancouver <- 
+  daily %>% 
+  filter(housing, status != "B") %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Vancouver",
+         type = "active")
+
+commercial_montreal <- 
+  daily_montreal %>% 
+  filter(housing, status != "B", (FREH_3 >= 0.5 | multi)) %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Montreal",
+         type = "commercial")
+
+commercial_toronto <- 
+  daily_toronto %>% 
+  filter(housing, status != "B", (FREH_3 >= 0.5 | multi)) %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Toronto",
+         type = "commercial")
+
+commercial_vancouver <- 
+  daily %>% 
+  filter(housing, status != "B", (FREH_3 >= 0.5 | multi)) %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Vancouver",
+         type = "commercial")
+
+multi_montreal <- 
+  daily_montreal %>% 
+  filter(housing, status != "B", multi) %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Montreal",
+         type = "multi")
+
+multi_toronto <- 
+  daily_toronto %>% 
+  filter(housing, status != "B", multi) %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Toronto",
+         type = "multi")
+
+multi_vancouver <- 
+  daily %>% 
+  filter(housing, status != "B", multi) %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Vancouver",
+         type = "multi")
+
+FREH_montreal <- 
+  daily_montreal %>% 
+  filter(housing, status != "B") %>% 
+  group_by(date) %>% 
+  summarize(n = sum(FREH_3, na.rm = TRUE)) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 20)) %>% 
+  mutate(city = "Montreal",
+         type = "FREH")
+
+FREH_toronto <- 
+  daily_toronto %>% 
+  filter(housing, status != "B") %>% 
+  group_by(date) %>% 
+  summarize(n = sum(FREH_3, na.rm = TRUE)) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 20)) %>% 
+  mutate(city = "Toronto",
+         type = "FREH")
+
+FREH_vancouver <- 
+  daily %>% 
+  filter(housing, status != "B") %>% 
+  group_by(date) %>% 
+  summarize(n = sum(FREH_3, na.rm = TRUE)) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 20)) %>% 
+  mutate(city = "Vancouver",
+         type = "FREH")
+
+rm(property_montreal, property_toronto, property, daily, daily_montreal, 
+   daily_toronto, property_montreal_other, property_toronto_other,
+   daily_montreal_other, daily_toronto_other, GH)
+
+```
+
+The preceding analysis varies significantly with the underlying assumptions being made about the growth of Vancouver's STR market prior to the introduction of the City's regulations. If we assume that growth would have continued along its previous trajectory, then the regulations have had a major impact on the number of active listings, and in particular on the number of commercial operations. If growth were already leveling off prior to the introduction of the regulations, by contrast, then it is likely that the regulations have somewhat reduced the number of active listings, but have been ineffective at targeting the commercial operations which are not permitted under the rules.
+
+There is no way to determine with certainty which of these scenarios would have occurred, but a promising strategy is to compare Vancouver with a set of similar jurisdictions which did not regulate their STR markets in mid-2018. In what follows we do this at multiple spatial scales, beginning with the other two largest STR markets in the country: Toronto and Montreal. The City of Toronto has recently implemented mandatory host registration and a principal-residence requirement which are very similar to Vancouver's rules, but these were not active during the study period. The City of Montreal has rules which vary across the city, but in the key central-city boroughs commercial short-term rentals are largely forbidden. However, with no registration system in place during the study period, it has been widely understood that Montreal's enforcement mechanisms have not been sufficiently strong to significantly affect the operation of commercial STRs. Toronto and Montreal thus represent zero- or low-regulation cases with which to compare Vancouver.
+
+```{r montreal_toronto_comparisons, cache = TRUE, cache.lazy = FALSE}
+
+van_mtl_active_dif_2017 <- 
+  bind_rows(active_montreal, active_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2017-01-01", date <= "2017-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Montreal"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_mtl_active_dif_2019 <- 
+  bind_rows(active_montreal, active_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2019-07-01", date <= "2019-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Montreal"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_to_active_dif_2017 <- 
+  bind_rows(active_toronto, active_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2017-01-01", date <= "2017-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Toronto"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_to_active_dif_2019 <- 
+  bind_rows(active_toronto, active_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2019-07-01", date <= "2019-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Toronto"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_to_FREH_dif_2017 <- 
+  bind_rows(FREH_toronto, FREH_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2017-01-01", date <= "2017-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Toronto"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_mtl_FREH_dif_2017 <- 
+  bind_rows(FREH_montreal, FREH_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2017-01-01", date <= "2017-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Montreal"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_to_FREH_dif_2019 <- 
+  bind_rows(FREH_toronto, FREH_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2019-07-01", date <= "2019-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Toronto"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_mtl_FREH_dif_2019 <- 
+  bind_rows(FREH_montreal, FREH_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2019-07-01", date <= "2019-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Montreal"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_to_multi_dif_2017 <- 
+  bind_rows(multi_toronto, multi_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2017-01-01", date <= "2017-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Toronto"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_mtl_multi_dif_2017 <- 
+  bind_rows(multi_montreal, multi_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2017-01-01", date <= "2017-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Montreal"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_to_multi_dif_2019 <- 
+  bind_rows(multi_toronto, multi_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2019-07-01", date <= "2019-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Toronto"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_mtl_multi_dif_2019 <- 
+  bind_rows(multi_montreal, multi_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2019-07-01", date <= "2019-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Montreal"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+```
+
+``` {r make_fig_3_5}
+
+figure_3_5_fun <- function(regular = "", condensed = "") {
+  
+  bind_rows(active_montreal, active_toronto, active_vancouver,
+            FREH_montreal, FREH_toronto, FREH_vancouver,
+            multi_montreal, multi_toronto, multi_vancouver) %>% 
+    filter(date >= "2016-07-01", date <= "2019-12-31") %>% 
+    group_by(city, type) %>% 
+    mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+    ungroup() %>% 
+    mutate(type = case_when(
+      type == "active" ~ "Active listings", 
+      type == "commercial" ~ "Commercial listings",
+      type == "FREH" ~ "FREH listings",
+      type == "multi" ~ "Multilistings")) %>% 
+    ggplot(aes(date, index, colour = city, size = city)) +
+    geom_line() +
+    scale_y_continuous(name = NULL, label = scales::comma) +
+    scale_x_date(name = NULL, limits = c(as.Date("2016-07-01"), NA)) +
+    scale_colour_manual(name = NULL, 
+                        values = col_palette[c(3, 6, 5)],
+                        guide = guide_legend(override.aes = list(
+                          size = c(0.5, 0.5, 1)))) +
+    scale_size_manual(values = c("Vancouver" = 1, "Montreal" = 0.5,
+                                 "Toronto" = 0.5), guide = "none") + 
+    facet_wrap(vars(type), nrow = 1) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular, 
+                                      size = 10),
+          legend.text = element_text(size = 10, family = regular),
+          strip.text = element_text(face = "bold", family = regular, size = 10))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_3_5.pdf"), 
+         plot = figure_3_5_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_3_5.pdf"))
+}
+
+```
+
+Figure \@ref(fig:fig-3-5) compares the active listing (left), FREH listing (middle), and multilisting (right) trajectories in Montreal, Toronto and Vancouver. (Commercial listings are disaggregated into FREH listings and multilistings in order to clarify the key patterns.) The figure lends significant weight to the conclusion that Vancouver's STR regulations have significantly reduced the commercial portion of the STR market. The left panel demonstrates that the growth trajectory of active listings in Vancouver was on a very similar trajectory to Montreal and Toronto prior to 2018. In 2018 the three cities diverged, with listings in Vancouver plummeting in response to the new registration system, listings in Toronto continuing to grow quickly, and listings in Montreal beginning a long period of stagnation and decline. By the end of 2019 Vancouver's active listings had caught up to Montreal's in relative terms (in both cases with total numbers similar to the beginning of 2017), but were far behind Toronto's, which grew by more than 50% from 2017 through 2019. Montreal was the first Canadian city to have a large STR market, driven by a combination of strong tourism and cheap housing (which incentivized conversions to STRs), and it has followed a trajectory comparable to other large tourist destinations—early growth then stagnation. Toronto and Vancouver began their periods of growth somewhat later, probably due in large to much higher housing prices. Toronto thus represents the most likely counterfactual for how Vancouver's STR market would have evolved in the absence of regulations. Over the second half of 2019, Toronto had on average `r van_to_active_dif_2019` more active listings than Vancouver, relative to each city's market size on January 1, 2017. In 2017, by contrast, the difference was only `r van_to_active_dif_2017`. This tends to support the higher end of our `r substr(no_growth_dif_pct, 1, 4)`-`r growth_dif_pct` estimate for the impact of the City of Vancouver's regulations on the number of active STR listings.
+
+``` {r fig-3-5, include = TRUE, fig.cap = '(ref:fig-3-5)', fig.align = "center"}
+
+figure_3_5_fun()
+
+```
+
+(ref:fig-3-5) _Active listings (L), FREH listings (C), and multilistings (R) in Montreal, Toronto and Vancouver (2017-01-01 = 100)_
+
+The divergence between Vancouver and Montreal and Toronto is even more significant with respect to commercial listings, which were prohibited by Vancouver's regulations but were either de jure (Toronto) or de facto (Montreal) permitted in the other cases. The center and right panels of Figure \@ref(fig:fig-3-5) show, respectively, the trajectory of FREH listings and multilistings in the three cities. In both cases the three cities were on highly similar growth trajectories through 2017. Montreal's FREH listings were growing at a `r van_mtl_FREH_dif_2017` higher rate than Vancouver, while Toronto's FREH growth rate was identical to Vancouver's. Montreal's multilistings were growing at a `r van_mtl_multi_dif_2017` higher rate than Vancouver, while Toronto's were growing `r van_to_FREH_dif_2017` faster. In the second half of 2019, by which point the temporary impacts of Airbnb's mass listing removal in Vancouver would have subsided, the commercial side of Vancouver's market looked dramatically different from either Montreal or Toronto. Montreal's FREH listings had grown `r van_mtl_FREH_dif_2019` faster than Vancouver's, while Toronto's had grown an incredible `r van_to_FREH_dif_2019` faster. The numbers are similar for multilistings: Montreal outpaced Vancouver by `r van_mtl_multi_dif_2019`, and Toronto outpaced Vancouver by `r van_to_multi_dif_2019`.
+
+These differences are summarized in Table \@ref(tab:tab-MTV). They strongly support the conclusion that the City of Vancouver's regulations have durably reduced the commercial part of Vancouver's STR market. Our "growth-as-usual" counterfactual had suggested that the regulations might have reduced commercial operators by `r com_growth_dif_pct`. Comparison with Montreal and Toronto adds additional evidence suggesting that this estimate is plausible.
+
+``` {r tab-MTV, include = TRUE}
+
+library(kableExtra)
+
+tibble(
+  City = c("Montreal", "", "Toronto", ""),
+  "Time period" = c("2017", "2019 (2H)", "2017", "2019 (2H)"),
+  "Active listings" = c(van_mtl_active_dif_2017, van_mtl_active_dif_2019,
+                        van_to_active_dif_2017, van_to_active_dif_2019),
+  "FREH listings" = c(van_mtl_FREH_dif_2017, van_mtl_FREH_dif_2019,
+                      van_to_multi_dif_2017, van_to_FREH_dif_2019),
+  "Multilistings" = c(van_mtl_multi_dif_2017, van_mtl_multi_dif_2019,
+                      van_to_FREH_dif_2017, van_to_multi_dif_2019)) %>% 
+  kbl(caption = "Montreal and Toronto listing trajectories in comparison with Vancouver (values are the growth rates since 1 January 2017 relative to Vancouver's growth rates in the same time period)", 
+      align = "llrrr") %>% 
+  kable_styling()
+
+```
+
+## The City of Vancouver in comparison with the rest of the Vancouver region
+
+```{r bc_water, cache = TRUE, cache.lazy = FALSE}
+
+ocean <- 
+  read_sf(here("data", "shapefiles", "lhy_000h16a_e.shp")) %>% 
+  st_transform(32610)
+
+ocean <- 
+  ocean %>% 
+  st_filter(rbind(select(CMA, -everything()), select(city, -everything())))
+
+river <- 
+  read_sf(here("data", "shapefiles", "lhy_000c16a_e.shp")) %>% 
+  st_transform(32610)
+
+river <- 
+  river %>% 
+  st_filter(rbind(select(CMA, -everything()), select(city, -everything())))
+
+water <- rbind(select(river, -everything()), select(ocean, -everything()))
+
+rm(ocean, river)
+
+```
+
+```{r cma_comparisons, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_bc_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+qload(here("output", "str_bc_processed.qsm"), nthreads = availableCores())
+
+active_bc <- 
+  daily_bc %>% 
+  filter(housing, status != "B") %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Rest of CMA", type = "active")
+
+commercial_bc <- 
+  daily_bc %>% 
+  filter(housing, status != "B", (FREH_3 >= 0.5 | multi)) %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Rest of CMA", type = "commercial")
+
+FREH_bc <- 
+  daily_bc %>% 
+  filter(housing, status != "B") %>% 
+  group_by(date) %>% 
+  summarize(n = sum(FREH_3, na.rm = TRUE)) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 20)) %>% 
+  mutate(city = "Rest of CMA", type = "FREH")
+
+multi_bc <- 
+  daily_bc %>% 
+  filter(housing, status != "B", multi) %>% 
+  count(date) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  mutate(city = "Rest of CMA", type = "multi")
+
+van_bc_active_dif_2017 <- 
+  bind_rows(active_bc, active_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2017-01-01", date <= "2017-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_bc_active_dif_2018a <- 
+  bind_rows(active_bc, active_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2018-01-01", date <= key_date_regulations) %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_bc_active_dif_2018b <- 
+  bind_rows(active_bc, active_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date > key_date_regulations, date <= "2018-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_bc_active_dif_2019 <- 
+  bind_rows(active_bc, active_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2019-07-01", date <= "2019-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_bc_FREH_dif_2017 <- 
+  bind_rows(FREH_bc, FREH_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2017-01-01", date <= "2017-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_bc_FREH_dif_2018a <- 
+  bind_rows(FREH_bc, FREH_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2018-01-01", date <= key_date_regulations) %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_bc_FREH_dif_2018b <- 
+  bind_rows(FREH_bc, FREH_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date > key_date_regulations, date <= "2018-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_bc_FREH_dif_2019 <- 
+  bind_rows(FREH_bc, FREH_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2019-07-01", date <= "2019-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_bc_multi_dif_2017 <- 
+  bind_rows(multi_bc, multi_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2017-01-01", date <= "2017-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_bc_multi_dif_2018a <- 
+  bind_rows(multi_bc, multi_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2018-01-01", date <= key_date_regulations) %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_bc_multi_dif_2018b <- 
+  bind_rows(multi_bc, multi_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date > key_date_regulations, date <= "2018-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+van_bc_multi_dif_2019 <- 
+  bind_rows(multi_bc, multi_vancouver) %>% 
+  group_by(city) %>% 
+  mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+  ungroup() %>% 
+  filter(date >= "2019-07-01", date <= "2019-12-31") %>% 
+  group_by(date) %>% 
+  summarize(dif = index[city == "Rest of CMA"] / index[city == "Vancouver"]) %>% 
+  summarize(dif = mean(dif) - 1) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+median_2019_rev_van <- 
+  daily %>% 
+  filter(housing, status == "R", date >= "2019-01-01", date <= "2019-12-31") %>% 
+  group_by(price) %>% 
+  summarize(revenue = sum(price)) %>% 
+  pull(revenue) %>% 
+  median() %>% 
+  scales::dollar(100)
+
+median_2019_rev_cma <- 
+  daily_bc %>% 
+  filter(housing, status == "R", date >= "2019-01-01", date <= "2019-12-31") %>% 
+  group_by(price) %>% 
+  summarize(revenue = sum(price)) %>% 
+  pull(revenue) %>% 
+  median() %>% 
+  scales::dollar(100)
+
+rm(property, daily, GH, property_bc, daily_bc)
+
+```
+
+``` {r make_fig_3_6}
+
+figure_3_6_fun <- function(regular = "", condensed = "") {
+  
+  library(ggrepel)
+  
+  CMA_labels <-
+    CMA %>% 
+    mutate(name = str_remove(name, " \\(.*\\)")) %>% 
+    group_by(name) %>% 
+    summarize(dwellings = sum(Dwellings)) %>% 
+    filter(dwellings > 10000) %>% 
+    mutate(centroids = st_centroid(geometry),
+           x = st_coordinates(centroids)[, 1],
+           y = st_coordinates(centroids)[, 2]) %>% 
+    st_drop_geometry() %>% 
+    select(x, y, name)
+  
+  CMA %>% 
+    ggplot() +
+    geom_sf(data = province, fill = "grey70", colour = "transparent") +
+    geom_sf(colour = "white", fill = col_palette[3]) +
+    geom_sf(data = city, fill = col_palette[6], colour = "white") +
+    geom_sf(data = water, fill = "white", colour = "transparent") +
+    geom_text_repel(aes(x = x, y = y, label = name), data = CMA_labels, 
+                    size = 3, family = regular) +
+    geom_sf_text(aes(label = name), data = mutate(city, name = "Vancouver"),
+                 fontface = "bold", family = regular) +
+    gg_bbox(CMA) +
+    theme_void() +
+    theme(legend.position = "bottom")
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_3_6.pdf"), 
+         plot = figure_3_6_fun("Futura", "Futura Condensed"), 
+         width = 7, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_3_6.pdf"))
+}
+
+```
+
+Another point of comparison for assessing the impact of the City's STR regulations is the rest of Metro Vancouver. While many visitors to Vancouver will be determined to stay within the City itself regardless of price or availability, others will be more flexible. So if the City's regulations have reduced the prevalence of commercial STRs, we should expect to see some redistribution of STR activity to neighbouring municipalities. We test this possibility by comparing the City of Vancouver with the remainder of the Vancouver Census Metropolitan Area (CMA), which is roughly coterminous with Metro Vancouver (Figure \@ref(fig:fig-3-6)).
+
+``` {r fig-3-6, include = TRUE, fig.cap = '(ref:fig-3-6)', fig.align = "center"}
+
+figure_3_6_fun()
+
+```
+
+(ref:fig-3-6) _The Vancouver Census Metropolitan Area (CMA)_
+
+STR activity in the outlying municipalities of the Vancouver CMA is mostly concentrated in the cities of Richmond, Burnaby and Surrey, and there are substantial differences between the STR markets of the City of Vancouver and the these outlying municipalities. For example, the median listing in the City of Vancouver earned `r median_2019_rev_van` in 2019, while the median listing in the rest of the CMA earned `r median_2019_rev_cma`. However, examining the relative trajectories of listing growth since 2017, as was done above with Toronto and Montreal, provides additional context for the drop in active and commercial listings experienced in the City of Vancouver since mid-2018.
+
+``` {r make_fig_3_7}
+
+figure_3_7_fun <- function(regular = "", condensed = "") {
+  
+  bind_rows(active_bc, active_vancouver,
+            FREH_bc, FREH_vancouver,
+            multi_bc, multi_vancouver) %>% 
+    filter(date >= "2016-07-01", date <= "2019-12-31") %>% 
+    group_by(city, type) %>% 
+    mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+    ungroup() %>% 
+    mutate(type = case_when(
+      type == "active" ~ "Active listings", 
+      type == "commercial" ~ "Commercial listings",
+      type == "FREH" ~ "FREH listings",
+      type == "multi" ~ "Multilistings")) %>% 
+    ggplot(aes(date, index, colour = city, size = city)) +
+    geom_line() +
+    scale_y_continuous(name = NULL, label = scales::comma) +
+    scale_x_date(name = NULL, limits = c(as.Date("2016-07-01"), NA)) +
+    scale_colour_manual(name = NULL, 
+                        values = col_palette[c(3, 5)],
+                        guide = guide_legend(override.aes = list(
+                          size = c(0.5, 1)))) +
+    scale_size_manual(values = c("Vancouver" = 1, "Rest of CMA" = 0.5), 
+                      guide = "none") + 
+    facet_wrap(vars(type), nrow = 1) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular, 
+                                      size = 10),
+          legend.text = element_text(size = 10, family = regular),
+          strip.text = element_text(face = "bold", family = regular, size = 10))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_3_7.pdf"), 
+         plot = figure_3_7_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_3_7.pdf"))
+}
+
+```
+
+Figure \@ref(fig:fig-3-7) shows the relative trajectories of active listings, FREH listings, and multilistings for the City of Vancouver and the rest of the Vancouver CMA since 2017. It demonstrates dramatic and widening divergences between the two geographies. While throughout 2017 active listings were already growing `r van_bc_active_dif_2017` faster in the rest of the CMA than in Vancouver, by the second half of 2019 the difference was `r van_bc_active_dif_2019`. FREH listings and multilistings reveal even larger divergences, from `r van_bc_FREH_dif_2017` to `r van_bc_FREH_dif_2019` for FREH listings and from `r van_bc_multi_dif_2017` to `r van_bc_multi_dif_2019` for multilistings.
+
+``` {r fig-3-7, include = TRUE, fig.cap = '(ref:fig-3-7)', fig.align = "center"}
+
+figure_3_7_fun()
+
+```
+
+(ref:fig-3-7) _Active listings (L), FREH listings (C), and multilistings (R) in the City of Vancouver and the rest of the Vancouver CMA (2017-01-01 = 100)_
+
+How much of this divergence can be explained by Vancouver's STR regulations? At least some of the divergence was already underway by the time the City implemented its new rules, and in particular by the time that Airbnb undertook its mass removal of listings in August 2018. However, the divergence between Vancouver and the rest of the region widened significantly after August 2018—from `r van_bc_active_dif_2018a` to `r van_bc_active_dif_2018b` for active listings, from `r van_bc_FREH_dif_2018a` to `r van_bc_FREH_dif_2018b` for FREH listings, and from `r van_bc_multi_dif_2018a` to `r van_bc_multi_dif_2018b` for multilistings (Table \@ref(tab:tab-bc)). This suggests that the regulations were an important (although not exclusive) force shifting STR activity from the City of Vancouver to outlying municipalities.
+
+``` {r tab-bc, include = TRUE}
+
+library(kableExtra)
+
+tibble(
+  "Time period" = c("2017", "2018 before listing takedown", 
+                  "2018 after listing takedown", "2019 (2H)"),
+  "Active listings" = c(van_bc_active_dif_2017, van_bc_active_dif_2018a, 
+                        van_bc_active_dif_2018b, van_bc_active_dif_2019),
+  "FREH listings" = c(van_bc_FREH_dif_2017, van_bc_FREH_dif_2018a,
+                      van_bc_FREH_dif_2018b, van_bc_FREH_dif_2019),
+  "Multilistings" = c(van_bc_multi_dif_2017, van_bc_multi_dif_2018a,
+                      van_bc_multi_dif_2018b, van_bc_multi_dif_2019)) %>% 
+  kbl(caption = "Vancouver CMA listing trajectories in comparison with the City of Vancouver (values are the growth rates since 1 January 2017 relative to the City of Vancouver's growth rates in the same time period)", 
+      align = "lrrr") %>% 
+  kable_styling()
+
+```
+
+```{r central_comparisons, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "cma_comparison.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+qload(here("output", "str_bc_processed.qsm"), nthreads = availableCores())
+qload(here("output", "cma_comparison.qsm"), nthreads = availableCores())
+
+central_active_montreal <- 
+  daily_montreal %>% 
+  bind_rows(daily_montreal_other) %>% 
+  filter(housing, status != "B") %>% 
+  count(date, central) %>% 
+  group_by(date) %>% 
+  summarize(central_pct = n[central] / sum(n)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-12-31") %>% 
+  mutate(city = "Montreal", type = "Active listings")
+
+central_active_toronto <- 
+  daily_toronto %>% 
+  bind_rows(daily_toronto_other) %>% 
+  filter(housing, status != "B") %>% 
+  count(date, central) %>% 
+  group_by(date) %>% 
+  summarize(central_pct = n[central] / sum(n)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-12-31") %>% 
+  mutate(city = "Toronto", type = "Active listings")
+
+central_active_vancouver <- 
+  daily %>% 
+  mutate(central = TRUE) %>% 
+  bind_rows(mutate(daily_bc, central = FALSE)) %>% 
+  filter(housing, status != "B") %>% 
+  count(date, central) %>% 
+  group_by(date) %>% 
+  summarize(central_pct = n[central] / sum(n)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-12-31") %>% 
+  mutate(city = "Vancouver", type = "Active listings")
+
+central_FREH_montreal <- 
+  daily_montreal %>% 
+  bind_rows(daily_montreal_other) %>% 
+  filter(housing, status != "B") %>% 
+  group_by(date, central) %>% 
+  summarize(n = sum(FREH_3, na.rm = TRUE)) %>% 
+  group_by(date) %>% 
+  summarize(central_pct = n[central] / sum(n)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-12-31") %>% 
+  mutate(city = "Montreal", type = "FREH listings")
+
+central_FREH_toronto <- 
+  daily_toronto %>% 
+  bind_rows(daily_toronto_other) %>% 
+  filter(housing, status != "B") %>% 
+  group_by(date, central) %>% 
+  summarize(n = sum(FREH_3, na.rm = TRUE)) %>% 
+  group_by(date) %>% 
+  summarize(central_pct = n[central] / sum(n)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-12-31") %>% 
+  mutate(city = "Toronto", type = "FREH listings")
+
+central_FREH_vancouver <- 
+  daily %>% 
+  mutate(central = TRUE) %>% 
+  bind_rows(mutate(daily_bc, central = FALSE)) %>% 
+  filter(housing, status != "B") %>% 
+  group_by(date, central) %>% 
+  summarize(n = sum(FREH_3, na.rm = TRUE)) %>% 
+  group_by(date) %>% 
+  summarize(central_pct = n[central] / sum(n)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-12-31") %>% 
+  mutate(city = "Vancouver", type = "FREH listings")
+
+central_multi_montreal <- 
+  daily_montreal %>% 
+  bind_rows(daily_montreal_other) %>% 
+  filter(housing, status != "B", multi) %>% 
+  count(date, central) %>% 
+  group_by(date) %>% 
+  summarize(central_pct = n[central] / sum(n)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-12-31") %>% 
+  mutate(city = "Montreal", type = "Multilistings")
+
+central_multi_toronto <- 
+  daily_toronto %>% 
+  bind_rows(daily_toronto_other) %>% 
+  filter(housing, status != "B", multi) %>% 
+  count(date, central) %>% 
+  group_by(date) %>% 
+  summarize(central_pct = n[central] / sum(n)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-12-31") %>% 
+  mutate(city = "Toronto", type = "Multilistings")
+
+central_multi_vancouver <- 
+  daily %>% 
+  mutate(central = TRUE) %>% 
+  bind_rows(mutate(daily_bc, central = FALSE)) %>% 
+  filter(housing, status != "B", multi) %>% 
+  count(date, central) %>% 
+  group_by(date) %>% 
+  summarize(central_pct = n[central] / sum(n)) %>% 
+  filter(date >= "2016-01-01", date <= "2019-12-31") %>% 
+  mutate(city = "Vancouver", type = "Multilistings")
+
+rm(property, daily, GH, property_montreal, property_montreal_other,
+   property_toronto, property_toronto_other, daily_montreal, 
+   daily_montreal_other, daily_toronto, daily_toronto_other,
+   property_bc, daily_bc)
+
+```
+
+``` {r make_fig_3_8}
+
+figure_3_8_fun <- function(regular = "", condensed = "") {
+  
+  bind_rows(central_active_montreal, central_active_toronto, 
+            central_active_vancouver, central_FREH_montreal,
+            central_FREH_toronto, central_FREH_vancouver,
+            central_multi_montreal, central_multi_toronto,
+            central_multi_vancouver) %>% 
+    filter(date <= "2019-12-31") %>% 
+    ggplot(aes(date, central_pct, colour = city, size = city)) +
+    geom_line() +
+    scale_y_continuous(name = NULL, label = scales::percent) +
+    scale_x_date(name = NULL, limits = c(as.Date("2016-07-01"), NA)) +
+    scale_colour_manual(name = NULL, 
+                        values = col_palette[c(3, 6, 5)],
+                        guide = guide_legend(override.aes = list(
+                          size = c(0.5, 0.5, 1)))) +
+    scale_size_manual(values = c("Vancouver" = 1, "Montreal" = 0.5,
+                                 "Toronto" = 0.5), guide = "none") + 
+    facet_wrap(vars(type), nrow = 1) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular, 
+                                      size = 10),
+          legend.text = element_text(size = 10, family = regular),
+          strip.text = element_text(face = "bold", family = regular, size = 10))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_3_8.pdf"), 
+         plot = figure_3_8_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_3_8.pdf"))
+}
+
+```
+
+Another way to examine the relationship between the City of Vancouver and the rest of the CMA is to compare the proportion of total regional active listings, FREH listings and multilistings located in the central city with the same proportion in the Montreal and Toronto regions. Figure \@ref(fig:fig-3-8) shows this comparison, and makes clear that Vancouver's STR market has long had an atypical relationship with that of its surrounding municipalities. In Montreal and Vancouver, the central city dominates the regional STR market in terms of total active listings, and on top of that has disproportionately high shares of FREH listings and multilistings. While in both cases outlying municipalities are slowly increasing their share of the regional market, as of the end of 2019 the central cities still had between 75% and 90% of the regional share of the various listing types. Vancouver had both a substantially lower share of its regional STR market in 2016 (where the graph begins) and a much sharper decrease in regional share across all listing categories. The fact that more STR activity would be located in outer municipalities of the Vancouver region than in Montreal or Toronto is not surprising, given that the City of Vancouver makes up a much smaller part of its CMA than the other two cities. But the fact is that Vancouver's declining share of regional STR activity began well before the City's regulations were put into place. At the same time, the City's share of regional STR activity drops noticeably in 2018, and the drop has proven to be durable. These facts suggest that the City's 2018 regulations accelerated a shift of STR activity from Vancouver to the neighbouring municipalities that was already underway. It is also notable that Vancouver now has a much smaller share of the region's multilistings than it does of active listings as a whole, but that it has a _higher_ share of FREH listings than it does of active listings as a whole. This pattern indicates that Vancouver's registration system has discouraged hosts from operating multiple listings simultaneously—a prima facie violation of the principal residence requirement—but that the system has not proven as effective at deterring full-time operation of a single listing, which is equally prohibited under the rules but arguably harder to detect.
+
+``` {r fig-3-8, include = TRUE, fig.cap = '(ref:fig-3-8)', fig.align = "center"}
+
+figure_3_8_fun()
+
+```
+
+(ref:fig-3-8) _The share of active listings, FREH listings and multilistings in the central city of the Montreal, Toronto and Vancouver CMAs_
+
+## The eastern edge of the City of Vancouver in comparison with the western edge of the City of Burnaby
+
+```{r burnaby, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_bc_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+qload(here("output", "str_bc_processed.qsm"), nthreads = availableCores())
+
+# Prepare buffer
+buffer_CoV_Burnaby <- 
+  st_intersection(select(st_cast(city, "MULTILINESTRING"), -everything()), 
+                  select(filter(st_cast(CMA, "MULTILINESTRING"), 
+                                name == "Burnaby (CY)"), -everything())) %>% 
+  st_cast("LINESTRING") %>%
+  st_buffer(dist = 1000, joinStyle = "MITRE", mitreLimit = 0.1)
+
+# Properties within the buffer
+property_buffer <- 
+  property %>% 
+  mutate(group = "CoV") %>% 
+  select(property_ID, group) %>% 
+  rbind(select(mutate(property_bc, group = "Burnaby"), property_ID, group)) %>%
+  st_filter(buffer_CoV_Burnaby)
+
+# Active listings within the buffer
+daily_buffer <- 
+  rbind(select(daily, property_ID:status, price, listing_type, housing, multi, 
+               FREH_3), 
+        select(daily_bc, property_ID:status, price, listing_type, housing, 
+               multi, FREH_3)) %>% 
+  inner_join(st_drop_geometry(property_buffer))
+
+active_listings_buffer <- 
+  daily_buffer %>% 
+  filter(housing, status != "B") %>% 
+  count(date, group) %>% 
+  group_by(group) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6, .complete = TRUE)) %>% 
+  ungroup()
+
+burnaby <-
+  CMA %>%
+  filter(name == "Burnaby (CY)")
+
+buffer_city <- 
+  st_intersection(buffer_CoV_Burnaby, select(city, -everything()))
+
+buffer_burnaby <- 
+  st_intersection(buffer_CoV_Burnaby, select(burnaby, -everything()))
+
+buffer <- 
+  rbind(mutate(buffer_city, city = "Vancouver listings"), 
+        mutate(buffer_burnaby, city = "Burnaby listings"))
+
+properties <- 
+  rbind(rename(select(property_bc, property_ID, last_active), 
+               active = last_active),
+        select(property, property_ID, active)) %>% 
+  filter(!property_ID %in% property_buffer$property_ID, active >= "2020-01-01")
+
+active_buffer <- 
+  daily_buffer %>% 
+  mutate(city = if_else(group == "CoV", "Vancouver border", 
+                        "Burnaby border")) %>% 
+  filter(housing, status != "B") %>% 
+  count(city, date) %>% 
+  group_by(city) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  ungroup() %>% 
+  filter(date >= "2016-01-01", date <= "2019-12-31") %>% 
+  mutate(type = "Active listings")
+
+FREH_buffer <- 
+  daily_buffer %>% 
+  mutate(city = if_else(group == "CoV", "Vancouver border", 
+                        "Burnaby border")) %>% 
+  filter(housing, status != "B") %>% 
+  group_by(city, date) %>% 
+  summarize(n = sum(FREH_3, na.rm = TRUE)) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 20)) %>% 
+  ungroup() %>% 
+  mutate(type = "FREH listings")
+
+multi_buffer <- 
+  daily_buffer %>% 
+  mutate(city = if_else(group == "CoV", "Vancouver border", 
+                        "Burnaby border")) %>% 
+  filter(housing, status != "B", multi) %>% 
+  count(city, date) %>% 
+  group_by(city) %>% 
+  mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+  ungroup() %>% 
+  mutate(type = "Multilistings")
+
+rm(property, daily, GH, property_bc, daily_bc)
+
+```
+
+```{r cma_streets, cache = TRUE, cache.lazy = FALSE}
+
+library(osmdata)
+
+cma_streets <- 
+  getbb("Metro Vancouver") %>% 
+  opq(timeout = 200) %>% 
+  add_osm_feature(key = "highway") %>% 
+  osmdata_sf()
+
+cma_streets <-
+  rbind(
+    cma_streets$osm_polygons %>% st_set_agr("constant") %>% st_cast("LINESTRING"), 
+    cma_streets$osm_lines) %>% 
+  as_tibble() %>% 
+  st_as_sf() %>% 
+  st_transform(32610) %>%
+  st_set_agr("constant")
+
+cma_streets <- 
+  cma_streets %>% 
+  filter(highway %in% c("primary", "secondary")) %>% 
+  select(osm_id, name, highway, geometry)
+
+```
+
+``` {r make_fig_3_9}
+
+figure_3_9_fun <- function(regular = "", condensed = "") {
+  
+  ggplot() +
+    geom_sf(data = city, fill = "grey70", color = "white", size = 0.5) +
+    geom_sf(data = CMA, fill = "grey80", color = "white", size  = 0.5) +
+    geom_sf(data = buffer, alpha = 0.8, colour = "transparent") +
+    geom_sf(data = properties, colour = "grey60", size = 0.5) +
+    geom_sf(data = cma_streets, color = "white") +
+    geom_sf(aes(color = group), data = property_buffer, size = 0.5) +
+    geom_sf(data = water, fill = "white", color = "transparent") +
+    scale_color_manual(
+      name = NULL, labels = c("Burnaby listings", "Vancouver listings"),
+      values = c("Burnaby" = col_palette[c(1)], "CoV" = col_palette[c(5)])) +
+    coord_sf(xlim = c(st_bbox(buffer)["xmin"] - 8500, 
+                      st_bbox(buffer)["xmax"] + 8500),
+             ylim = c(st_bbox(buffer)["ymin"] - 500, 
+                      st_bbox(buffer)["ymax"] + 500)) +
+    theme_void() +
+    theme(legend.position = "bottom",
+          legend.text = element_text(size = 10, family = regular))
+  
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_3_9.pdf"), 
+         plot = figure_3_9_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_3_9.pdf"))
+}
+
+```
+
+We conducted a final comparison at a smaller scale designed to directly assess the impact of the City's regulations on STR growth trajectories, by examining listings lying within one kilometre of the Vancouver-Burnaby border, in both Vancouver and Burnaby. Listings located in the study zone on either side of the Vancouver-Burnaby will be highly comparable from a visitor's perspective. The only significant difference between these listings is that some are located in the City of Vancouver, and are subject to its regulations, while some are located in the City of Burnaby, and are not. (We conducted an additional analysis of listings within walking distance of SkyTrain stations on both sides of the Vancouver border to reduce non-regulatory variations between listings even more, but the results were very similar to this analysis, so we have not presented them.) If listings in the study zone on the Vancouver side of the border display growth trajectories similar to their counterparts on the Burnaby side, this implies that the City's regulations are not meaningfully constraining STR operators in Vancouver. By contrast, if listings in the study zone on the Vancouver side of the border display growth trajectories dissimilar to their counterparts on the Burnaby side but similar to the rest of the City of Vancouver, this implies that the City's regulations are have a significant impact.
+
+``` {r fig-3-9, include = TRUE, fig.cap = '(ref:fig-3-9)', fig.align = "center"}
+
+figure_3_9_fun()
+
+```
+
+(ref:fig-3-9) _Study area for comparison: a 1-km strip on either side of the Vancouver-Burnaby border_
+
+``` {r make_fig_3_10}
+
+figure_3_10_fun <- function(regular = "", condensed = "") {
+  
+  bind_rows(active_buffer, FREH_buffer, multi_buffer,
+            mutate(active_vancouver, type = "Active listings"), 
+            mutate(FREH_vancouver, type = "FREH listings"),
+            mutate(multi_vancouver, type = "Multilistings")) %>% 
+    filter(date >= "2016-07-01", date <= "2019-12-31") %>% 
+    group_by(city, type) %>% 
+    mutate(index = 100 * n / n[date == "2017-01-01"]) %>% 
+    ungroup() %>% 
+    ggplot(aes(date, index, colour = city, size = city)) +
+    geom_line() +
+    scale_y_continuous(name = NULL, label = scales::comma) +
+    scale_x_date(name = NULL, limits = c(as.Date("2016-07-01"), NA)) +
+    scale_colour_manual(name = NULL, 
+                        values = col_palette[c(3, 6, 5)],
+                        guide = guide_legend(override.aes = list(
+                          size = c(0.5, 0.5, 1)))) +
+    scale_size_manual(values = c("Vancouver border" = 1, "Burnaby border" = 0.5,
+                                 "Vancouver" = 0.5), 
+                      guide = "none") + 
+    facet_wrap(vars(type), nrow = 1) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular, 
+                                      size = 10),
+          legend.text = element_text(size = 10, family = regular),
+          strip.text = element_text(face = "bold", family = regular, size = 10))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_3_10.pdf"), 
+         plot = figure_3_10_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_3_10.pdf"))
+}
+
+```
+
+The results of the comparison, shown in Figure \@ref(fig:fig-3-10) are highly illuminating. Listings located in Vancouver but near the border with Burnaby have been on a growth trajectory which resembles nearby listings in Burnaby in some respects, and which resembles the rest of the City of Vancouver in others. First of all, growth trajectories across all listing types have been significantly lower in the Vancouver border listings than the Burnaby border listings since the implementation of the City's STR regulations in 2018. This provides clear and compelling evidence that the regulations have reduced STR activity. However, there is a substantial difference between the patterns with respect to FREH listings (dedicated commercial operations) and multilistings (listings operated by a host who is simultaneously operating other listings). Multilistings in the Vancouver border area have grown far less quickly since 2018 than their counterparts in Burnaby, and nearly identically to multilistings elsewhere in Vancouver. But FREH listings in the Vancouver border area have grown extremely rapidly—not as quickly their counterparts in Burnaby, but more than twice as quickly as the rest of Vancouver. Both of these categories of listings will be in violation of the City's principal residence requirement, but multilistings have evidently been much more significantly restrained by the regulations than FREH listings have been. This is the same pattern that the comparison of the City of Vancouver with the rest of the Vancouver CMA revealed.
+
+``` {r fig-3-10, include = TRUE, fig.cap = '(ref:fig-3-10)', fig.align = "center"}
+
+figure_3_10_fun()
+
+```
+
+(ref:fig-3-10) _Active listings (L), FREH listings (C), and multilistings (R) along the Vancouver-Burnaby border (2017-01-01 = 100)_
+
+## Conclusions
+
+This chapter has presented a variety of comparisons designed to isolate the impact of the City of Vancouver's 2018 STR regulations on Vancouver's STR market. Across the different comparisons, the following findings emerged:
+
+- The initial implementation of the City's licensing system and Airbnb's subsequent mass removal of non-licensed listings created a one-time negative shock in the number of STR listings in Vancouver in mid-2018. But this shock was disproportionately concentrated among listings which were present on STR platforms but not actively being rented, and active listings grew more quickly in 2019 to partially counteract the effects of this shock.
+- Trend analysis sets a plausible range for the longer-term regulatory impact on total active listings of between 600 and 1,510 listings removed, or 14.2% to 35.8% of the total number of listings. The plausible range for the longer-term impact on commercial listings is between 80 and 980 commercial listings removed, or 3.0% to 35.0% of the total commercial listings.
+- Comparisons with other jurisdictions uniformly suggest that the real impact of the City's STR regulations is at the higher end of the trend analysis scenarios. Since 2018 Vancouver's STR market has developed more slowly and in a less commercialized direction than Montreal or Toronto, while a substantial amount of commercial STR activity has relocated to nearby municipalities in Metro Vancouver.
+- Comparisons with nearby municipalities suggest that, among commercial STR operations, multilistings have been particularly constrained by the City's regulations, while dedicated FREH listings have grown less than they otherwise would have, but at something closer to the rate expected in the absence of regulations. This pattern is consistent with the scenario where the City's licensing system has discouraged hosts from licensing multiple listings, but has failed to discourage hosts from operating single listings in a full-time fashion, despite the fact that both these categories of use are non-compliant with the City's principal residence requirement.
+- Based on the scenario modelling and the results of the jurisdictional comparisons, we estimate that the City's regulations have returned between 300 and 500 units of housing to the long-term market.
+
+\newpage

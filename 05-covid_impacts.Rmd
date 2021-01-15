@@ -1,0 +1,1012 @@
+# Covid-19: The impact of the pandemic on the STR market
+
+<style type="text/css">
+  body{
+  font-family: Futura, Helvetica, Arial;
+}
+</style>
+
+<br>
+
+```{r setup, include = FALSE, echo = FALSE}
+
+library(here)
+source(here("R", "01_startup.R"))
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(include = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+
+# Function for checking file modifications
+mtime <- function(files) lapply(Sys.glob(files), function(x) file.info(x)$mtime)
+
+# Set this to TRUE to output PDF figures
+build_figures <- TRUE
+
+```
+
+**STR activity in Vancouver has suffered an unprecedented collapse during the Covid-19 pandemic. Reservations from March to September 2020 are down 57.6% over 2019. Prices for reservations which did occur are down 33.0% from their previous trend. In total, the pandemic has reduced STR host revenue in Vancouver by $130.7 million from March to September. The number of frequently-rented entire home listings dropped from 2,680 in January 2020 to just 940 in August 2020. 39.2% of FREH listings were permanently deactivated and 22.9% were temporarily blocked.**
+
+## The disruption of STR activities in March 2020
+
+Business-as-usual for short-term rentals came to a halt in 2020 due to the Covid-19 pandemic. Both local and international travel restrictions and patterns have had serious effects on STR markets worldwide. On March 14th, 2020, Airbnb announced a new emergency cancellation policy in light of the Covid-19 pandemic, which enabled guests to cancel their reservations if the reservation start date was between March 14 and July 31, 2020 (Airbnb 2020). This policy, in combination with the broader decline in travel demand, caused an unprecedented collapse in STR activity in the City of Vancouver.
+
+## Reservations and prices collapsed during Covid-19
+
+```{r active_listings, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+active_by_status <- 
+  daily %>% 
+  filter(housing, date >= "2016-01-01", status %in% c("R", "A")) %>% 
+  count(date, status)
+
+reserved_nights_increase_2019 <- 
+  daily %>% 
+  filter(housing, status == "R", date >= LTM_start_date - years(1), 
+         date <= LTM_end_date) %>% 
+  count(date_2019 = date >= LTM_start_date) %>% 
+  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
+  pull(growth) %>% 
+  scales::percent(0.1)
+
+peak_reserved_nights <- 
+  daily %>% 
+  filter(housing, status == "R", date >= LTM_start_date) %>% 
+  count(date, sort = TRUE) %>% 
+  slice(1) %>% 
+  pull(n) %>% 
+  round(-2) %>% 
+  prettyNum(",")
+
+reserved_nights_increase_jan_feb <- 
+  daily %>% 
+  filter(housing, status == "R", date >= LTM_start_date, 
+         month(date) %in% c(1, 2)) %>% 
+  count(date_2020 = date >= LTM_start_date + years(1)) %>% 
+  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
+  pull(growth) %>% 
+  scales::percent(0.1)
+
+reserved_nights_increase_mar_sep <- 
+  daily %>% 
+  filter(housing, status == "R", date >= LTM_start_date, 
+         month(date) %in% 3:9) %>% 
+  count(date_2020 = date >= LTM_start_date + years(1)) %>% 
+  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
+  pull(growth) %>% 
+  scales::percent(0.1) %>% 
+  str_remove("-")
+
+rm(property, daily, GH)
+
+```
+
+``` {r make_fig_5_1}
+
+figure_5_1_fun <- function(regular = "", condensed = "") {
+  
+  active_by_status %>% 
+    group_by(status) %>% 
+    mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+    ungroup() %>% 
+    filter(date >= "2018-01-01") %>% 
+    ggplot(aes(date, n, color = status)) +
+    geom_line(lwd = 1) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = NULL, limits = c(0, NA), label = scales::comma) +
+    scale_color_manual(name = NULL,
+                       labels = c("Available listings", "Reserved listings"), 
+                       values = col_palette[c(5, 1)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.text = element_text(size = 10, family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_5_1.pdf"), 
+         plot = figure_5_1_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_5_1.pdf"))
+}
+
+```
+
+Figure \@ref(fig:fig-5-1) shows the number of STR listings available and reserved each day in Vancouver. In general, reservations spike during the winter holidays, but otherwise are low from November to February, and then increase steadily from March to August before reclining again. Available nights follow a roughly opposite pattern, since availability is higher when fewer reservations are made. Although the total number of active daily listings declined in 2019 in comparison to 2018 (as discussed in section 1), the number of listings reserved each day continued to increase. There were `r reserved_nights_increase_2019` more nights reserved in Vancouver STRs in 2019 than there were in 2018—peaking at `r peak_reserved_nights` STR nightly reservations at the beginning of August 2019. (The 14-day rolling average shown in Figure \@ref(fig:fig-5-1) peaks slightly lower.) 
+
+``` {r fig-5-1, include = TRUE, fig.cap = '(ref:fig-5-1)', fig.align = "center"}
+
+figure_5_1_fun()
+
+```
+
+(ref:fig-5-1) _Available and reserved listings since 2018 (14-day average)_
+
+In March 2020, however, when reserved nights should have been steadily increasing en route to the summer peak, they instead collapsed in the face of Covid-19. While total reserved nights from January to February 2020 increased a rapid `r reserved_nights_increase_jan_feb` compared to 2019, reserved nights from March to September 2020 decreased `r reserved_nights_increase_mar_sep` compared to the previous year.
+
+```{r reservation_trend, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+library(feasts)
+library(fabletools)
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+# Create and decompose reservations time series
+reservations <- 
+  active_by_status %>% 
+  filter(status == "R") %>% 
+  tsibble::as_tsibble() %>% 
+  tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
+  summarize(n = sum(n)) %>% 
+  filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
+  model(x11 = feasts:::X11(n, type = "additive")) %>% 
+  components()
+
+# Get March-Oct seasonal
+mar_oct_seasonal <- 
+  reservations %>% 
+  slice(39:46) %>% 
+  pull(seasonal)
+
+# Get Feb trend
+feb_trend <- 
+  reservations %>% 
+  slice(50) %>% 
+  pull(trend)
+
+# Apply March-Oct seasonal component to Feb trend
+trends <-
+  tibble(
+    date = as.Date(c("2020-03-16", "2020-04-16", "2020-05-16", "2020-06-16",
+                     "2020-07-16", "2020-08-16", "2020-09-16", "2020-09-30")),
+    trend = (feb_trend + mar_oct_seasonal) / c(31, 30, 31, 30, 31, 31, 30, 30))
+
+# Set Seo 30 value to average of September and October
+trends[8,]$trend <- mean(trends[7:8,]$trend)
+
+reservations <- 
+  active_by_status %>% 
+  filter(status == "R") %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6)) %>% 
+  filter(date >= "2019-01-01") %>% 
+  left_join(trends) %>% 
+  select(-status) %>% 
+  mutate(trend = if_else(date == "2020-03-01", n, trend)) %>% 
+  filter(date >= "2020-03-01") %>% 
+  mutate(trend = zoo::na.approx(trend))
+
+reservations <- 
+  active_by_status %>% 
+  filter(status == "R") %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6)) %>% 
+  filter(date >= "2019-01-01", date <= "2020-02-29") %>% 
+  select(-status) %>% 
+  bind_rows(reservations) 
+
+# Reservation comparisons
+sep_res_table <- 
+  reservations %>% 
+  filter(date == "2020-09-30") %>% 
+  mutate(dif = trend - n, pct_change = 1 - n / trend)
+
+res_sep_2020 <- 
+  prettyNum(round(sep_res_table$n, -1), ",")
+
+res_sep_2020_trend <- 
+  prettyNum(round(sep_res_table$trend, -1), ",")
+
+res_sep_2020_pct <- 
+  scales::percent(1 - sep_res_table$n / sep_res_table$trend, 0.1)
+
+res_sep_2020_dif <- 
+    prettyNum(round(sep_res_table$trend - sep_res_table$n, -1), ",")
+
+pandemic_reservations <- 
+  reservations %>% 
+  filter(date >= "2020-03-01") %>% 
+  summarize(across(c(n, trend), sum)) %>% 
+  mutate(dif = trend - n, pct = n / trend)
+
+res_total_pandemic_dif <- 
+    prettyNum(round(pandemic_reservations$trend - pandemic_reservations$n, -2), 
+              ",")
+
+res_total_pandemic <- 
+  prettyNum(round(pandemic_reservations$n, -2), ",")
+
+res_total_pandemic_pct <- 
+  scales::percent(pandemic_reservations$n / pandemic_reservations$trend, 0.1)
+
+res_total_pandemic_trend <- 
+    prettyNum(round(pandemic_reservations$trend, -2), ",")
+
+rm(property, daily, GH)
+
+```
+
+``` {r make_fig_5_2}
+
+figure_5_2_fun <- function(regular = "", condensed = "") {
+  
+  reservations %>% 
+    pivot_longer(-date) %>% 
+    filter(!is.na(value)) %>%
+    ggplot() +
+    geom_ribbon(aes(x = date, ymin = n, ymax = trend, group = 1),
+                data = reservations, fill = col_palette[3], 
+                alpha = 0.3) +
+    geom_line(aes(date, value, color = name), lwd = 1) +
+    geom_text(aes(x = as.Date("2020-09-30"), 
+                  y = mean(value[date == as.Date("2020-09-30")]),
+                  label = paste(
+                    prettyNum(round(abs(diff(
+                      value[date == as.Date("2020-09-30")])), -1), ","),
+                    "fewer", "reservations", "than", "expected", sep = "\n")), 
+              inherit.aes = FALSE, hjust = 1, family = condensed, 
+              nudge_x = -4) +
+    geom_segment(aes(x = as.Date("2020-09-30"), xend = as.Date("2020-09-30"),
+                     y = min(value[date == as.Date("2020-09-30")]),
+                     yend = max(value[date == as.Date("2020-09-30")])),
+                 colour = col_palette[3],
+                 arrow = arrow(length = unit(0.1, "cm"), ends = "both",
+                               type = "open")) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = NULL, limits = c(0, NA), label = scales::comma) +
+    scale_color_manual(name = NULL, labels = c("Actual reservations", 
+                                               "Expected reservations"), 
+                       values = col_palette[c(5, 1)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.text = element_text( size = 10, family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_5_2.pdf"), 
+         plot = figure_5_2_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_5_2.pdf"))
+}
+
+```
+
+Figure \@ref(fig:fig-5-2) provides a closer look at daily reservations since 2019, comparing the actual trajectory of reservations during the pandemic with what the trajectory of reservations would have been expected to be in the absence of the pandemic. (To do this, we use seasonal decomposition to identify the regular seasonal fluctuations in STR activity and separate them from the underlying patterns of growth or decline.)
+
+``` {r fig-5-2, include = TRUE, fig.cap = '(ref:fig-5-2)', fig.align = "center"}
+
+figure_5_2_fun()
+
+```
+
+(ref:fig-5-2) _Actual and expected reservations during the Covid-19 pandemic (7-day average)_
+
+On September 30, 2020, only `r res_sep_2020` STRs were reserved in Vancouver. But the trajectory of STR activity established prior to the pandemic, combined with the fact that bookings normally increase rapidly through the spring and summer, suggests that, in the absence of the pandemic, Vancouver would have been expected to receive `r res_sep_2020_trend` reservations instead. The Covid-19 pandemic, therefore, depressed STR activity by `r res_sep_2020_pct`, or `r res_sep_2020_dif` reservations, on that date. In total, from March through September 2020, we estimate that there have been `r res_total_pandemic_dif` fewer STR nights reserved than would normally have been expected to occur. The `r res_total_pandemic` total nights reserved in this time period is only `r res_total_pandemic_pct` of the `r res_total_pandemic_trend` nights total that would represent the previous growth trend.
+
+```{r prices, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+# Get average nightly prices
+average_prices <- 
+  daily %>% 
+  filter(housing, status == "R", date >= "2016-01-01",
+         listing_type == "Entire home/apt") %>% 
+  group_by(date) %>% 
+  summarize(price = mean(price))
+
+# Create monthly price time series
+monthly_prices <- 
+  average_prices %>% 
+  tsibble::as_tsibble() %>% 
+  tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
+  summarize(price = mean(price))
+
+# Get March-October seasonal
+mar_sep_price_seasonal <- 
+  monthly_prices %>% 
+  filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
+  model(x11 = feasts:::X11(price, type = "additive")) %>% 
+  components() %>%
+  slice(39:45) %>% 
+  pull(seasonal)
+
+# Get Feb trend
+feb_price_trend <- 
+  monthly_prices %>% 
+  filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
+  model(x11 = feasts:::X11(price, type = "additive")) %>% 
+  components() %>% 
+  slice(50) %>% 
+  pull(trend)
+
+# Apply March-Sep seasonal component to Feb trend
+mar_sep_price_trend <- 
+  tibble(yearmon = tsibble::yearmonth(c("2020-03", "2020-04", "2020-05", 
+                                        "2020-06", "2020-07", "2020-08",
+                                        "2020-09")),
+         trend = feb_price_trend + mar_sep_price_seasonal)
+
+# Apply to daily averages to get trend
+average_prices <- 
+  average_prices %>% 
+  mutate(yearmon = tsibble::yearmonth(date)) %>% 
+  inner_join(mar_sep_price_trend) %>% 
+  group_by(yearmon) %>% 
+  mutate(trend = price * trend / mean(price)) %>% 
+  ungroup() %>% 
+  select(date, trend) %>% 
+  left_join(average_prices, .)
+
+nightly_price_dif <- 
+  average_prices %>% 
+  filter(date >= "2020-03-01") %>% 
+  summarize(dif = 1 - sum(price) / sum(trend)) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+total_price_dif <- 
+  average_prices %>%
+  rename(price_trend = trend) %>% 
+  filter(date >= "2020-03-01") %>% 
+  left_join(reservations) %>% 
+  mutate(rev_dif = n * (price_trend - price)) %>% 
+  tally(rev_dif) %>% 
+  pull(n) %>% 
+  scales::dollar(0.1, 1 / 1000000, suffix = " million")
+
+total_revenue_lost <- 
+  average_prices %>%
+  rename(price_trend = trend) %>% 
+  filter(date >= "2020-03-01") %>% 
+  left_join(reservations) %>% 
+  mutate(total_rev_dif = n * (price_trend - price) + 
+           (trend - n) * price_trend) %>% 
+  tally(total_rev_dif) %>% 
+  pull(n) %>% 
+  scales::dollar(0.1, 1 / 1000000, suffix = " million")
+
+rm(property, daily, GH)
+
+```
+
+``` {r make_fig_5_3}
+
+figure_5_3_fun <- function(regular = "", condensed = "") {
+  
+  average_prices %>% 
+    mutate(across(c(price, trend), slide_dbl, mean, na.rm = TRUE, 
+                  .before = 6)) %>% 
+    mutate(trend = if_else(date == "2020-02-29", price, trend)) %>% 
+    filter(date >= "2019-01-01") %>% 
+    pivot_longer(-date) %>% 
+    ggplot(aes(date, value, colour = name)) +
+    geom_line(lwd = 1) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = NULL, limits = c(50, NA),
+                       label = scales::label_dollar(accuracy = 1)) +
+    scale_color_manual(name = NULL, values = col_palette[c(5, 1)],
+                       labels = c("Actual nightly price", 
+                                  "Expected nightly price")) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.text = element_text( size = 10, family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_5_3.pdf"), 
+         plot = figure_5_3_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_5_3.pdf"))
+}
+
+```
+
+The collapse of the STR market in Vancouver extends beyond the drop in reservations, because the bookings that were made occurred at sharply lower nightly prices than would have been expected. Nightly prices follow roughly the same pattern of seasonality as reservations, with lower prices in the winter and higher in the summer, plus a spike during the winter holidays. The trajectory of STR pricing since the arrival of Covid-19 in Vancouver has not follow this pattern. Indeed, prices lowered when they would have been expected to start increasing throughout the spring, and did not rise in the summer as  expected. Average prices have consistently been lower than previous trends would have predicted (Figure \@ref(fig:fig-5-3)). This is a symptom of a large number of STR hosts chasing a vastly smaller amount of demand for their listings, and cutting prices as a result. 
+
+``` {r fig-5-3, include = TRUE, fig.cap = '(ref:fig-5-3)', fig.align = "center"}
+
+figure_5_3_fun()
+
+```
+
+(ref:fig-5-3) _Actual and expected average nightly prices for entire-home listings during the COVID-19 pandemic (7-day average)_
+
+Throughout the May-September period of 2020, nightly prices have been an average of `r nightly_price_dif` lower than expected. Spread across the `r res_total_pandemic` nights reserved during this period, this means that STR operators collectively earned `r total_price_dif` less than they would have on their bookings in the absence of the pandemic. When the lower prices on reservations which did occur is combined with the reservations which did not occur, our estimate is that Vancouver’s STR hosts lost a total of `r total_revenue_lost` million in revenue between March and September 2020 because of the Covid-19 pandemic.
+
+## Covid’s impact on frequently rented entire-home listings
+
+```{r FREH_outcomes, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+FREH_2020 <- 
+  daily %>% 
+  filter(housing, date >= "2020-01-01", date <= "2020-02-29", FREH_3 > 0.5) %>% 
+  pull(property_ID) %>% 
+  unique() %>% 
+  {filter(property, property_ID %in% .)} %>% 
+  st_drop_geometry()
+
+non_FREH_2020 <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(property_ID %in% {daily %>% 
+      filter(housing, date >= "2020-01-01", date <= "2020-02-29", 
+             status != "B") %>% 
+      pull(property_ID) %>% 
+      unique()}, !property_ID %in% FREH_2020$property_ID)
+
+FREH_2019 <- 
+  daily %>% 
+  filter(housing, date >= "2019-01-01", date <= "2019-02-28", FREH_3 > 0.5) %>% 
+  pull(property_ID) %>% 
+  unique() %>% 
+  {filter(property, property_ID %in% .)} %>% 
+  st_drop_geometry()
+
+non_FREH_2019 <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(property_ID %in% {daily %>% 
+      filter(housing, date >= "2019-01-01", date <= "2019-02-28", 
+             status != "B") %>% 
+      pull(property_ID) %>% 
+      unique()}, !property_ID %in% FREH_2019$property_ID)
+
+total_2020 <- 
+  tibble(
+    group = c("FREH", "non-FREH"),
+    year = 2020,
+    variable = "total listings",
+    value = c(nrow(FREH_2020), nrow(non_FREH_2020))
+  )
+
+total_2019 <- 
+  tibble(
+    group = c("FREH", "non-FREH"),
+    year = 2019,
+    variable = "total listings",
+    value = c(nrow(FREH_2019), nrow(non_FREH_2019))
+  )
+
+deactivated_2020 <- 
+  tibble(
+    group = c("FREH", "non-FREH"),
+    year = 2020,
+    variable = "deactivated",
+    value = c({
+      FREH_2020 %>% 
+        summarize(total = sum(scraped <= "2020-09-30")) %>% 
+        pull(total)}, {
+          non_FREH_2020 %>% 
+            summarize(total = sum(scraped <= "2020-09-30")) %>% 
+            pull(total)})
+  )
+
+deactivated_2019 <- 
+  tibble(
+    group = c("FREH", "non-FREH"),
+    year = 2019,
+    variable = "deactivated",
+    value = c({
+      FREH_2019 %>% 
+        summarize(total = sum(scraped <= "2019-09-30")) %>% 
+        pull(total)}, {
+          non_FREH_2019 %>% 
+            summarize(total = sum(scraped <= "2019-09-30")) %>% 
+            pull(total)})
+  )
+
+blocked_PIDs_2020 <- 
+  daily %>% 
+  filter(housing, date >= "2020-09-01", date <= "2020-09-30") %>% 
+  group_by(property_ID) %>% 
+  filter(mean(status == "B") == 1) %>% 
+  pull(property_ID) %>% 
+  unique()
+
+blocked_PIDs_2019 <- 
+  daily %>% 
+  filter(housing, date >= "2019-09-01", date <= "2019-09-30") %>% 
+  group_by(property_ID) %>% 
+  filter(mean(status == "B") == 1) %>% 
+  pull(property_ID) %>% 
+  unique()
+
+blocked_2020 <-
+  tibble(
+    group = c("FREH", "non-FREH"),
+    year = 2020,
+    variable = "blocked",
+    value = c(nrow(filter(FREH_2020, property_ID %in% blocked_PIDs_2020)),
+              nrow(filter(non_FREH_2020, property_ID %in% blocked_PIDs_2020)))
+  )
+
+blocked_2019 <-
+  tibble(
+    group = c("FREH", "non-FREH"),
+    year = 2019,
+    variable = "blocked",
+    value = c(nrow(filter(FREH_2019, property_ID %in% blocked_PIDs_2019)),
+              nrow(filter(non_FREH_2019, property_ID %in% blocked_PIDs_2019)))
+  )
+
+active_2020 <- 
+  tibble(
+    group = c("FREH", "non-FREH"),
+    year = 2020,
+    variable = "active",
+    value = c(
+      nrow(FREH_2020) - deactivated_2020[1,]$value - blocked_2020[1,]$value,
+      nrow(non_FREH_2020) - deactivated_2020[2,]$value - blocked_2020[2,]$value)
+  )
+
+active_2019 <- 
+  tibble(
+    group = c("FREH", "non-FREH"),
+    year = 2019,
+    variable = "active",
+    value = c(
+      nrow(FREH_2019) - deactivated_2019[1,]$value - blocked_2019[1,]$value,
+      nrow(non_FREH_2019) - deactivated_2019[2,]$value - blocked_2019[2,]$value)
+  )
+
+comparison_df <- 
+  bind_rows(total_2020, total_2019, deactivated_2020, deactivated_2019,
+            blocked_2020, blocked_2019, active_2020, active_2019)
+
+# Figure parameters
+n_segs <- 1000
+offset <- 1000
+max_y <- comparison_df %>% filter(value == max(value)) %>% 
+  mutate(value = value + 2 * offset) %>% pull(value)
+
+fig_polys <- 
+  comparison_df %>% 
+  group_by(group, year, variable) %>%
+  summarize(
+    x = c(3, 5) - (variable == "total listings") * 3,
+    ymax = rep(value, 2)) %>% 
+  ungroup() %>% 
+  arrange(desc(variable)) %>% 
+  group_by(group, year) %>% 
+  mutate(
+    ymin = case_when(
+      variable == "total listings" ~ offset,
+      variable == "active"         ~ 0,
+      variable == "blocked"        ~ ymax[variable == "active"][1] + offset,
+      variable == "deactivated"    ~ ymax[variable == "blocked"][1] + 
+        ymax[variable == "active"][1] + offset * 2
+    ),
+    ymax = ymax + ymin, .before = ymax) %>% 
+  mutate(adjustment = max_y / 2 - mean(c(ymax[variable == "total listings"], 
+                                         ymin[variable == "total listings"])),
+         ymin = ymin + adjustment,
+         ymax = ymax + adjustment) %>% 
+  ungroup()
+
+fig_segments <-
+  fig_polys %>% 
+  filter(variable != "total listings") %>% 
+  mutate(orientation = case_when(
+    variable == "deactivated" ~ -1,
+    variable == "blocked"     ~ 0,
+    variable == "active"      ~ 1)) %>% 
+  group_by(group, year, variable) %>% 
+  mutate(across(c(ymin, ymax), ~{.x + c(offset, 0) * orientation})) %>% 
+  ungroup() %>% 
+  select(-orientation) %>% 
+  mutate(x = (x + 1) / 2) %>% 
+  group_by(group, year) %>% 
+  mutate(ramp = 1:6) %>% 
+  group_by(group, year, variable) %>% 
+  mutate(ymin_slope = diff(ymin) / diff(x),
+         ymin_intercept = ymin[1] - ymin_slope * x[1],
+         ymax_slope = diff(ymax) / diff(x),
+         ymax_intercept = ymax[1] - ymax_slope * x[1]) %>% 
+  summarize(
+    x = seq(min(x), max(x), length.out = n_segs),
+    xend = x,
+    y = x * ymin_slope[1] + ymin_intercept[1],
+    yend = xend * ymax_slope[1] + ymax_intercept[1],
+    ramp = x - min(x) + min(ramp)
+  ) %>% 
+  ungroup()
+
+fig_labels <-
+  fig_polys %>% 
+  group_by(group, year, variable) %>% 
+  summarize(x = mean(x),
+            y = mean(c(ymin, ymax)),
+            label = mean(ymax) - mean(ymin)) %>% 
+  ungroup() %>% 
+  group_by(group, year) %>% 
+  mutate(label = case_when(
+    variable == "total listings" ~ paste0(label, " ", variable, "\nin Jan/Feb"),
+    variable == "active" ~ paste0(label, " (", 
+                                  round(label/sum(label) * 200, 1), "%) ", 
+                                  variable, "\nin September"),
+    TRUE ~ paste0(label, " (", round(label/sum(label) * 200, 1), "%) ",
+                  variable))) %>% 
+  ungroup()
+
+# Facts about housing loss
+GH_total <- 
+  GH %>% 
+  st_drop_geometry() %>% 
+  filter(status != "B") %>% 
+  group_by(date) %>% 
+  summarize(GH_units = sum(housing_units))
+
+housing_loss_summary <- 
+  daily %>% 
+  group_by(date) %>% 
+  summarize(FREH = sum(FREH_3)) %>% 
+  left_join(GH_total) %>% 
+  mutate(housing_loss = FREH + GH_units) %>% 
+  filter(date >= key_date_regulations) %>% 
+  filter(housing_loss == max(housing_loss, na.rm = TRUE)) %>% 
+  mutate(across(-date, round, -1))
+
+peak_housing_loss <- 
+  prettyNum(housing_loss_summary$housing_loss, ",")
+
+oct_2017_housing_loss <- 
+  daily %>% 
+  group_by(date) %>% 
+  summarize(FREH = sum(FREH_3)) %>% 
+  left_join(GH_total) %>% 
+  mutate(housing_loss = FREH + GH_units) %>%
+  filter(housing_loss == max(housing_loss, na.rm = TRUE)) %>% 
+  pull(housing_loss) %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+peak_FREH <- 
+  prettyNum(housing_loss_summary$FREH, ",")
+
+peak_GH <-
+  prettyNum(housing_loss_summary$GH_units, ",")
+
+aug_2020_housing_loss <- 
+  daily %>% 
+  group_by(date) %>% 
+  summarize(FREH = sum(FREH_3)) %>% 
+  left_join(GH_total) %>% 
+  mutate(housing_loss = FREH + GH_units) %>% 
+  filter(date == "2020-08-01") %>% 
+  mutate(across(-date, round, -1)) %>% 
+  pull(housing_loss) %>% 
+  prettyNum(",")
+
+#' FREH in either Jan or Feb 2020
+FREH_in_jan_feb <- 
+  daily %>% 
+  filter(housing, date >= "2020-01-01", date <= "2020-02-29", FREH_3 > 0.5) %>% 
+  pull(property_ID) %>% 
+  unique()
+
+jan_feb_FREH_total <- 
+  length(FREH_in_jan_feb) %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+jan_feb_FREH_deactivated <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(property_ID %in% FREH_in_jan_feb) %>% 
+  summarize(total = round(sum(scraped <= "2020-09-30"), -1),
+            pct = round(mean(scraped <= "2020-09-30"), 3)) %>% 
+  pull(total) %>% 
+  prettyNum(",")
+
+jan_feb_FREH_deactivated_pct <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(property_ID %in% FREH_in_jan_feb) %>% 
+  summarize(total = round(sum(scraped <= "2020-09-30"), -1),
+            pct = round(mean(scraped <= "2020-09-30"), 3)) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+FREH_in_jan_feb_2019 <- 
+  daily %>% 
+  filter(housing, date >= "2019-01-01", date <= "2019-02-28", FREH_3 > 0.5) %>% 
+  pull(property_ID) %>% 
+  unique()
+
+jan_feb_FREH_deactivated_pct_2019 <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(property_ID %in% FREH_in_jan_feb_2019) %>% 
+  summarize(pct = mean(scraped <= "2019-09-30")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+jan_feb_non_FREH_deactivated_pct <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(property_ID %in% {daily %>% 
+      filter(housing, date >= "2020-01-01", date <= "2020-02-29", 
+             status != "B") %>% 
+      pull(property_ID) %>% 
+      unique()}, !property_ID %in% FREH_in_jan_feb) %>% 
+  summarize(pct = mean(scraped <= "2020-09-30")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+jan_feb_non_FREH_deactivated_pct_2019 <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(property_ID %in% {daily %>% 
+      filter(housing, date >= "2019-01-01", date <= "2019-02-28", 
+             status != "B") %>% 
+      pull(property_ID) %>% 
+      unique()}, !property_ID %in% FREH_in_jan_feb_2019) %>% 
+  summarize(pct = mean(scraped <= "2019-09-30")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+# For final figure
+monthly_reservation_trajectories <- 
+  daily %>% 
+  filter(housing, status == "R", date >= "2019-01-01", 
+         listing_type == "Entire home/apt") %>% 
+  mutate(FREH_feb = if_else(property_ID %in% FREH_in_jan_feb, TRUE, FALSE)) %>% 
+  tsibble::as_tsibble(index = date, key = property_ID) %>% 
+  tsibble::group_by_key() %>% 
+  tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
+  summarize(n = sum(status == "R"),
+            FREH_feb = as.logical(prod(FREH_feb))) %>% 
+  group_by(FREH_feb) %>% 
+  tsibble::index_by(yearmon) %>% 
+  summarize(n = mean(n)) %>% 
+  arrange(yearmon, FREH_feb)
+
+daily_reservation_trajectories <- 
+  daily %>% 
+  filter(housing, status == "R", date >= "2019-01-01", 
+         listing_type == "Entire home/apt") %>% 
+  mutate(FREH_feb = if_else(property_ID %in% FREH_in_jan_feb, TRUE, FALSE)) %>% 
+  count(date, FREH_feb)
+
+jan_feb_FREH_active <- 
+  property %>% 
+  filter(property_ID %in% FREH_in_jan_feb, scraped > "2020-09-30") %>% 
+  nrow() %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+jan_feb_FREH_blocked_all <- 
+  daily %>% 
+  filter(housing, date >= "2020-09-01", date <= "2020-09-30") %>% 
+  group_by(property_ID) %>% 
+  filter(mean(status == "B") == 1) %>% 
+  pull(property_ID) %>% 
+  unique() %>% 
+  {filter(property, property_ID %in% ., property_ID %in% FREH_in_jan_feb)} %>% 
+  nrow() %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+jan_feb_FREH_blocked_all_pct <- 
+  {daily %>% 
+  filter(housing, date >= "2020-09-01", date <= "2020-09-30") %>% 
+  group_by(property_ID) %>% 
+  filter(mean(status == "B") == 1) %>% 
+  pull(property_ID) %>% 
+  unique() %>% 
+  {filter(property, property_ID %in% ., property_ID %in% FREH_in_jan_feb)} %>% 
+  nrow() %>% 
+  `/`(property %>% 
+        filter(property_ID %in% FREH_in_jan_feb, scraped > "2020-09-30") %>% 
+        nrow())} %>% 
+  scales::percent(0.1)
+
+jan_feb_FREH_blocked_maj <- 
+  daily %>% 
+  filter(housing, date >= "2020-09-01", date <= "2020-09-30") %>% 
+  group_by(property_ID) %>% 
+  filter(mean(status == "B") > 0.5) %>% 
+  pull(property_ID) %>% 
+  unique() %>% 
+  {filter(property, property_ID %in% ., property_ID %in% FREH_in_jan_feb)} %>% 
+  nrow() %>% 
+  round(-1) %>% 
+  prettyNum(",")
+
+jan_feb_FREH_blocked_maj_pct <- 
+  {daily %>% 
+    filter(housing, date >= "2020-09-01", date <= "2020-09-30") %>% 
+    group_by(property_ID) %>% 
+    filter(mean(status == "B") > 0.5) %>% 
+    pull(property_ID) %>% 
+    unique() %>% 
+    {filter(property, property_ID %in% ., property_ID %in% FREH_in_jan_feb)} %>% 
+    nrow() %>% 
+    `/`(property %>% 
+          filter(property_ID %in% FREH_in_jan_feb, scraped > "2020-09-30") %>% 
+          nrow())} %>% 
+  scales::percent(0.1)
+
+jan_feb_FREH_blocked_all_pct_2019 <- 
+  {daily %>% 
+    filter(housing, date >= "2019-09-01", date <= "2019-09-30") %>% 
+    group_by(property_ID) %>% 
+    filter(mean(status == "B") == 1) %>% 
+    pull(property_ID) %>% 
+    unique() %>% 
+    {filter(property, property_ID %in% ., 
+            property_ID %in% FREH_in_jan_feb_2019)} %>% 
+    nrow() %>% 
+    `/`(property %>% 
+          filter(property_ID %in% FREH_in_jan_feb_2019, 
+                 scraped > "2019-09-30") %>% 
+          nrow())} %>% 
+  scales::percent(0.1)
+
+jan_feb_FREH_blocked_maj_pct_2019 <- 
+  {daily %>% 
+    filter(housing, date >= "2019-09-01", date <= "2019-09-30") %>% 
+    group_by(property_ID) %>% 
+    filter(mean(status == "B") > 0.5) %>% 
+    pull(property_ID) %>% 
+    unique() %>% 
+    {filter(property, property_ID %in% ., 
+            property_ID %in% FREH_in_jan_feb_2019)} %>% 
+    nrow() %>% 
+    `/`(property %>% 
+          filter(property_ID %in% FREH_in_jan_feb_2019, 
+                 scraped > "2019-09-30") %>% 
+          nrow())} %>% 
+  scales::percent(0.1)
+
+feb_2020_FREH_pct <- 
+  daily %>% 
+  filter(housing, date >= "2020-02-01", date <= "2020-02-29", status == "R") %>% 
+  summarize(pct = mean(property_ID %in% FREH_in_jan_feb)) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+rm(property, daily, GH)
+
+```
+
+We estimate conversions to dedicated entire-home STRs (what we call “frequently rented entire-home”, or FREH, listings) using a statistical model described above in section 1. The model uses three months of a listing’s activity (nights available, reserved or blocked) in combination with historical data incorporating a year of activity for listings which have existed for that long to determine whether a listing’s current activity is consistent with it being a dedicated STR. 
+
+According to the model, the number of housing units in Vancouver lost due to commercial STRs reached its all-time peak (`r peak_housing_loss`) at the beginning of 2020 since the beginning of the regulations (the true peak being in October of 2017 at `r oct_2017_housing_loss`). Most of these (`r peak_FREH`) were FREH listings, with the remainder (`r peak_GH`) being ghost hostels—clusters of private-room listings operated out of a single housing unit. As of August 2020, the number of FREH listings had dropped to its lowest amount since we began tracking it in 2016, with just `r aug_2020_housing_loss` listings displaying availability and reservations consistent with historical patterns of full-time STR activity in Vancouver.
+
+One possibility is that these formerly FREH listings are no longer operating as STRs, either permanently (the listings were deactivated) or temporarily (the listings were blocked from receiving reservations). Under this possibility the listings may have been returned to the longer-term rental market. Another possibility is that the listings have remained open for business as short-term rentals, but the dramatically decreased demand for tourist accommodations means that the listings have not received the level of reservations which our model expects in order to classify the listings as frequently rented.
+
+``` {r make_fig_5_4}
+
+figure_5_4_fun <- function(regular = "", condensed = "") {
+  
+  fig_polys %>% 
+    ggplot() +
+    geom_ribbon(aes(x = x, ymin = ymin, ymax = ymax, fill = variable)) +
+    geom_segment(aes(x = x, xend = xend, y = y, yend = yend, group = variable,
+                     colour = ramp), data = fig_segments, inherit.aes = FALSE) +
+    geom_text(aes(x, y, group = variable, label = label), data = fig_labels,
+              colour = "white", size = 2, family = regular) + 
+    scale_colour_gradientn(colours = col_palette[c(5, 3, 5, 2, 5, 1)]) +
+    scale_fill_manual(values = c("total listings" = col_palette[5], 
+                                 "active" = col_palette[1],
+                                 "blocked" = col_palette[2],
+                                 "deactivated" = col_palette[3])) +
+    facet_grid(rows = vars(group), cols = vars(year), switch = "y",
+               scales = "free_y", space = "free_y") +
+    theme_void() +
+    theme(legend.position = "none",
+          text = element_text(face = "plain", family = regular),
+          strip.text = element_text(face = "bold", family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_5_4.pdf"), 
+         plot = figure_5_4_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_5_4.pdf"))
+}
+
+```
+
+We adjudicate between these possibilities by comparing the activity of listings which had FREH status in January or February 2020—the months before the pandemic arrived—and listings which did not have this status. There were `r jan_feb_FREH_total` listings which we consider likely to have been FREH in either or both of January and February 2020. Of these listings, `r jan_feb_FREH_deactivated` were no longer listed on Airbnb or VRBO as of September 30, 2020. This is `r jan_feb_FREH_deactivated_pct` of these listings—almost twice as high as the `r jan_feb_FREH_deactivated_pct_2019` of listings which were FREH in either January or February 2019 and were no longer listed on the STR platforms by the end of August 2019. In total, `r jan_feb_non_FREH_deactivated_pct` of non-FREH listings active in January or February 2020 were deactivated by the end of August 2020, while the corresponding figure last year was `r jan_feb_non_FREH_deactivated_pct_2019`. This means that non-FREH listings have been deactivated at a higher rate this year than last year, but FREH listings have been deactivated at a substantially higher rate this year than last year (Figure \@ref(fig:fig-5-4)).
+
+``` {r fig-5-4, include = TRUE, fig.cap = '(ref:fig-5-4)', fig.align = "center"}
+
+figure_5_4_fun()
+
+```
+
+(ref:fig-5-4) _Activity trajectories of FREH and non-FREH listings in 2019 and 2020_
+
+Of the `r jan_feb_FREH_active` FREH listings which remained listed throughout March - September, `r jan_feb_FREH_blocked_all` (`r jan_feb_FREH_blocked_all_pct`) were blocked (i.e. not available for reservations) for all of the month of September, and `r jan_feb_FREH_blocked_maj` (`r jan_feb_FREH_blocked_maj_pct`) were blocked for a majority of the month. This is extremely rare behaviour for a dedicated STR listing, since September is usually one of the busiest months for tourist accommodations in Vancouver. In 2019, only `r jan_feb_FREH_blocked_all_pct_2019` of listings which were FREH in January or February were blocked for all of September, and only `r jan_feb_FREH_blocked_maj_pct_2019` were blocked for a majority of the month.
+
+``` {r make_fig_5_5}
+
+library(tsibble)
+
+figure_5_5_fun <- function(regular = "", condensed = "") {
+  
+  fig_left <- 
+    daily_reservation_trajectories %>% 
+    group_by(FREH_feb) %>% 
+    mutate(n = slider::slide_dbl(n, mean, .before = 13)) %>% 
+    ungroup() %>% 
+    ggplot(aes(date, n, colour = FREH_feb)) +
+    geom_line(lwd = 1) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = "Total daily reservations", limits = c(0, NA), 
+                       label = scales::comma) +
+    scale_color_manual(name = "FREH status in January-February 2020", 
+                       values = col_palette[c(5, 1)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular, 
+                                      size = 10),
+          legend.text = element_text( size = 10, family = regular))
+  
+  fig_right <- 
+    monthly_reservation_trajectories %>% 
+    mutate(date = as.Date(yearmon)) %>%
+    ggplot(aes(date, n, colour = FREH_feb)) +
+    geom_line(lwd = 1) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = "Average monthly reservations", limits = c(5, NA), 
+                       label = scales::label_number(accuracy = 1)) +
+    scale_color_manual(name = "FREH status in January-February 2020", 
+                       values = col_palette[c(5, 1)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.title = element_text(face = "bold", family = regular,
+                                      size = 10),
+          legend.text = element_text(size = 10, family = regular))
+  
+  fig_left + fig_right + plot_layout(guides = 'collect') & 
+    theme(legend.position = "bottom")
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_5_5.pdf"), 
+         plot = figure_5_5_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_5_5.pdf"))
+}
+
+```
+
+Figure \@ref(fig:fig-5-5) compares the activity of the FREH and non-FREH listings which have remained active during the pandemic. The left panel shows the total reserved nights which occurred in each of these two groups. Unsurprisingly, it demonstrates that the large majority of reservations in the months prior to the pandemic occurred in these FREH properties. For example, in the month of February 2020, `r feb_2020_FREH_pct` of all reserved nights were booked in these FREH properties. In March 2020, reservations declined in both the FREH and non-FREH properties, but the decline is far larger in both relative and absolute terms among the FREH properties. The right panel aggregates the same data in a different fashion, showing the average number of booked nights per listing per month across the FREH and non-FREH listings. The same general pattern is observable: FREH listings receive substantially more bookings per month than non-FREH properties until March 2020, at which point both groups see their reservations decline, but the FREH listings decline much more sharply.
+
+``` {r fig-5-5, include = TRUE, fig.cap = '(ref:fig-5-5)', fig.align = "center"}
+
+figure_5_5_fun()
+
+```
+
+(ref:fig-5-5) _The total number of reservations per day (L) and the average reservations per listing per month (R), for listings which had FREH status in January or February 2020 and listings which did not (14-day average)_
+
+The conclusion is that, while the entire STR market in Vancouver has suffered an unprecedented collapse during the Covid-19 pandemic, this collapse has been disproportionately concentrated among dedicated STRs which have been responsible for thousands of units of rental housing lost in the city over the past several years. This raises the possibility that some of these units many have returned to the long-term rental market—a possibility that has been noted anecdotally in cities across Canada (McSheffrey 2020). We explore this possibility systematically in the next chapter.
+
+\newpage

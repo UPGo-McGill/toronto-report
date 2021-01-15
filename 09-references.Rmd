@@ -1,0 +1,29 @@
+# References {-}
+
+Airbnb. (2020). Extenuating circumstances policy and the coronavirus. Airbnb. https://www.airbnb.ca/help/article/2701/extenuating-circumstances-policy-and-the-coronavirus-covid19
+
+Barron, K., Kung, E., & Proserpio, D. (2017). The Effect of Home-Sharing on House Prices and Rents: Evidence from Airbnb. https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3006832 
+
+Boeing, G., & Waddell, P. (2017). New insights into rental housing markets across the United States: Web scraping and analyzing craigslist rental listings. Journal of Planning Education and Research, 37(4), 457-476. https://doi.org/10.1177/0739456X16664789
+
+City of Vancouver. 2020a. Short-term rental business licence. City of Vancouver. Online: https://vancouver.ca/doing-business/short-term-rentals.aspx
+
+City of Vancouver. 2020b. Short-term rental highlights report. City of Vancouver. Online: https://vancouver.ca/files/cov/short-term-rental-highlights-report.pdf 
+
+City of Vancouver. 2019. One year review of short-term rental (STR) program. City of Vancouver. Online: https://council.vancouver.ca/20191106/documents/cfsc1.pdf 
+
+CMHC. (nd). Methodology for rental market survey. Accessed July 2020.  https://www03.cmhc-schl.gc.ca/hmip-pimh/en/TableMapChart/RmsMethodology
+
+Combs, J., Kerrigan, D., & Wachsmuth, D. (2019 [preprint]). Short-term rentals in Canada: Uneven growth, uneven impacts. Canadian Journal of Urban Research. https://upgo.lab.mcgill.ca/publication/short-term-rentals-in-canada/short-term-rentals-in-canada.pdf 
+
+Deboosere, R., Kerrigan, D. J., Wachsmuth, D., & El-Geneidy, A. (2019). Location, location and professionalization: a multilevel hedonic analysis of Airbnb listing prices and revenue. Regional Studies, Regional Science, 6(1), 143-156. https://doi.org/10.1080/21681376.2019.1592699
+
+Garcia-López, M. À., Jofre-Monseny, J., Martínez Mazza, R., & Segú, M. (2019). Do short-term rental platforms affect housing markets? Evidence from Airbnb in Barcelona. Retrieved from: https://mpra.ub.uni-muenchen.de/96131/1/MPRA_paper_96131.pdf
+
+Horn, K., & Merante, M. (2017). Is home sharing driving up rents? Evidence from Airbnb in Boston. Journal of Housing Economics, 38, 14-24. https://doi.org/10.1016/j.jhe.2017.08.002
+
+McSheffrey, E. (2020, June 8). The New Reality: As bookings plummet, short-term hosts court long-term tenants during COVID-19. Global News https://globalnews.ca/news/6992034/short-term-rentals-long-term-tenants-coronavirus-covid-19/
+
+RCLALQ (2020). La flambée des loyers. Enquête sur les prix des logements à louer au Québec. [Report] Regroupement des comités logement et associations de locataires du Québec. https://rclalq.qc.ca/publications/enquete-flambee-des-loyers/ 
+
+Wachsmuth, D., & Weisler, A. (2018). Airbnb and the rent gap: Gentrification through the Sharing Economy. Environmental and Planning A: Economy and Space, 50(6), 1147-1170. https://doi.org/10.1177/0308518X18778038 

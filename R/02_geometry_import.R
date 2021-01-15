@@ -60,25 +60,24 @@ DA <-
 
 # Toronto neighbourhoods --------------------------------------------------
 
-NB <-
-  read_sf("data/Neighbourhoods/Neighbourhoods.shp") %>%
-  select(neighbourhood = FIELD_7) %>%
-  mutate(neighbourhood = sub("\\s+[^ ]+$", "", neighbourhood)) %>% 
+WD <-
+  read_sf("data/wards/City Wards Data.shp") %>%
+  select(ward = FIELD_13) %>%
   st_set_agr("constant") %>%
   st_as_sf() %>%
   st_transform(32617) %>%
   st_intersection(province)
 
-NB <-
+WD <-
   DA %>%
   select(dwellings) %>%
-  st_interpolate_aw(NB, extensive = TRUE) %>%
+  st_interpolate_aw(WD, extensive = TRUE) %>%
   st_drop_geometry() %>%
   select(dwellings) %>%
-  cbind(NB, .) %>%
+  cbind(WD, .) %>%
   as_tibble() %>%
   st_as_sf() %>%
-  arrange(neighbourhood)
+  arrange(ward)
 
 
 # Streets -----------------------------------------------------------------
@@ -154,6 +153,6 @@ NB <-
 
 # Save output -------------------------------------------------------------
 
-qsavem(province, CMA, DA, city, NB,
+qsavem(province, CMA, DA, city, WD,
        #streets, BL, BL_expanded, skytrain,
        file = "output/geometry.qsm", nthreads = availableCores())

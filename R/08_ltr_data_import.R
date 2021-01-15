@@ -27,57 +27,57 @@ cl <- qread("data/ltr/cl.qs", nthreads = availableCores()) %>%
 
 # Get geometry from KJ listings -------------------------------------------
 
-Find previously geocoded addresses
-upgo_connect(geolocation = TRUE)
-
-processed_addresses <-
-  geolocation_remote %>%
-  filter(entity %in% !!kj$location) %>%
-  collect()
-
-upgo_disconnect()
-
-kj_old_geography <-
-  kj %>%
-  inner_join(processed_addresses, by = c("location" = "entity"))
-
-kj_new_geography <-
-  kj %>%
-  filter(!location %in% processed_addresses$entity, !is.na(location))
-
-if (nrow(kj_new_geography) > 0) {
-
-  to_geocode <- kj_new_geography$location %>% unique()
-  output <- ggmap::geocode(to_geocode)
-  output <- tibble(location = to_geocode, lon = output$lon, lat = output$lat)
-
-  kj_new_geography <-
-    kj_new_geography %>%
-    left_join(output, by = "location")
-
-} else kj_new_geography <- mutate(kj_new_geography, lon = numeric(),
-                                  lat = numeric())
-
-locations_new <-
-  kj_new_geography %>%
-  select(entity = location, lon, lat)
-
-locations_new <-
-  locations_new %>%
-  distinct(entity, .keep_all = TRUE)
-
-# Upload new geocoding results to server (ONLY WORKS WITH ADMIN PRIVILEGES)
-upgo_connect(geolocation = TRUE)
-RPostgres::dbWriteTable(upgo:::.upgo_env$con, "geolocation", locations_new,
-                        append = TRUE)
-
-upgo_disconnect()
-
-# Rbind results
-kj <- bind_rows(kj_old_geography, kj_new_geography)
-
-suppressWarnings(rm(processed_addresses, kj_old_geography, kj_new_geography,
-   locations_new, output, to_geocode))
+# # Find previously geocoded addresses
+# upgo_connect(geolocation = TRUE)
+# 
+# processed_addresses <-
+#   geolocation_remote %>%
+#   filter(entity %in% !!kj$location) %>%
+#   collect()
+# 
+# upgo_disconnect()
+# 
+# kj_old_geography <-
+#   kj %>%
+#   inner_join(processed_addresses, by = c("location" = "entity"))
+# 
+# kj_new_geography <-
+#   kj %>%
+#   filter(!location %in% processed_addresses$entity, !is.na(location))
+# 
+# if (nrow(kj_new_geography) > 0) {
+# 
+#   to_geocode <- kj_new_geography$location %>% unique()
+#   output <- ggmap::geocode(to_geocode)
+#   output <- tibble(location = to_geocode, lon = output$lon, lat = output$lat)
+# 
+#   kj_new_geography <-
+#     kj_new_geography %>%
+#     left_join(output, by = "location")
+# 
+# } else kj_new_geography <- mutate(kj_new_geography, lon = numeric(),
+#                                   lat = numeric())
+# 
+# locations_new <-
+#   kj_new_geography %>%
+#   select(entity = location, lon, lat)
+# 
+# locations_new <-
+#   locations_new %>%
+#   distinct(entity, .keep_all = TRUE)
+# 
+# # Upload new geocoding results to server (ONLY WORKS WITH ADMIN PRIVILEGES)
+# upgo_connect(geolocation = TRUE)
+# RPostgres::dbWriteTable(upgo:::.upgo_env$con, "geolocation", locations_new,
+#                         append = TRUE)
+# 
+# upgo_disconnect()
+# 
+# # Rbind results
+# kj <- bind_rows(kj_old_geography, kj_new_geography)
+# 
+# suppressWarnings(rm(processed_addresses, kj_old_geography, kj_new_geography,
+#    locations_new, output, to_geocode))
 
 
 # Clean up KJ file --------------------------------------------------------
@@ -97,29 +97,30 @@ kj <-
            str_remove('.*">'),
          type = if_else(type == "Not Available", NA_character_, type))
 
-kj <- 
-  kj %>% 
-  select(id, short_long:furnished, type, lat, lon, title, text, photos) %>% 
-  mutate(kj = TRUE)
-
-kj_with_geom <-
-  kj %>%
-  filter(!is.na(lon), !is.na(lat)) %>%
-  st_as_sf(coords = c("lon", "lat"), crs = 4326)
-
-kj_without_geom <-
-  kj %>%
-  filter(is.na(lon) | is.na(lat)) %>%
-  mutate(geometry = st_sfc(st_point())) %>%
-  st_as_sf(crs = 4326) %>%
-  select(-lon, -lat)
-
-kj <-
-  rbind(kj_with_geom, kj_without_geom) %>%
-  st_as_sf() %>%
-  arrange(scraped, id)
-
-rm(kj_with_geom, kj_without_geom)
+# kj <-
+#   kj %>%
+#   select(id, short_long:furnished, type, lat, lon, 
+#          title, text, photos) %>%
+#   mutate(kj = TRUE)
+# 
+# kj_with_geom <-
+#   kj %>%
+#   filter(!is.na(lon), !is.na(lat)) %>%
+#   st_as_sf(coords = c("lon", "lat"), crs = 4326)
+# 
+# kj_without_geom <-
+#   kj %>%
+#   filter(is.na(lon) | is.na(lat)) %>%
+#   mutate(geometry = st_sfc(st_point())) %>%
+#   st_as_sf(crs = 4326) %>%
+#   select(-lon, -lat)
+# 
+# kj <-
+#   rbind(kj_with_geom, kj_without_geom) %>%
+#   st_as_sf() %>%
+#   arrange(scraped, id)
+# 
+# rm(kj_with_geom, kj_without_geom)
 
 
 # Clean up CL file --------------------------------------------------------
@@ -140,50 +141,50 @@ cl <-
          type = NA,
          kj = FALSE)
 
-cl_with_geom <-
-  cl %>%
-  filter(!is.na(lon), !is.na(lat)) %>%
-  st_as_sf(coords = c("lon", "lat"), crs = 4326)
-
-cl_without_geom <-
-  cl %>%
-  filter(is.na(lon) | is.na(lat)) %>%
-  mutate(geometry = st_sfc(st_point())) %>%
-  st_as_sf(crs = 4326) %>%
-  select(-lon, -lat)
-
-cl <-
-  rbind(cl_with_geom, cl_without_geom) %>%
-  st_as_sf() %>%
-  arrange(scraped, id)
-
-rm(cl_with_geom, cl_without_geom)
+# cl_with_geom <-
+#   cl %>%
+#   filter(!is.na(lon), !is.na(lat)) %>%
+#   st_as_sf(coords = c("lon", "lat"), crs = 4326)
+# 
+# cl_without_geom <-
+#   cl %>%
+#   filter(is.na(lon) | is.na(lat)) %>%
+#   mutate(geometry = st_sfc(st_point())) %>%
+#   st_as_sf(crs = 4326) %>%
+#   select(-lon, -lat)
+# 
+# cl <-
+#   rbind(cl_with_geom, cl_without_geom) %>%
+#   st_as_sf() %>%
+#   arrange(scraped, id)
+# 
+# rm(cl_with_geom, cl_without_geom)
 
 
 # Rbind into one table ----------------------------------------------------
 
-ltr <- rbind(kj, cl)
+ltr <- rbind(kj, select(cl, names(kj)))
 
 rm(kj, cl)
 
 # Add geometry ------------------------------------------------------------
 
-qload("output/geometry.qsm", nthreads = availableCores())
-
-ltr <- st_transform(ltr, 32617)
-
-ltr <-
-  ltr %>%
-  st_join(LA) %>%
-  select(-dwellings)
-
-ltr <-
-  ltr %>%
-  st_join(DA) %>%
-  as_tibble() %>%
-  st_as_sf()
-
-rm(city, CMA, DA, NB, province)
+# qload("output/geometry.qsm", nthreads = availableCores())
+# 
+# ltr <- st_transform(ltr, 32617)
+# 
+# ltr <-
+#   ltr %>%
+#   st_join(LA) %>%
+#   select(-dwellings)
+# 
+# ltr <-
+#   ltr %>%
+#   st_join(DA) %>%
+#   as_tibble() %>%
+#   st_as_sf()
+# 
+# rm(city, CMA, DA, NB, province)
 
 
 # Save output -------------------------------------------------------------

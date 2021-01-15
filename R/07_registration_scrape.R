@@ -17,7 +17,7 @@ source("R/01_startup.R")
 # Load previous data ------------------------------------------------------
 
 qload("output/str_raw.qsm", nthreads = availableCores())
-qload("data/reg_2.qs", nthreads = availableCores())
+qload("data/reg.qs", nthreads = availableCores())
 
 
 # Create a registration table ---------------------------------------------
@@ -152,6 +152,7 @@ reg_table <- tibble(property_ID, date, registration)
 
 property <- 
   property %>% 
+  select(-registration_scraped_date, -registration) %>% 
   left_join(rename(reg_table, registration_scraped_date = date)) %>% 
   mutate(registration = ifelse(!property_ID %in% reg_table$property_ID, "NOT SCRAPED", registration))
 

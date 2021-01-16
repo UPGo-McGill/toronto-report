@@ -1250,7 +1250,7 @@ figure_1_4_fun <- function(regular = "", condensed = "") {
 
   host_deciles %>% 
   ggplot(aes(position, value, group = decile, fill = decile)) +
-  geom_ward(colour = "white", lwd = 1.2) +
+  geom_area(colour = "white", lwd = 1.2) +
   geom_text(aes(x = 0.02, y = absolute_val, label = display_percentile), 
             data = filter(host_deciles, position == 0, decile <= 2),
             family = regular, 

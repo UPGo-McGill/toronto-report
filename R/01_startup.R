@@ -33,12 +33,12 @@ library(qs)
 if (Sys.info()["sysname"] != "Windows") plan(multisession)
 key_date_covid <- as.Date("2020-03-14")
 key_date_regulations <- as.Date("2020-12-31")
-LTM_start_date <- as.Date("2019-01-01")
-LTM_end_date <- as.Date("2019-12-31")
-LTM20_start_date <- as.Date("2020-01-01")
-LTM20_end_date <- as.Date("2020-12-31")
+start_2019 <- as.Date("2019-01-01")
+end_2019 <- as.Date("2019-12-31")
+start_2020 <- as.Date("2020-01-01")
+end_2020 <- as.Date("2020-12-31")
 col_palette <-
-  c("#990033", "#99CC66", "#FF9999", "#333366", "#346900", "#C9C9FF", "#C90A4A")
+  c("#14325C", "#5398D9", "#F4E3B1", "#D96B0C", "#A53A3B", "#A2E8AF")
 
 
 # Optionally install and activate fonts -----------------------------------

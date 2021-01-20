@@ -17,12 +17,7 @@ source("R/01_startup.R")
 # Load previous data ------------------------------------------------------
 
 qload("output/str_raw.qsm", nthreads = availableCores())
-qload("data/reg.qs", nthreads = availableCores())
-
-
-# Create a registration table ---------------------------------------------
-
-reg_table <- tibble(property_ID, date, registration)
+reg_table <- qread("data/reg.qs", nthreads = availableCores())
 
 
 # # Get existing registration scrapes from server ---------------------------
@@ -127,27 +122,20 @@ reg_table <- tibble(property_ID, date, registration)
 # 
 # 
 # # Clean output ------------------------------------------------------------
-# 
-# registration_table <-
-#   registration_table %>%
-#   mutate(registration = case_when(
-#     is.na(registration) ~ NA_character_,
-#     registration == "NO LISTING" ~ "NO LISTING",
-#     registration == "HOMEAWAY" ~ "HOMEAWAY",
-#     str_detect(registration, '(E|e)xempt') ~ "EXEMPT",
-#     {registration %>% 
-#         str_remove_all("\\D") %>% 
-#         nchar()} == 8L ~ str_remove_all(registration, "\\D"),
-#     TRUE ~ "INVALID"
-#   )) %>% 
-#   mutate(registration = if_else(str_starts(registration, "\\D|18|19|20"),
-#                                 registration, "INVALID")) %>% 
-#   mutate(registration = if_else(str_detect(registration, "[:digit:]"),
-#                                 paste0(substr(registration, 1, 2), "-",
-#                                        substr(registration, 3, 8)),
-#                                 registration))
-# 
-# 
+
+registration_table <-
+  registration_table %>%
+  mutate(registration - toupper(registration),
+         registration = case_when(
+    is.na(registration) ~ NA_character_,
+    registration == "NO LISTING" ~ "NO LISTING",
+    registration == "HOMEAWAY" ~ "HOMEAWAY",
+    registration == "EXEMPT" ~ "EXEMPT",
+    str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
+    TRUE ~ "INVALID"
+  ))
+
+
 # # Add results to property table -------------------------------------------
 
 property <- 

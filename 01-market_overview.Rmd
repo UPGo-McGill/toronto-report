@@ -22,7 +22,7 @@ knitr::opts_chunk$set(warning = FALSE)
 mtime <- function(files) lapply(Sys.glob(files), function(x) file.info(x)$mtime)
 
 # Set this to TRUE to output PDF figures
-build_figures <- TRUE
+build_figures <- FALSE
 
 ```
 
@@ -34,35 +34,35 @@ qload(here("output", "geometry.qsm"), nthreads = availableCores())
 # 2019 active
 active_2019 <- 
   daily %>%
-  filter(housing, status %in% c("R", "A"), date <= LTM_end_date, 
-         date >= LTM_start_date) %>%
+  filter(housing, status %in% c("R", "A"), date <= end_2019, 
+         date >= start_2019) %>%
   pull(property_ID) %>% 
   unique()
   
 # 2019 revenue
 revenue_2019 <-
   daily %>%
-  filter(housing, status == "R", date <= LTM_end_date, 
-         date >= LTM_start_date) %>%
+  filter(housing, status == "R", date <= end_2019, 
+         date >= start_2019) %>%
   group_by(property_ID) %>%
-  summarize(revenue_LTM = sum(price), .groups = "drop") %>% 
+  summarize(revenue_2019 = sum(price), .groups = "drop") %>% 
   inner_join(property, ., by = "property_ID")
 
 # 2020 active
 active_2020 <- 
   daily %>%
-  filter(housing, status %in% c("R", "A"), date <= LTM20_end_date, 
-         date >= LTM20_start_date) %>%
+  filter(housing, status %in% c("R", "A"), date <= end_2020, 
+         date >= start_2020) %>%
   pull(property_ID) %>% 
   unique()
 
 # 2020 revenue
 revenue_2020 <-
   daily %>%
-  filter(housing, status == "R", date <= LTM20_end_date, 
-         date >= LTM20_start_date) %>%
+  filter(housing, status == "R", date <= end_2020, 
+         date >= start_2020) %>%
   group_by(property_ID) %>%
-  summarize(revenue_LTM20 = sum(price), .groups = "drop") %>% 
+  summarize(revenue_2020 = sum(price), .groups = "drop") %>% 
   inner_join(property, ., by = "property_ID")
 
 # Active listings
@@ -101,19 +101,19 @@ daily_variation <-
 # WD breakdown
 WD_breakdown <- 
   daily %>% 
-  filter(housing, status != "B", date >= LTM_start_date - years(1), 
-         date <= LTM_end_date) %>% 
+  filter(housing, status != "B", date >= start_2020 - years(1), 
+         date <= end_2020) %>% 
   group_by(date, ward) %>% 
   summarize(n = n(),
             revenue = sum(price[status == "R"])) %>% 
   left_join(st_drop_geometry(WD)) %>% 
   group_by(ward, dwellings) %>% 
-  summarize(active_listings = mean(n[date >= LTM_start_date]),
-            active_2018 = mean(n[date < LTM_start_date]),
-            active_growth = (active_listings - active_2018) / active_2018,
-            annual_rev = sum(revenue[date >= LTM_start_date]),
-            rev_2018 = sum(revenue[date < LTM_start_date]),
-            rev_growth = (annual_rev - rev_2018) / rev_2018,
+  summarize(active_listings = mean(n[date >= start_2020]),
+            active_2019 = mean(n[date < start_2020]),
+            active_growth = (active_listings - active_2019) / active_2019,
+            annual_rev = sum(revenue[date >= start_2020]),
+            rev_2019 = sum(revenue[date < start_2020]),
+            rev_growth = (annual_rev - rev_2019) / rev_2019,
             .groups = "drop") %>% 
   mutate(listings_pct = active_listings / sum(active_listings, na.rm = TRUE),
          listings_pct_dwellings = active_listings / dwellings,
@@ -124,8 +124,8 @@ WD_breakdown <-
 # Active listings by WD
 active_WD <-
   daily %>%
-  filter(housing, status != "B", date >= LTM_start_date, 
-         date <= LTM_end_date) %>%
+  filter(housing, status != "B", date >= start_2020, 
+         date <= end_2020) %>%
   count(ward, date) %>% 
   group_by(ward) %>% 
   summarize(n = mean(n, na.rm = TRUE)) %>%
@@ -136,8 +136,8 @@ active_WD <-
 # Active listings by DA
 active_DA <-
   daily %>%
-  filter(housing, status != "B", date >= LTM_start_date,
-         date <= LTM_end_date) %>%
+  filter(housing, status != "B", date >= start_2020,
+         date <= end_2020) %>%
   left_join(select(st_drop_geometry(property), property_ID, GeoUID)) %>% 
   count(GeoUID, date) %>% 
   group_by(GeoUID) %>% 
@@ -150,8 +150,8 @@ active_DA <-
 # Listing type breakdown
 listing_type_breakdown <- 
   daily %>% 
-  filter(housing, status != "B", date >= LTM_start_date,
-         date <= LTM_end_date) %>% 
+  filter(housing, status != "B", date >= start_2020,
+         date <= end_2020) %>% 
   group_by(listing_type) %>% 
   summarize(
     active_listings = n() / 365,
@@ -162,30 +162,30 @@ listing_type_breakdown <-
 
 listing_type_breakdown <- 
   daily %>% 
-  filter(housing, status != "B", date >= LTM_start_date - years(1), 
-         date <= LTM_end_date - years(1)) %>% 
+  filter(housing, status != "B", date >= start_2020 - years(1), 
+         date <= end_2020 - years(1)) %>% 
   group_by(listing_type) %>% 
-  summarize(active_2018 = n() / 365) %>% 
+  summarize(active_2019 = n() / 365) %>% 
   left_join(listing_type_breakdown, .) %>% 
-  mutate(pct_listing_growth = (active_listings - active_2018) / active_2018) %>% 
-  select(-active_2018)
+  mutate(pct_listing_growth = (active_listings - active_2019) / active_2019) %>% 
+  select(-active_2019)
 
 # Host revenue table for calculations and table
 host_rev <-
   daily %>%
-  filter(housing, date >= LTM_start_date, date <= LTM_end_date, 
+  filter(housing, date >= start_2020, date <= end_2020, 
          status == "R", !is.na(host_ID)) %>%
   group_by(host_ID) %>%
   summarize(rev = sum(price))
 
-host_rev20 <-
+host_rev19 <-
   daily %>%
-  filter(housing, date >= LTM20_start_date, date <= LTM20_end_date, 
+  filter(housing, date >= start_2019, date <= end_2019, 
          status == "R", !is.na(host_ID)) %>%
   group_by(host_ID) %>%
   summarize(rev = sum(price))
 
-rm(property, daily, GH, CMA, DA, city, BL, BL_expanded, skytrain)
+rm(property, daily, GH, CMA, DA, city)
 
 ```
 
@@ -193,10 +193,10 @@ rm(property, daily, GH, CMA, DA, city, BL, BL_expanded, skytrain)
 
 qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 
-# Average active and blocked daily listings in 2019
+# Average active and blocked daily listings in 2020
 avg_listings <- 
   daily %>% 
-  filter(housing, date >= LTM_start_date, date <= LTM_end_date) %>% 
+  filter(housing, date >= start_2020, date <= end_2020) %>% 
   count(date, B = status == "B") %>% 
   group_by(B) %>% 
   summarize(avg = round(mean(n), digit = -1), .groups = "drop")
@@ -205,30 +205,30 @@ avg_listings_active <-
   avg_listings$avg[1] %>% 
   prettyNum(",")
 
-# Average active and blocked daily listings in 2020
-avg_listings20 <- 
+# Average active and blocked daily listings in 2019
+avg_listings19 <- 
   daily %>% 
-  filter(housing, date >= LTM20_start_date, date <= LTM20_end_date) %>% 
+  filter(housing, date >= start_2019, date <= end_2019) %>% 
   count(date, B = status == "B") %>% 
   group_by(B) %>% 
   summarize(avg = round(mean(n), digit = -1), .groups = "drop")
 
-avg_listings_active20 <- 
-  avg_listings20$avg[1] %>% 
+avg_listings_active19 <- 
+  avg_listings19$avg[1] %>% 
   prettyNum(",")
 
-# Total annual revenue in 2019
+# Total annual revenue in 2020
 annual_rev <- 
-  revenue_2019$revenue_LTM %>% 
+  revenue_2020$revenue_2020 %>% 
   sum() %>% 
   {. / 1000000} %>% 
   round(digit = 1) %>% 
   prettyNum(",") %>% 
   paste0("$", ., " million")
 
-# Total annual revenue in 2020
-annual_rev20 <- 
-  revenue_2020$revenue_LTM %>% 
+# Total annual revenue in 2019
+annual_rev19 <- 
+  revenue_2019$revenue_2019 %>% 
   sum() %>% 
   {. / 1000000} %>% 
   round(digit = 1) %>% 
@@ -249,7 +249,7 @@ eh_revenue <-
   pull(pct_of_revenue) %>% 
   scales::percent(0.1)
 
-# Host revenue
+# Host revenue in 2020
 host_rev_top_10 <- 
   host_rev %>% 
   summarize(top_10 = sum(rev[rev > quantile(rev, .9)]) / sum(rev)) %>% 
@@ -262,55 +262,55 @@ host_rev_top_1 <-
   pull(top_1) %>% 
   scales::percent(0.1)
 
-# Host revenue in 2020
-host_rev_top_10_2020 <- 
-  host_rev20 %>% 
+# Host revenue in 2019
+host_rev_top_10_2019 <- 
+  host_rev19 %>% 
   summarize(top_10 = sum(rev[rev > quantile(rev, .9)]) / sum(rev)) %>% 
   pull(top_10) %>% 
   scales::percent(0.1)
 
-host_rev_top_1_2020 <- 
-  host_rev20 %>% 
+host_rev_top_1_2019 <- 
+  host_rev19 %>% 
   summarize(top_1 = sum(rev[rev > quantile(rev, .99)]) / sum(rev)) %>% 
   pull(top_1) %>% 
   scales::percent(0.1)
 
-# 2019 ML listings
+# 2020 ML listings
 ml_listings <- 
   daily %>% 
-  filter(housing, status != "B", date >= LTM_start_date, 
-         date <= LTM_end_date) %>% 
-  count(multi) %>% 
-  summarize(ML = n[2] / sum(n)) %>% 
-  pull(ML) %>% 
-  scales::percent(0.1)
-
-# 2019 ML revenue
-ml_revenue <- 
-  daily %>% 
-  filter(housing, status == "R", date >= LTM_start_date, 
-       date <= LTM_end_date) %>% 
-  group_by(multi) %>% 
-  tally(price) %>% 
-  summarize(multi_rev = n[2] / sum(n)) %>% 
-  pull(multi_rev) %>% 
-  scales::percent(0.1)
-
-# 2020 ML listings
-ml_listings20 <- 
-  daily %>% 
-  filter(housing, status != "B", date >= LTM20_start_date, 
-         date <= LTM20_end_date) %>% 
+  filter(housing, status != "B", date >= start_2020, 
+         date <= end_2020) %>% 
   count(multi) %>% 
   summarize(ML = n[2] / sum(n)) %>% 
   pull(ML) %>% 
   scales::percent(0.1)
 
 # 2020 ML revenue
-ml_revenue20 <- 
+ml_revenue <- 
   daily %>% 
-  filter(housing, status == "R", date >= LTM20_start_date, 
-       date <= LTM20_end_date) %>% 
+  filter(housing, status == "R", date >= start_2020, 
+       date <= end_2020) %>% 
+  group_by(multi) %>% 
+  tally(price) %>% 
+  summarize(multi_rev = n[2] / sum(n)) %>% 
+  pull(multi_rev) %>% 
+  scales::percent(0.1)
+
+# 2019 ML listings
+ml_listings19 <- 
+  daily %>% 
+  filter(housing, status != "B", date >= start_2019, 
+         date <= end_2019) %>% 
+  count(multi) %>% 
+  summarize(ML = n[2] / sum(n)) %>% 
+  pull(ML) %>% 
+  scales::percent(0.1)
+
+# 2019 ML revenue
+ml_revenue19 <- 
+  daily %>% 
+  filter(housing, status == "R", date >= start_2019, 
+       date <= end_2019) %>% 
   group_by(multi) %>% 
   tally(price) %>% 
   summarize(multi_rev = n[2] / sum(n)) %>% 
@@ -321,7 +321,7 @@ rm(property, daily, GH)
 
 ```
 
-**There were `r avg_listings_active` active STR listings in Toronto housing units in 2019, which collectively earned `r annual_rev`. A quarter of all listings are in the Downtown ward. More than two thirds (`r eh_listings`) of Toronto’s STR listings are entire homes, and entire homes are responsible for `r eh_revenue` of all revenue. Revenue is concentrated unevenly among hosts, with the top 10% earning `r host_rev_top_10` of revenue, and the top 1% earning `r host_rev_top_1`, but Toronto has much less revenue concentration than other large cities in Canada. Commercial operators who control multiple STR listings account for `r ml_listings` listings and `r ml_revenue` revenue, and those shares have been falling consistently since the introduction of the City's 2018 STR regulations.**
+**There were `r avg_listings_active` active STR listings in Toronto housing units in 2020, which collectively earned `r annual_rev`. A quarter of all listings are in the Downtown ward. More than two thirds (`r eh_listings`) of Toronto’s STR listings are entire homes, and entire homes are responsible for `r eh_revenue` of all revenue. Revenue is concentrated unevenly among hosts, with the top 10% earning `r host_rev_top_10` of revenue, and the top 1% earning `r host_rev_top_1`, but Toronto has much less revenue concentration than other large cities in Canada. Commercial operators who control multiple STR listings account for `r ml_listings` listings and `r ml_revenue` revenue.**
 
 <br>
 
@@ -331,10 +331,10 @@ rm(property, daily, GH)
 
 qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 
-# Average active and blocked daily listings in 2019
+# Average active and blocked daily listings in 2020
 avg_listings <- 
   daily %>% 
-  filter(housing, date >= LTM_start_date, date <= LTM_end_date) %>% 
+  filter(housing, date >= start_2020, date <= end_2020) %>% 
   count(date, B = status == "B") %>% 
   group_by(B) %>% 
   summarize(avg = round(mean(n), digit = -1), .groups = "drop")
@@ -343,64 +343,64 @@ avg_listings_active <-
   avg_listings$avg[1] %>% 
   prettyNum(",")
 
-# Average active and blocked daily listings in 2020
-avg_listings20 <- 
+# Average active and blocked daily listings in 2019
+avg_listings19 <- 
   daily %>% 
-  filter(housing, date >= LTM20_start_date, date <= LTM20_end_date) %>% 
+  filter(housing, date >= start_2019, date <= end_2019) %>% 
   count(date, B = status == "B") %>% 
   group_by(B) %>% 
   summarize(avg = round(mean(n), digit = -1), .groups = "drop")
 
-avg_listings_active20 <- 
-  avg_listings20$avg[1] %>% 
-  prettyNum(",")
-
-# Average number of hosts in 2019 (taking out blocked 365 days)
-avg_hosts <- 
-  daily %>% 
-  filter(housing, status != "B", date >= LTM_start_date, 
-         date <= LTM_end_date) %>%
-  count(date, host_ID) %>% 
-  count(date) %>% 
-  summarize(hosts = round(mean(n), digit = -1), .groups = "drop") %>% 
-  pull(hosts) %>% 
+avg_listings_active19 <- 
+  avg_listings19$avg[1] %>% 
   prettyNum(",")
 
 # Average number of hosts in 2020 (taking out blocked 365 days)
-avg_hosts20 <- 
+avg_hosts <- 
   daily %>% 
-  filter(housing, status != "B", date >= LTM20_start_date, 
-         date <= LTM20_end_date) %>%
+  filter(housing, status != "B", date >= start_2020, 
+         date <= end_2020) %>%
   count(date, host_ID) %>% 
   count(date) %>% 
   summarize(hosts = round(mean(n), digit = -1), .groups = "drop") %>% 
   pull(hosts) %>% 
   prettyNum(",")
 
-# Total annual revenue in 2019
-annual_rev <- 
-  revenue_2019$revenue_LTM %>% 
-  sum() %>% 
-  {. / 1000000} %>% 
-  round(digit = 1) %>% 
-  prettyNum(",") %>% 
-  paste0("$", ., " million")
+# Average number of hosts in 2019 (taking out blocked 365 days)
+avg_hosts19 <- 
+  daily %>% 
+  filter(housing, status != "B", date >= start_2019, 
+         date <= end_2019) %>%
+  count(date, host_ID) %>% 
+  count(date) %>% 
+  summarize(hosts = round(mean(n), digit = -1), .groups = "drop") %>% 
+  pull(hosts) %>% 
+  prettyNum(",")
 
 # Total annual revenue in 2020
-annual_rev20 <- 
-  revenue_2020$revenue_LTM %>% 
+annual_rev <- 
+  revenue_2020$revenue_2020 %>% 
   sum() %>% 
   {. / 1000000} %>% 
   round(digit = 1) %>% 
   prettyNum(",") %>% 
   paste0("$", ., " million")
 
-# Average revenue per active listing in 2019
+# Total annual revenue in 2019
+annual_rev19 <- 
+  revenue_2019$revenue_2019 %>% 
+  sum() %>% 
+  {. / 1000000} %>% 
+  round(digit = 1) %>% 
+  prettyNum(",") %>% 
+  paste0("$", ., " million")
+
+# Average revenue per active listing in 2020
 avg_rev_per_listing <- 
-  (sum(revenue_2019$revenue_LTM) /
+  (sum(revenue_2020$revenue_2020) /
     daily %>% 
-    filter(housing, status != "B", date >= LTM_start_date, 
-           date <= LTM_end_date) %>% 
+    filter(housing, status != "B", date >= start_2020, 
+           date <= end_2020) %>% 
     count(date) %>% 
     summarize(avg_rev_per_active = round(mean(n)), .groups = "drop")) %>% 
   as.vector() %>% 
@@ -408,12 +408,12 @@ avg_rev_per_listing <-
   prettyNum(",") %>% 
   paste0("$", .)
 
-# Average revenue per active listing in 2020
-avg_rev_per_listing20 <- 
-  (sum(revenue_2020$revenue_LTM) /
+# Average revenue per active listing in 2019
+avg_rev_per_listing19 <- 
+  (sum(revenue_2019$revenue_2019) /
     daily %>% 
-    filter(housing, status != "B", date >= LTM20_start_date, 
-           date <= LTM20_end_date) %>% 
+    filter(housing, status != "B", date >= start_2019, 
+           date <= end_2019) %>% 
     count(date) %>% 
     summarize(avg_rev_per_active20 = round(mean(n)), .groups = "drop")) %>% 
   as.vector() %>% 
@@ -421,12 +421,12 @@ avg_rev_per_listing20 <-
   prettyNum(",") %>% 
   paste0("$", .)
 
-#' Average revenue per active host
+#' Average revenue per active host in 2020
 avg_rev_per_host <- 
-  (sum(revenue_2019$revenue_LTM) /
+  (sum(revenue_2020$revenue_2020) /
     daily %>% 
-    filter(housing, status != "B", date >= LTM_start_date, 
-           date <= LTM_end_date) %>%
+    filter(housing, status != "B", date >= start_2020, 
+           date <= end_2020) %>%
     group_by(date) %>% 
     summarize(n_hosts = length(unique(host_ID)), .groups = "drop_last") %>% 
     summarize(avg_n_hosts = round(mean(n_hosts)), .groups = "drop")) %>% 
@@ -434,12 +434,12 @@ avg_rev_per_host <-
   prettyNum(",") %>% 
   paste0("$", .)
 
-#' Average revenue per active host in 2020
-avg_rev_per_host20 <- 
-  (sum(revenue_2020$revenue_LTM) /
+#' Average revenue per active host in 2019
+avg_rev_per_host19 <- 
+  (sum(revenue_2019$revenue_2019) /
     daily %>% 
-    filter(housing, status != "B", date >= LTM20_start_date, 
-           date <= LTM20_end_date) %>%
+    filter(housing, status != "B", date >= start_2019, 
+           date <= end_2019) %>%
     group_by(date) %>% 
     summarize(n_hosts = length(unique(host_ID)), .groups = "drop_last") %>% 
     summarize(avg_n_hosts20 = round(mean(n_hosts)), .groups = "drop")) %>% 
@@ -496,7 +496,7 @@ if (build_figures) {
 
 ```
 
-Active daily listings are listings which were displayed on Airbnb or VRBO on a given day, and were either reserved or available for a reservation. It is the most reliable means of determining the overall size of the STR market in a location, particularly with respect to change over time. In 2019 there was an average of `r avg_listings_active` active daily listings (Figure \@ref(fig:fig-1-1)) operated by an average of `r avg_hosts` hosts. These hosts collectively earned `r annual_rev`—an average of `r avg_rev_per_listing` per daily active listing or `r avg_rev_per_host` per active host. In 2020 the daily active listings average declined to `r avg_listings_active20` and were operated by an average of `r avg_hosts20` hosts. These hosts collectively earned `r annual_rev20`—an average of `r avg_rev_per_listing20` per daily active listing or `r avg_rev_per_host20` per active host.
+Active daily listings are listings which were displayed on Airbnb or VRBO on a given day, and were either reserved or available for a reservation. It is the most reliable means of determining the overall size of the STR market in a location, particularly with respect to change over time. In 2020 there was an average of `r avg_listings_active` active daily listings (Figure \@ref(fig:fig-1-1)) operated by an average of `r avg_hosts` hosts. These hosts collectively earned `r annual_rev`—an average of `r avg_rev_per_listing` per daily active listing or `r avg_rev_per_host` per active host. 
 
 ``` {r fig-1-1, include = TRUE, fig.cap = '(ref:fig-1-1)', fig.align = "center"}
 
@@ -510,69 +510,69 @@ figure_1_1_fun()
 
 qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 
-# Average blocked daily listings in 2019
+# Average blocked daily listings in 2020
 avg_listings_blocked <- 
   avg_listings$avg[2] %>% 
   prettyNum(",")
 
-# Average blocked daily listings in 2020
-avg_listings_blocked20 <- 
-  avg_listings20$avg[2] %>% 
+# Average blocked daily listings in 2019
+avg_listings_blocked19 <- 
+  avg_listings19$avg[2] %>% 
   prettyNum(",")
-
-# Average revenue per all listings in 2019
-avg_revenue_all_listings <- 
-  revenue_2019$revenue_LTM %>% 
-  mean() %>% 
-  round(digit = -2) %>% 
-  prettyNum(",") %>% 
-  paste0("$", .)
 
 # Average revenue per all listings in 2020
 avg_revenue_all_listings <- 
-  revenue_2020$revenue_LTM %>% 
+  revenue_2020$revenue_2020 %>% 
   mean() %>% 
   round(digit = -2) %>% 
   prettyNum(",") %>% 
   paste0("$", .)
 
-# Average revenue per all hosts in 2019
-avg_revenue_all_hosts <- 
-  revenue_2019 %>% 
-  st_drop_geometry() %>%
-  filter(!is.na(host_ID)) %>%
-  group_by(host_ID) %>% 
-  summarize("host_rev" = sum(revenue_LTM)) %>% 
-  summarize("avg_host_rev" = prettyNum(round(mean(host_rev), digit = -2), ",")) %>% 
-  pull(avg_host_rev) %>% 
+# Average revenue per all listings in 2019
+avg_revenue_all_listings19 <- 
+  revenue_2019$revenue_2019 %>% 
+  mean() %>% 
+  round(digit = -2) %>% 
+  prettyNum(",") %>% 
   paste0("$", .)
 
 # Average revenue per all hosts in 2020
-avg_revenue_all_hosts20 <- 
+avg_revenue_all_hosts <- 
   revenue_2020 %>% 
   st_drop_geometry() %>%
   filter(!is.na(host_ID)) %>%
   group_by(host_ID) %>% 
-  summarize("host_rev" = sum(revenue_LTM)) %>% 
+  summarize("host_rev" = sum(revenue_2020)) %>% 
   summarize("avg_host_rev" = prettyNum(round(mean(host_rev), digit = -2), ",")) %>% 
   pull(avg_host_rev) %>% 
   paste0("$", .)
 
-# Non-housing active listings in 2019
+# Average revenue per all hosts in 2019
+avg_revenue_all_hosts19 <- 
+  revenue_2019 %>% 
+  st_drop_geometry() %>%
+  filter(!is.na(host_ID)) %>%
+  group_by(host_ID) %>% 
+  summarize("host_rev" = sum(revenue_2019)) %>% 
+  summarize("avg_host_rev" = prettyNum(round(mean(host_rev), digit = -2), ",")) %>% 
+  pull(avg_host_rev) %>% 
+  paste0("$", .)
+
+# Non-housing active listings in 2020
 non_housing_listings <- 
   daily %>% 
-  filter(!housing, status != "B", date >= LTM_start_date, 
-         date <= LTM_end_date) %>%
+  filter(!housing, status != "B", date >= start_2020, 
+         date <= end_2020) %>%
   count(date) %>% 
   summarize(non_housing = round(mean(n), digit = -1)) %>% 
   pull(non_housing) %>% 
   prettyNum(",")
 
-# Non-housing active listings in 2020
-non_housing_listings20 <- 
+# Non-housing active listings in 2019
+non_housing_listings19 <- 
   daily %>% 
-  filter(!housing, status != "B", date >= LTM20_start_date, 
-         date <= LTM20_end_date) %>%
+  filter(!housing, status != "B", date >= start_2019, 
+         date <= end_2019) %>%
   count(date) %>% 
   summarize(non_housing = round(mean(n), digit = -1)) %>% 
   pull(non_housing) %>% 
@@ -582,7 +582,7 @@ rm(property, daily, GH)
 
 ```
 
-There was also a daily average of `r avg_listings_blocked` listings which were visible on the Airbnb and VRBO websites but were blocked by the host from receiving reservations (`r avg_listings_blocked` in 2020). The presence of these listings can erroneously suggest that a city’s STR market is larger than it is. When these blocked but inactive listings are included, the average listing earned `r avg_revenue_all_listings` in 2019, and the average host earned `r avg_revenue_all_hosts`. Finally, there was a daily average of `r non_housing_listings` listings that were not located in private housing units (B&Bs, hotels, etc.) (`r non_housing_listings20` in 2020), which have been excluded from the analysis in this report. All the figures which follow, therefore, pertain to short-term rentals located in Toronto’s traditional residential housing stock.
+There was also a daily average of `r avg_listings_blocked` listings which were visible on the Airbnb and VRBO websites but were blocked by the host from receiving reservations. The presence of these listings can erroneously suggest that a city’s STR market is larger than it is. When these blocked but inactive listings are included, the average listing earned `r avg_revenue_all_listings` in 2020, and the average host earned `r avg_revenue_all_hosts`. Finally, there was a daily average of `r non_housing_listings` listings that were not located in private housing units (B&Bs, hotels, etc.), which have been excluded from the analysis in this report. All the figures which follow, therefore, pertain to short-term rentals located in Toronto’s traditional residential housing stock.
 
 ``` {r para_3, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
@@ -606,11 +606,31 @@ highest_activity_amount <-
   prettyNum(",")
 
 # Active listing YOY change in 2019
+active_yoy_change19 <- 
+  daily %>% 
+  filter(housing, status != "B", date >= start_2019 - years(1), 
+         date <= end_2019) %>% 
+  group_by(year_2019 = date >= start_2019) %>% 
+  summarize(active_listings = n() / 365,
+            revenue = sum(price[status == "R"]), .groups = "drop") %>% 
+  summarize(across(c(active_listings, revenue), ~{(.x[2] - .x[1]) / .x[1]}),
+            .groups = "drop")
+
+active_yoy_listings19 <- 
+  active_yoy_change19$active_listings %>% 
+  {. * -1} %>% 
+  scales::percent(accuracy = 0.1)
+
+active_yoy_revenue19 <- 
+  active_yoy_change19$revenue %>% 
+  scales::percent(accuracy = 0.1)
+
+# Active listing YOY change in 2020
 active_yoy_change <- 
   daily %>% 
-  filter(housing, status != "B", date >= LTM_start_date - years(1), 
-         date <= LTM_end_date) %>% 
-  group_by(year_2019 = date >= LTM_start_date) %>% 
+  filter(housing, status != "B", date >= start_2020 - years(1), 
+         date <= end_2020) %>% 
+  group_by(year_2020 = date >= start_2020) %>% 
   summarize(active_listings = n() / 365,
             revenue = sum(price[status == "R"]), .groups = "drop") %>% 
   summarize(across(c(active_listings, revenue), ~{(.x[2] - .x[1]) / .x[1]}),
@@ -625,31 +645,11 @@ active_yoy_revenue <-
   active_yoy_change$revenue %>% 
   scales::percent(accuracy = 0.1)
 
-# Active listing YOY change in 2020
-active_yoy_change20 <- 
-  daily %>% 
-  filter(housing, status != "B", date >= LTM20_start_date - years(1), 
-         date <= LTM20_end_date) %>% 
-  group_by(year_2020 = date >= LTM20_start_date) %>% 
-  summarize(active_listings = n() / 365,
-            revenue = sum(price[status == "R"]), .groups = "drop") %>% 
-  summarize(across(c(active_listings, revenue), ~{(.x[2] - .x[1]) / .x[1]}),
-            .groups = "drop")
-
-active_yoy_listings20 <- 
-  active_yoy_change20$active_listings %>% 
-  {. * -1} %>% 
-  scales::percent(accuracy = 0.1)
-
-active_yoy_revenue20 <- 
-  active_yoy_change20$revenue %>% 
-  scales::percent(accuracy = 0.1)
-
 rm(property, daily, GH)
 
 ```
 
-Active daily listings peaked in `r highest_activity_date` at `r highest_activity_amount`, and have since declined. There were  `r active_yoy_listings` more listings active on average in 2019 than in 2018, and `r active_yoy_revenue` more revenue. Due to the COVID-19 pandemic, active listings decreased by `r active_yoy_listings20` in 2020 and revenues plummeted, with `r active_yoy_revenue20` less revenue earned during the year, compared to 2019.
+Active daily listings peaked in `r highest_activity_date` at `r highest_activity_amount`, and have since declined. Due to the Covid-19 pandemic, there were  `r active_yoy_listings` less listings active on average in 2020 than in 2019, and `r active_yoy_revenue` less revenue. Compared to 2018, active listings increease by `r active_yoy_listings19` in 2019 and revenues grew by `r active_yoy_revenue19`.
 
 In general, the number of STR listings available in the City of Toronto peaks during late summer and winter holidays and falling in between these periods (Figure \@ref(fig:fig-1-1)). There is one major exception the March to December 2020 period, where activity has been sharply below the seasonal trend because of the Covid-19 pandemic.
   
@@ -705,9 +705,9 @@ qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 # YOY listing growth, 2016-2017
 listing_growth_2017 <- 
   daily %>% 
-  filter(housing, status != "B", date >= LTM_start_date - years(3),
-         date <= LTM_end_date - years(2)) %>% 
-  group_by(year_2017 = date >= LTM_start_date - years(2)) %>% 
+  filter(housing, status != "B", date >= start_2019 - years(3),
+         date <= end_2019 - years(2)) %>% 
+  group_by(year_2017 = date >= start_2019 - years(2)) %>% 
   summarize(n = n() / 365) %>% 
   summarize(change = (n[2] - n[1]) / n[1]) %>% 
   pull(change) %>% 
@@ -716,9 +716,9 @@ listing_growth_2017 <-
 # YOY listing growth, 2017-2018
 listing_growth_2018 <- 
   daily %>% 
-  filter(housing, status != "B", date >= LTM_start_date - years(2),
-         date <= LTM_end_date - years(1)) %>% 
-  group_by(year_2018 = date >= LTM_start_date - years(1)) %>% 
+  filter(housing, status != "B", date >= start_2019 - years(2),
+         date <= end_2019 - years(1)) %>% 
+  group_by(year_2018 = date >= start_2019 - years(1)) %>% 
   summarize(n = n() / 365) %>% 
   summarize(change = (n[2] - n[1]) / n[1]) %>% 
   pull(change) %>% 
@@ -727,9 +727,9 @@ listing_growth_2018 <-
 #' YOY listing growth, 2018-2019
 listing_growth_2019 <- 
   daily %>% 
-  filter(housing, status != "B", date >= LTM_start_date - years(1),
-         date <= LTM_end_date) %>% 
-  group_by(year_2019 = date >= LTM_start_date) %>% 
+  filter(housing, status != "B", date >= start_2019 - years(1),
+         date <= end_2019) %>% 
+  group_by(year_2019 = date >= start_2019) %>% 
   summarize(n = n() / 365) %>% 
   summarize(change = (n[2] - n[1]) / n[1])  %>% 
   pull(change) %>% 
@@ -745,11 +745,11 @@ end_month <-
 # YOY listing growth, 2019-2020
 listing_growth_2020 <- 
   daily %>% 
-  filter(housing, status != "B", date >= LTM_start_date,
-         date <= LTM20_end_date,
-         (date <= max(daily$date) - years(1) | date >= LTM20_start_date),
+  filter(housing, status != "B", date >= start_2019,
+         date <= end_2020,
+         (date <= max(daily$date) - years(1) | date >= start_2020),
          date != "2020-02-29") %>%
-  group_by(year_2020 = date >= LTM20_start_date) %>% 
+  group_by(year_2020 = date >= start_2020) %>% 
   summarize(n = n() / as.numeric((max(daily$date) - as.Date("2020-01-01")))) %>% 
   summarize(change = (n[2] - n[1]) / n[1])  %>% 
   pull(change) %>% 
@@ -765,23 +765,46 @@ Overall, the year-over-year change in average active listings from 2016 to 2017 
 
 qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 
-# YOY reservation change, 2018-2019
-reservation_change_2019 <- 
+# YOY reservation change, 2019-2020
+reservation_change_2020 <- 
   daily %>%
-  filter(housing, status == "R", date >= LTM_start_date - years(1),
-         date <= LTM_end_date) %>%
-  group_by(year_2019 = date >= LTM_start_date) %>%
+  filter(housing, status == "R", date >= start_2020 - years(1),
+         date <= end_2020) %>%
+  group_by(year_2020 = date >= start_2020) %>%
   summarize(n = n()) %>%
   summarize(change = (n[2] - n[1]) / n[1]) %>% 
   pull(change) %>% 
   scales::percent(0.1)
 
+# YOY reservation change, 2018-2019
+reservation_change_2019 <- 
+  daily %>%
+  filter(housing, status == "R", date >= start_2019 - years(1),
+         date <= end_2019) %>%
+  group_by(year_2019 = date >= start_2019) %>%
+  summarize(n = n()) %>%
+  summarize(change = (n[2] - n[1]) / n[1]) %>% 
+  pull(change) %>% 
+  scales::percent(0.1)
+
+# Reservation counts, 2019-2020
+reservation_count_2020 <- 
+  daily %>%
+  filter(housing, status == "R", date >= start_2020 - years(1),
+         date <= end_2020) %>%
+  group_by(year_2020 = date >= start_2020) %>%
+  summarize(n = n()) %>% 
+  mutate(n = n / 1000000,
+         n = round(n, 2),
+         n = paste0(n, " million")) %>% 
+  pull(n)
+
 # Reservation counts, 2018-2019
 reservation_count_2019 <- 
   daily %>%
-  filter(housing, status == "R", date >= LTM_start_date - years(1),
-         date <= LTM_end_date) %>%
-  group_by(year_2019 = date >= LTM_start_date) %>%
+  filter(housing, status == "R", date >= start_2019 - years(1),
+         date <= end_2019) %>%
+  group_by(year_2019 = date >= start_2019) %>%
   summarize(n = n()) %>% 
   mutate(n = n / 1000000,
          n = round(n, 2),
@@ -791,22 +814,23 @@ reservation_count_2019 <-
 # YOY revenue change, 2019-2020
 active_yoy_revenue_2020 <- 
   daily %>%
-  filter(housing, status == "R", date >= LTM_start_date,
-         date <= LTM_end_date + years(1),
-         (date <= "2019-07-31" | date >= LTM_start_date + years(1)),
+  filter(housing, status == "R", date >= start_2019,
+         date <= end_2019 + years(1),
+         (date <= "2019-07-31" | date >= start_2019 + years(1)),
          date != "2020-02-29") %>%
-  group_by(year_2020 = date >= LTM_start_date + years(1)) %>%
+  group_by(year_2020 = date >= start_2019 + years(1)) %>%
   summarize(revenue = sum(price)) %>%
   summarize(change = (revenue[2] - revenue[1]) / revenue[1]) %>% 
   pull(change) %>% 
   {. * -1} %>% 
   scales::percent(0.1)
 
+
 rm(property, daily, GH)
 
 ```
 
-As for the growth rate of reservations and host revenue, in 2019, the number of reserved nights increased by `r reservation_change_2019`, from `r reservation_count_2019[1]` reserved nights in 2018 to `r reservation_count_2019[2]` reserved nights in 2019, while revenue increased `r active_yoy_revenue`. Due to the Covid-19 pandemic, revenue from January to `r end_month` 2020 is down `r active_yoy_revenue_2020` compared to the same time last year.
+As for the growth rate of reservations and host revenue, in 2020, the number of reserved nights decreased by `r reservation_change_2020`, from `r reservation_count_2020[1]` reserved nights in 2019 to `r reservation_count_2020[2]` reserved nights in 2020, while revenue decreased by a staggering `r active_yoy_revenue`. Comparatively, from 2018 to 2019, reservations and revenue increased by `r reservation_change_2019` and `r active_yoy_revenue`, respectively.
   
 <br>
 
@@ -1067,7 +1091,7 @@ qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 bedrooms <- 
   property %>% 
   st_drop_geometry() %>% 
-  filter(property_ID %in% active_2019, listing_type == "Entire home/apt") %>% 
+  filter(property_ID %in% active_2020, listing_type == "Entire home/apt") %>% 
   mutate(bedrooms = if_else(bedrooms >= 3, "3+", as.character(bedrooms))) %>% 
   count(bedrooms) %>% 
   mutate(percentage = n / sum(n))
@@ -1098,7 +1122,7 @@ studios <-
 
 eh_3_bedroom <- 
   property %>% 
-  filter(housing, created <= LTM_end_date, scraped >= LTM_start_date, 
+  filter(housing, created <= end_2020, scraped >= start_2020, 
          listing_type == "Entire home/apt", !is.na(bedrooms)) %>% 
   st_drop_geometry() %>% 
   summarize(bed_3 = mean(bedrooms <= 3)) %>% 
@@ -1109,7 +1133,7 @@ rm(property, daily, GH)
 
 ```
 
-Table \@ref(tab:tab-1-3) provides the distribution of the listings by listing type in 2019. The majority of STRs in Toronto are entire homes, a category which includes single-family homes, townhouses, apartments and condominiums. `r one_bedrooms` of these were one-bedroom housing units, and a third (`r two_bedrooms`) were two-bedrooms units. Almost a fifth of these listings (`r three_bedrooms`) were 3 or more bedrooms housing units, and `r studios` were studios. In general, studios and one-bedroom units are overrepresented on STR platforms in comparison with the City’s overall housing stock.
+Table \@ref(tab:tab-1-3) provides the distribution of the listings by listing type in 2019. The majority of STRs in Toronto are entire homes, a category which includes single-family homes, townhouses, apartments and condominiums. Half (`r one_bedrooms`) of these were one-bedroom housing units, and more than a quarter (`r two_bedrooms`) were two-bedrooms units. `r three_bedrooms` were 3 or more bedrooms housing units, and `r studios` were studios. In general, studios and one-bedroom units are overrepresented on STR platforms in comparison with the City’s overall housing stock.
 
 ``` {r tab-1-3, include = TRUE}
 
@@ -1134,7 +1158,7 @@ listing_type_breakdown %>%
 
 ```
 
-In 2019 entire-home listings accounted for `r eh_listings` of all daily active listings, and `r eh_revenue` of total host revenue. (Private rooms accounted for nearly all of the remainder.) Moreover, the dominance of entire-home listings in Toronto’s STR market is increasing over time; while there were fewer active listings among all listing types in 2019 when compared to 2018, active daily entire-home listings declined by a much smaller proportion than the other listing types.
+In 2020 entire-home listings accounted for `r eh_listings` of all daily active listings, and `r eh_revenue` of total host revenue. (Private rooms accounted for nearly all of the remainder.) Moreover, the dominance of entire-home listings in Toronto’s STR market is increasing over time.
 
 <br>
 
@@ -1150,7 +1174,7 @@ qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 # Host deciles table for figure
 host_deciles <-
   daily %>%
-  filter(housing, date >= LTM_start_date, date <= LTM_end_date, 
+  filter(housing, date >= start_2020, date <= end_2020, 
          status == "R", !is.na(host_ID)) %>%
   group_by(host_ID) %>%
   summarize(rev = sum(price)) %>% 
@@ -1235,11 +1259,11 @@ host_rev_top_1 <-
   pull(top_1) %>% 
   scales::percent(0.1)
 
-#### same for 2020
+#### same for 2019
 
-host_deciles20 <-
+host_deciles19 <-
   daily %>%
-  filter(housing, date >= LTM20_start_date, date <= LTM20_end_date, 
+  filter(housing, date >= start_2019, date <= end_2019, 
          status == "R", !is.na(host_ID)) %>%
   group_by(host_ID) %>%
   summarize(rev = sum(price)) %>% 
@@ -1286,55 +1310,58 @@ host_deciles20 <-
       percentile == "top_20" ~ "Next 10% of hosts...",
       TRUE ~ NA_character_))
 
-top_host_listings20 <- 
+top_host_listings19 <- 
   property %>% 
-  filter(host_ID == host_rev[which.max(host_rev20$rev),]$host_ID) %>% 
+  filter(host_ID == host_rev[which.max(host_rev19$rev),]$host_ID) %>% 
   nrow()
 
-top_host_rev20 <- 
-  host_rev20 %>% 
+top_host_rev19 <- 
+  host_rev19 %>% 
   filter(rev == max(rev)) %>% 
   pull(rev) %>% 
   scales::dollar(accuracy = 0.1, scale = 1 / 1000000, suffix = " million")
 
-median_host_rev20 <- 
-  median(host_rev20$rev) %>%
+median_host_rev19 <- 
+  median(host_rev19$rev) %>%
   scales::dollar(accuracy = 100)
 
-n_hosts_over_250_20 <- 
-  host_rev20 %>% 
+n_hosts_over_250_19 <- 
+  host_rev19 %>% 
   filter(rev >= 250000) %>% 
   nrow()
 
-host_rev_top_10_20 <- 
-  host_rev20 %>% 
+host_rev_top_10_19 <- 
+  host_rev19 %>% 
   summarize(top_10 = sum(rev[rev > quantile(rev, .9)]) / sum(rev)) %>% 
   pull(top_10) %>% 
   scales::percent(0.1)
 
-host_rev_top_5_20 <- 
-  host_rev20 %>% 
+host_rev_top_5_19 <- 
+  host_rev19 %>% 
   summarize(top_5 = sum(rev[rev > quantile(rev, .95)]) / sum(rev)) %>% 
   pull(top_5) %>% 
   scales::percent(0.1)
 
-host_rev_top_1_20 <- 
-  host_rev20 %>% 
+host_rev_top_1_19 <- 
+  host_rev19 %>% 
   summarize(top_1 = sum(rev[rev > quantile(rev, .99)]) / sum(rev)) %>% 
   pull(top_1) %>% 
   scales::percent(0.1)
+
+diff_host_250 <- 
+  n_hosts_over_250_19 - n_hosts_over_250
 
 rm(property, daily, GH)
 
 ```
 
-We identified one network of hosts which has operated `r top_host_listings` listings in Toronto over the last several years, and which earned approximately `r top_host_rev` in 2019. An investigation into a sample of the host accounts which make up this network suggests links between numerous property management companies and third party operators. Through time, several individual host accounts seem to have merged into a cluster of larger hosts. The image-matching algorithm also merged hosts that use both Airbnb and VRBO, allowing for more accurate revenue calculations. Without interviewing actors associated with this host network, it is impossible to describe the level of connection and coordination between the various host accounts, but an operation of this scale would not be unprecedented. Reports from Chicago, USA and London, UK have identified similar host networks behind which were property management companies and realty groups (Conti, 2019). 
+We identified one network of hosts which has operated `r top_host_listings` listings in Toronto over the last several years, and which earned approximately `r top_host_rev` in 2020. An investigation into a sample of the host accounts which make up this network suggests links between numerous property management companies and third party operators. Through time, several individual host accounts seem to have merged into a cluster of larger hosts. The image-matching algorithm also merged hosts that use both Airbnb and VRBO, allowing for more accurate revenue calculations. Without interviewing actors associated with this host network, it is impossible to describe the level of connection and coordination between the various host accounts, but an operation of this scale would not be unprecedented. Reports from Chicago, USA and London, UK have identified similar host networks behind which were property management companies and realty groups (Conti, 2019). 
 
 ``` {r make_fig_1_4}
 
 figure_1_4_fun <- function(regular = "", condensed = "") {
   
-  revenue_colour <- colorRampPalette(col_palette[c(1, 3, 6, 4, 2, 5)])(10)
+  revenue_colour <- colorRampPalette(col_palette[c(5, 4, 3, 6, 2, 1)])(10)
 
   host_deciles %>% 
   ggplot(aes(position, value, group = decile, fill = decile)) +
@@ -1356,7 +1383,7 @@ figure_1_4_fun <- function(regular = "", condensed = "") {
   scale_fill_gradientn(colours = revenue_colour) +
   theme_void() +
   theme(legend.position = "none",
-        #text = element_text(family = regular),
+        text = element_text(family = regular),
         axis.text.y = element_text(hjust = 1),
         axis.title.y.left = element_text(
           angle = 90, margin = margin(0, 10, 0, 0)),
@@ -1377,7 +1404,7 @@ if (build_figures) {
 
 ```
 
-Among all the STR hosts who earned revenue in the City of Toronto in 2019, the median revenue was `r median_host_rev` (Table \@ref(tab:tab-host-rev)). Throughout the City of Toronto, there were `r n_hosts_over_250` hosts that earned more than $250,000 in 2019. Figure \@ref(fig:fig-1-4) shows the percentage of the total `r annual_rev` in STR revenue which accrued to each decile of hosts. The figure shows that revenue is disproportionately concentrated among a small number of hosts; the top 10% earned `r host_rev_top_10`: the top 5% earned `r host_rev_top_5` of revenue, while the top 1% of hosts earned `r host_rev_top_1` of all revenue. To put this revenue distribution in context, Montreal’s top 10% of STR hosts earned 68.8% of all revenue in 2019. One the other hand, Vancouver's top 10% hosts only earned 43.2% of all revenue in 2019. This indicates that Toronto's STR market is dominated by commercial operators compared to its Western peer, but to a lesser extent than Montreal.
+Among all the STR hosts who earned revenue in the City of Toronto in 2020, the median revenue was `r median_host_rev` (Table \@ref(tab:tab-host-rev)). Throughout the City of Toronto, there were `r n_hosts_over_250` hosts that earned more than $250,000 in 2020, which is `r diff_host_250` less hosts than in 2019. Figure \@ref(fig:fig-1-4) shows the percentage of the total `r annual_rev` in STR revenue which accrued to each decile of hosts. The figure shows that revenue is disproportionately concentrated among a small number of hosts; the top 10% earned `r host_rev_top_10`: the top 5% earned `r host_rev_top_5` of revenue, while the top 1% of hosts earned `r host_rev_top_1` of all revenue. To put this revenue distribution in context, Montreal’s top 10% of STR hosts earned 68.8% of all revenue in 2019. One the other hand, Vancouver's top 10% hosts only earned 43.2% of all revenue in 2019. This indicates that Toronto's STR market is dominated by commercial operators compared to its Western peer, but to a lesser extent than Montreal.
 
 ``` {r tab-host-rev, include = TRUE}
 
@@ -1489,7 +1516,7 @@ if (build_figures) {
 
 ```
 
-In 2019, `r ml_listings` of active listings in Toronto were multilistings, earning `r ml_revenue` of total host revenue. Multilistings had been growing steadily since 2017, both in terms of listings and revenue percentage, until Airbnb’s mass removal of listings without licence numbers. Since then, the proportion of multilistings and their share of overall revenue has been decreasing. Multilisting revenue as a share of total revenue reached an all-time high right before Airbnb's August 2018 regulatory enforcement takedown, while multilisting active listings as a share of total active listings peaked several months later (Figure \@ref(fig:fig-1-5)). Both indicators have been in relatively steady decline since then, and by the end of 2019 were considerably lower than in any of the other large cities in Canada. Figure \@ref(fig:fig-1-5) also highlights that, amidst generally declining STR activity during the COVID-19 pandemic, multilistings have declined disproportionately quickly, and through the fall of 2020 were earning a bit more than 1 out of every 4 dollars on STR platforms in Toronto. 
+In 2020, `r ml_listings` of active listings in Toronto were multilistings, earning `r ml_revenue` of total host revenue. Multilistings had been growing steadily since 2017, both in terms of listings and revenue percentage, until the Covid-19 pandemic, where there was first a drop of revenue percentage, later followed by a drop in multilistings percentage (Figure \@ref(fig:fig-1-5)). The share of multilistings in both listings share and revenue caught up during the summer of 2020. Figure \@ref(fig:fig-1-5) also highlights that, amidst generally declining STR activity during the COVID-19 pandemic, multilistings have remained strong, and through the fall of 2020 were earning a bit more than 4 out of every 10 dollars on STR platforms in Toronto. 
 
 ``` {r fig-1-5, include = TRUE, fig.cap = '(ref:fig-1-5)', fig.align = "center"}
 
@@ -1497,7 +1524,7 @@ figure_1_5_fun()
 
 ```
 
-(ref:fig-1-5) _The percentage of active listings and revenue accounted for by multilistings inToronto (14-day average)_
+(ref:fig-1-5) _The percentage of active listings and revenue accounted for by multilistings in Toronto (14-day average)_
 
 These figures should be taken as highly conservative estimates. Many commercial operators will use different Airbnb or VRBO accounts to manage their listings. If multiple listings share the same photographs then our image recognition software will be able to connect them together, but it is otherwise difficult to determine whether two accounts belong to the same person. Moreover, many STR commercial operators only operate a single listing, but operate it on a full-time basis. A house owner with a secondary suite, or the owner of an investment condo who operates a STR in it, are clearly commercial operators running listings which are not their principal residences, but they would not be counted by this method.
 

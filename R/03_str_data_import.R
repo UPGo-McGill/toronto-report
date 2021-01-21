@@ -101,7 +101,7 @@ property <-
 
 # Scrape fixed listings with May scraped date to see which are still active
 to_scrape <- jan_fix %>% filter(old_scraped >= "2020-05-01")
-upgo_scrape_connect()
+upgo_scrape_connect(chrome = "87.0.4280.87")
 new_scrape <- to_scrape %>% upgo_scrape_ab(proxies = .proxy_list, cores = 10)
 upgo_scrape_disconnect()
 still_active <- new_scrape %>% filter(!is.na(country))
@@ -110,7 +110,7 @@ still_active <- new_scrape %>% filter(!is.na(country))
 property <-
   property %>%
   mutate(scraped = if_else(property_ID %in% still_active$property_ID,
-                           as.Date("2020-09-30"), scraped))
+                           as.Date("2020-12-31"), scraped))
 
 # Get inactives
 inactives <-
@@ -154,13 +154,13 @@ property <-
 # Add area to property file
 property <-
   property %>%
-  st_join(select(LA, -dwellings))
+  st_join(select(WD, -dwellings))
 
 # Add area to daily file
 daily <-
   property %>%
   st_drop_geometry() %>%
-  select(property_ID, area) %>%
+  select(property_ID, ward) %>%
   left_join(daily, ., by = "property_ID")
 
 

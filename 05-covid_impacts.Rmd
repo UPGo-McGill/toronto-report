@@ -245,14 +245,14 @@ figure_5_2_fun <- function(regular = "", condensed = "") {
     geom_segment(aes(x = as.Date("2020-09-30"), xend = as.Date("2020-09-30"),
                      y = min(value[date == as.Date("2020-09-30")]),
                      yend = max(value[date == as.Date("2020-09-30")])),
-                 colour = col_palette[3],
+                 colour = col_palette[1],
                  arrow = arrow(length = unit(0.1, "cm"), ends = "both",
                                type = "open")) +
     scale_x_date(name = NULL) +
     scale_y_continuous(name = NULL, limits = c(0, NA), label = scales::comma) +
     scale_color_manual(name = NULL, labels = c("Actual reservations", 
                                                "Expected reservations"), 
-                       values = col_palette[c(5, 1)]) +
+                       values = col_palette[c(4, 2)]) +
     theme_minimal() +
     theme(legend.position = "bottom", 
           panel.grid.minor.x = element_blank(),
@@ -302,13 +302,13 @@ monthly_prices <-
   tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
   summarize(price = mean(price))
 
-# Get March-October seasonal
-mar_sep_price_seasonal <- 
+# Get March-November seasonal
+mar_nov_price_seasonal <- 
   monthly_prices %>% 
   filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
   model(x11 = feasts:::X11(price, type = "additive")) %>% 
   components() %>%
-  slice(39:45) %>% 
+  slice(39:47) %>% 
   pull(seasonal)
 
 # Get Feb trend
@@ -321,17 +321,21 @@ feb_price_trend <-
   pull(trend)
 
 # Apply March-Sep seasonal component to Feb trend
-mar_sep_price_trend <- 
-  tibble(yearmon = tsibble::yearmonth(c("2020-03", "2020-04", "2020-05", 
-                                        "2020-06", "2020-07", "2020-08",
-                                        "2020-09")),
-         trend = feb_price_trend + mar_sep_price_seasonal)
+mar_nov_price_trend <- 
+  tibble(
+    date = as.Date(c("2020-03-16", "2020-04-16", "2020-05-16", "2020-06-16",
+                     "2020-07-16", "2020-08-16", "2020-09-16", "2020-10-16",
+                     "2020-10-31")),
+    trend = (feb_price_trend + mar_nov_price_seasonal))
+
+# Set Oct 31 value to average of October and November
+mar_nov_price_trend[9,]$trend <- mean(mar_nov_price_trend[8:9,]$trend)
 
 # Apply to daily averages to get trend
 average_prices <- 
   average_prices %>% 
   mutate(yearmon = tsibble::yearmonth(date)) %>% 
-  inner_join(mar_sep_price_trend) %>% 
+  inner_join(mar_nov_price_trend) %>% 
   group_by(yearmon) %>% 
   mutate(trend = price * trend / mean(price)) %>% 
   ungroup() %>% 

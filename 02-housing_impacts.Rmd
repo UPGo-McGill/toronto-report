@@ -608,16 +608,16 @@ city_vacancy_2019 <-
   pull(vacancy) %>% 
   scales::percent(0.1)
 
-# Highest WD vacancy
-highest_vacancy_WD <- 
+# Highest zone vacancy
+highest_vacancy_zone <- 
   annual_vacancy %>% 
   filter(date == 2019, dwelling_type == "Total", bedroom == "Total", 
          quality == "a") %>% 
   filter(vacancy == max(vacancy)) %>% 
   pull(zone_name)
 
-# Highest WD vacancy rate
-highest_vacancy_WD_rate <- 
+# Highest zone vacancy rate
+highest_vacancy_zone_rate <- 
   annual_vacancy %>% 
   filter(date == 2019, dwelling_type == "Total", bedroom == "Total", 
          quality == "a") %>% 
@@ -625,31 +625,31 @@ highest_vacancy_WD_rate <-
   pull(vacancy) %>% 
   scales::percent(0.1)
 
-# Highest WD vacancy rental units
-highest_vacancy_WD_apts <- 
+# Highest zone vacancy rental units
+highest_vacancy_zone_apts <- 
   annual_units %>% 
-  filter(zone_name == highest_vacancy_WD, 
+  filter(zone_name == highest_vacancy_zone, 
          date == 2019, dwelling_type == "Total", 
          bedroom == "Total") %>% 
   pull(units) %>%
   round(-2) %>% 
   prettyNum(",")
 
-# Highest WD vacancy vacant rental units
-highest_vacancy_WD_vac_apts <- 
+# Highest zone vacancy vacant rental units
+highest_vacancy_zone_vac_apts <- 
     annual_units %>% 
-  filter(zone_name == highest_vacancy_WD_apts, 
+  filter(zone_name == highest_vacancy_zone_apts, 
          date == 2019, dwelling_type == "Total", 
          bedroom == "Total") %>% 
   pull(units) %>%
-  {. * parse_number(highest_vacancy_WD_rate) / 100} %>% 
+  {. * parse_number(highest_vacancy_zone_rate) / 100} %>% 
   round(-2) %>% 
   prettyNum(",")
 
-# 3+ bedroom vacancy rate Spadina-Fort York
-spadina_vac_3_bed <- 
+# 3+ bedroom vacancy rate Toronto central
+toronto_central_vac_3_bed <- 
   annual_vacancy %>% 
-  filter(zone_name == "Spadina-Fort York", date == 2019, dwelling_type == "Total",
+  filter(zone_name == "Toronto (Central)", date == 2019, dwelling_type == "Total",
          bedroom == "3 Bedroom +") %>% 
   pull(vacancy) %>% 
   scales::percent(0.1)

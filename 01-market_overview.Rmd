@@ -1103,9 +1103,9 @@ active_by_status <-
 
 reserved_nights_increase_2019 <- 
   daily %>% 
-  filter(housing, status == "R", date >= LTM_start_date - years(1), 
-         date <= LTM_end_date) %>% 
-  count(date_2019 = date >= LTM_start_date) %>% 
+  filter(housing, status == "R", date >= start_2019 - years(1), 
+         date <= end_2019) %>% 
+  count(date_2019 = date >= start_2019) %>% 
   summarize(growth = (n[2] - n[1]) / n[1]) %>% 
   pull(growth) %>% 
   scales::percent(0.1)

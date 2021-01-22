@@ -1,4 +1,4 @@
-# Short-term rentals in Vancouver: Housing impacts
+# Short-term rentals in Toronto: Housing impacts
 
 <style type="text/css">
   body{
@@ -38,34 +38,34 @@ FREH <-
   summarize(across(c(FREH, FREH_3), sum)) %>%
   filter(substr(date, 9, 10) == "01")
 
-FREH_area <- 
+FREH_WD <- 
   daily %>% 
-  filter(date %in% as.Date(c("2018-12-01", "2019-12-01"))) %>% 
-  group_by(area, date) %>% 
+  filter(date %in% as.Date(c("2019-10-31", "2020-10-31"))) %>% 
+  group_by(ward, date) %>% 
   summarize(FREH = sum(FREH_3)) %>% 
-  mutate(date = if_else(date >= LTM_start_date, 2019, 2018))
+  mutate(date = if_else(date >= start_2020, 2020, 2019))
 
 FREH_DA <- 
   daily %>% 
-  filter(date == "2019-12-01") %>% 
+  filter(date == "2020-10-01") %>% 
   left_join(select(st_drop_geometry(property), property_ID, GeoUID)) %>% 
   group_by(GeoUID) %>% 
   summarize(FREH = sum(FREH_3))
 
-GH_area <- 
+GH_WD <- 
   GH %>% 
-  filter(date %in% as.Date(c(LTM_end_date - years(1), LTM_end_date))) %>% 
+  filter(date %in% as.Date(c("2019-10-31", "2020-10-31"))) %>% 
   mutate(geometry = st_centroid(geometry)) %>% 
-  st_join(LA) %>% 
+  st_join(WD) %>% 
   st_drop_geometry() %>% 
-  group_by(area, date) %>% 
+  group_by(ward, date) %>% 
   summarize(GH = sum(housing_units, na.rm = TRUE)) %>% 
   as_tibble() %>% 
-  mutate(date = if_else(date >= LTM_start_date, 2019, 2018))
+  mutate(date = if_else(date >= start_2020, 2020, 2019))
 
 GH_DA <- 
   GH %>% 
-  filter(date == LTM_end_date) %>% 
+  filter(date == "2020-10-31") %>% 
   mutate(geometry = st_centroid(geometry)) %>% 
   st_join(DA) %>% 
   st_drop_geometry() %>% 
@@ -99,10 +99,10 @@ housing_loss <-
   mutate(`Listing type` = factor(`Listing type`, 
                                  levels = c("Private room", "Entire home/apt")))  
 
-housing_loss_area <- 
-  LA %>% 
-  left_join(FREH_area) %>% 
-  left_join(GH_area) %>% 
+housing_loss_WD <- 
+  WD %>% 
+  left_join(FREH_WD) %>% 
+  left_join(GH_WD) %>% 
   mutate(GH = if_else(is.na(GH), 0L, GH),
          housing_loss_pct = (FREH + GH) / dwellings)
 
@@ -113,21 +113,21 @@ housing_loss_DA <-
   mutate(GH = if_else(is.na(GH), 0L, GH),
          housing_loss_pct = (FREH + GH) / dwellings)
 
-LA_housing_table <- 
-  LA %>% 
+WD_housing_table <- 
+  WD %>% 
   st_drop_geometry() %>% 
-  left_join(FREH_area) %>% 
-  left_join(GH_area) %>%
+  left_join(FREH_WD) %>% 
+  left_join(GH_WD) %>%
   mutate(GH = if_else(is.na(GH), 0L, GH)) %>% 
-  group_by(area) %>% 
+  group_by(ward) %>% 
   summarize(
     dwellings = mean(dwellings),
-    housing_loss_2018 = sum(FREH[date == 2018]) + sum(GH[date == 2018]),
     housing_loss_2019 = sum(FREH[date == 2019]) + sum(GH[date == 2019]),
-    yoy_change = (housing_loss_2019 - housing_loss_2018) / housing_loss_2018,
-    housing_loss_pct_2019 = housing_loss_2019 / dwellings)
+    housing_loss_2020 = sum(FREH[date == 2020]) + sum(GH[date == 2020]),
+    yoy_change = (housing_loss_2020 - housing_loss_2019) / housing_loss_2019,
+    housing_loss_pct_2020 = housing_loss_2020 / dwellings)
   
-rm(property, daily, GH, CMA, DA, city, BL, BL_expanded, skytrain)
+rm(property, daily, GH, CMA, DA, city)
 
 ```
 
@@ -135,62 +135,96 @@ rm(property, daily, GH, CMA, DA, city, BL, BL_expanded, skytrain)
 
 qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 
+# Total housing loss for 2020
+housing_loss_2020 <- 
+  {{FREH %>% 
+      filter(date == "2020-10-01") %>% 
+      pull(FREH_3)} +
+      {GH %>% 
+          filter(date == "2020-10-01") %>% 
+          pull(housing_units) %>% sum()}} %>% 
+  round(digit = -1) %>% 
+  prettyNum(",")
+
 # Total housing loss for 2019
 housing_loss_2019 <- 
   {{FREH %>% 
-    filter(date == "2019-12-01") %>% 
-    pull(FREH_3)} +
-    {GH %>% 
-        filter(date == LTM_end_date) %>% 
-        pull(housing_units) %>% sum()}} %>% 
+      filter(date == "2019-10-01") %>% 
+      pull(FREH_3)} +
+      {GH %>% 
+          filter(date == end_2019) %>% 
+          pull(housing_units) %>% sum()}} %>% 
+  round(digit = -1) %>% 
+  prettyNum(",")
+
+# Absolute numbers of change in dedicated STRs from 2019 to 2020
+housing_loss_change_absolute <- 
+  {{{FREH %>% filter(date == as.Date("2019-10-01")) %>% pull(FREH_3)} +
+      {GH %>% filter(date == as.Date("2020-10-01") - years(1)) %>% 
+          pull(housing_units) %>% sum()}} -
+  {{FREH %>% filter(date == as.Date("2020-10-01")) %>% pull(FREH_3)} +
+      {GH %>% filter(date == as.Date("2020-10-01")) %>% pull(housing_units) %>% sum()}}} %>% 
   round(digit = -1) %>% 
   prettyNum(",")
 
 # YOY increase in housing loss
 housing_loss_change <- 
-  {{{FREH %>% filter(date == "2019-12-01") %>% pull(FREH_3)} +
-    {GH %>% filter(date == LTM_end_date) %>% pull(housing_units) %>% sum()}} /
-  {{FREH %>% filter(date == "2018-12-01") %>% pull(FREH_3)} +
-      {GH %>% filter(date == LTM_end_date - years(1)) %>% 
-          pull(housing_units) %>% sum()}}} %>% 
+  {{{FREH %>% filter(date == as.Date("2020-10-01")) %>% pull(FREH_3)} +
+      {GH %>% filter(date == as.Date("2020-10-01")) %>% pull(housing_units) %>% sum()}} /
+      {{FREH %>% filter(date == as.Date("2019-10-01")) %>% pull(FREH_3)} +
+          {GH %>% filter(date == as.Date("2020-10-01") - years(1)) %>% 
+              pull(housing_units) %>% sum()}}} %>% 
   {. - 1} %>% 
   round(3) %>% 
   scales::percent(0.1)
 
 housing_loss_pct_dwelling <- 
-  {{{FREH %>% filter(date == "2019-12-01") %>% pull(FREH_3)} +
-    {GH %>% filter(date == LTM_end_date) %>% pull(housing_units) %>% sum()}} /
-  sum(LA$dwellings)} %>% 
+  {{{FREH %>% filter(date == "2020-10-01") %>% pull(FREH_3)} +
+      {GH %>% filter(date == "2020-10-01") %>% pull(housing_units) %>% sum()}} /
+      sum(WD$dwellings)} %>% 
   round(3) %>% 
   scales::percent(0.1)
 
-# Housing loss in Downtown, Riley Park, and Shaughnessy
-housing_loss_pct_LA <- 
-  LA %>% 
-  left_join(FREH_area) %>% 
-  left_join(GH_area) %>% 
+# Housing loss in Spadina-Fort York, University-Rosedale, and Toronto Centre
+housing_loss_pct_WD <- 
+  WD %>% 
+  left_join(FREH_WD) %>% 
+  left_join(GH_WD) %>% 
+  filter(date == "2020") %>% 
+  mutate(GH = if_else(is.na(GH), 0L, GH),
+         housing_loss_per_dwelling = (FREH + GH) / dwellings,
+         housing_loss_per_dwelling = round(housing_loss_per_dwelling, 3)) %>% 
+  st_drop_geometry() %>% 
+  filter(ward %in% c("Spadina-Fort York", "University-Rosedale", "Toronto Centre"))
+
+housing_loss_pct_spadina_2019 <- 
+  WD %>% 
+  left_join(FREH_WD) %>% 
+  left_join(GH_WD) %>% 
   filter(date == "2019") %>% 
   mutate(GH = if_else(is.na(GH), 0L, GH),
          housing_loss_per_dwelling = (FREH + GH) / dwellings,
          housing_loss_per_dwelling = round(housing_loss_per_dwelling, 3)) %>% 
   st_drop_geometry() %>% 
-  filter(area %in% c("Downtown", "Riley Park", "Shaughnessy"))
+  filter(ward %in% c("Spadina-Fort York")) %>% 
+    pull(housing_loss_per_dwelling) %>% 
+  scales::percent(0.1)
 
-housing_loss_pct_downtown <- 
-  housing_loss_pct_LA %>% 
-  filter(area == "Downtown") %>% 
+housing_loss_pct_spadina <- 
+  housing_loss_pct_WD %>% 
+  filter(ward == "Spadina-Fort York") %>% 
   pull(housing_loss_per_dwelling) %>% 
   scales::percent(0.1)
 
-housing_loss_pct_riley <- 
-  housing_loss_pct_LA %>% 
-  filter(area == "Riley Park") %>% 
+housing_loss_pct_university <- 
+  housing_loss_pct_WD %>% 
+  filter(ward == "University-Rosedale") %>% 
   pull(housing_loss_per_dwelling) %>% 
   scales::percent(0.1)
 
-housing_loss_pct_shaughnessy <- 
-  housing_loss_pct_LA %>% 
-  filter(area == "Shaughnessy") %>% 
+housing_loss_pct_centre <- 
+  housing_loss_pct_WD %>% 
+  filter(ward == "Toronto Centre") %>% 
   pull(housing_loss_per_dwelling) %>% 
   scales::percent(0.1)
 
@@ -199,13 +233,13 @@ rm(property, daily, GH)
 
 ```
 
-**Short-term rentals removed `r housing_loss_2019` housing units from Vancouver’s long-term market in 2019 — an increase of `r housing_loss_change` from 2018. The 2018 regulations returned between 300 and 500 dedicated STRs to the long-term market in the early days of their existence, but those gains have since been partially offset by a rapid growth in dedicated STRs throughout 2019. Almost two thirds of all entire-home listings and four in ten private-room listings are dedicated STRs. In the Downtown area, `r housing_loss_pct_downtown` of all housing has been converted to dedicated STRs, while the figure is `r housing_loss_pct_riley` in Riley Park and `r housing_loss_pct_shaughnessy` in Shaughnessy. Between 2015 and 2019, STRs have been responsible for a 2.1% increase in average monthly rent, and the average renter household in Vancouver has paid an additional $1,390 in rent because of the impact of STRs.**
+**Short-term rentals removed `r housing_loss_2020` housing units from Toronto’s long-term market in 2020 — a decrease of `r housing_loss_change` from 2019. The Covid-19 pandemic has reduced the number of dedicated STRs in Toronto by `r housing_loss_change_absolute units`units compared to the year before. Almost two thirds of all entire-home listings and four in ten private-room listings are dedicated STRs. In the Spadina-Fort York area, `r housing_loss_pct_spadina` of all housing has been converted to dedicated STRs, while the figure is `r housing_loss_pct_university` in University-Rosedale and `r housing_loss_pct_centre` in Toronto Centre. Between 2015 and 2019, STRs have been responsible for a 2.1% increase in average monthly rent, and the average renter household in Toronto has paid an additional $1,390 in rent because of the impact of STRs.**
 
 <br>
 
 ## STR-induced housing loss
 
-Vancouver’s housing market has been under considerable stress in the past years, with housing prices and rents rising, and rental vacancy rates falling. These are symptoms of a market where the supply of housing is insufficient to meet demand. One possible explanation for both the insufficient supply and elevated demand for housing in Vancouver is the growth in short-term rentals. Tourists are now able to compete with residents for housing—adding demand to the local housing market—while landlords are now able to shift their properties out of the conventional housing market to become dedicated STRs—reducing the supply of conventional housing. Research has found that renting a housing unit on the STR market frequently offers landlords greater potential revenue than conventional leases (Wachsmuth & Weisler 2018), especially in transit-accessible neighborhoods (Deboosere et al. 2019). Multiple studies have also found that Airbnb and other STR platforms increase housing costs (Barron, Kung, & Proserpio 2017; Horn & Merante 2017; Garcia-Lopez et al. 2019).
+Toronto’s housing market has been under considerable stress in the past years, with housing prices and rents rising, and rental vacancy rates falling. These are symptoms of a market where the supply of housing is insufficient to meet demand. One possible explanation for both the insufficient supply and elevated demand for housing in Toronto is the growth in short-term rentals. Tourists are now able to compete with residents for housing—adding demand to the local housing market—while landlords are now able to shift their properties out of the conventional housing market to become dedicated STRs—reducing the supply of conventional housing. Research has found that renting a housing unit on the STR market frequently offers landlords greater potential revenue than conventional leases (Wachsmuth & Weisler 2018), especially in transit-accessible neighborhoods (Deboosere et al. 2019). Multiple studies have also found that Airbnb and other STR platforms increase housing costs (Barron, Kung, & Proserpio 2017; Horn & Merante 2017; Garcia-Lopez et al. 2019).
 
 One of the major considerations when gauging the impacts of short-term rentals (STRs) on a city, therefore, is the extent to which STRs are removing long-term housing from the market. This process can occur either directly, where tenants of a unit are evicted or not replaced at the end of a lease and the unit is converted to a STR, or indirectly by absorbing new construction or investment properties which otherwise would have gone onto the long-term market. To obtain the exact number of units that have been occupied as STRs, landlords or units would need to be individually surveyed, which is infeasible because STR hosts are mostly anonymous on major STR platforms such as Airbnb and VRBO. Instead, we use the daily activity of listings, alongside structural characteristics such as listing type and location, to estimate which listings are operating as dedicated STRs and are therefore not available as conventional long-term housing.
 
@@ -217,18 +251,18 @@ _Ghost hostels:_ In addition to FREH listings, it is possible that entire housin
 
 qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 
-# FREH in 2019-12
-FREH_2019 <- 
+# FREH in 2020-10
+FREH_2020 <- 
   FREH %>% 
-  filter(date == "2019-12-01") %>% 
+  filter(date == "2020-10-01") %>% 
   pull(FREH_3) %>% 
   round(digit = -1) %>% 
   prettyNum(",")
 
-# GH in 2019-12
-GH_2019 <- 
+# GH in 2020-10
+GH_2020 <- 
   GH %>% 
-  filter(date == LTM_end_date) %>% 
+  filter(date == "2020-10-01") %>% 
   pull(housing_units) %>% 
   sum() %>% 
   round(digit = -1) %>% 
@@ -237,9 +271,9 @@ GH_2019 <-
 # Change in listings
 active_yoy_change <- 
   daily %>% 
-  filter(housing, status != "B", date >= LTM_start_date - years(1), 
-         date <= LTM_end_date) %>% 
-  group_by(year_2019 = date >= LTM_start_date) %>% 
+  filter(housing, status != "B", date >= start_2020 - years(1), 
+         date <= end_2020) %>% 
+  group_by(year_2020 = date >= start_2020) %>% 
   summarize(active_listings = n() / 365,
             revenue = sum(price[status == "R"]), .groups = "drop") %>% 
   summarize(across(c(active_listings, revenue), ~{(.x[2] - .x[1]) / .x[1]}),
@@ -251,41 +285,16 @@ active_yoy_listings <-
   {. * -1} %>% 
   scales::percent(accuracy = 0.1)
 
-# Total housing loss for 2018
-housing_loss_2018 <- 
+# Total housing loss for 2020
+housing_loss_2020 <- 
   {{FREH %>% 
-      filter(date == "2018-12-01") %>% 
+      filter(date == "2020-10-01") %>% 
       pull(FREH_3)} +
     {GH %>% 
-        filter(date == LTM_end_date - years(1)) %>% 
+        filter(date == "2020-10-01") %>% 
         pull(housing_units) %>% 
         sum()}} %>% 
   round(digit = -1) %>% 
-  prettyNum(",")
-
-# Monthly figures associated with new regulations
-housing_loss_aug_2018 <- 
-  housing_loss %>% 
-  filter(date == "2018-08-01") %>% 
-  pull(`Housing units`) %>% 
-  sum() %>% 
-  round(-1) %>% 
-  prettyNum(",")
-
-housing_loss_sep_2018 <- 
-  housing_loss %>% 
-  filter(date == "2018-09-01") %>% 
-  pull(`Housing units`) %>% 
-  sum() %>% 
-  round(-1) %>% 
-  prettyNum(",")
-
-housing_loss_jan_2019 <- 
-  housing_loss %>% 
-  filter(date == "2019-01-01") %>% 
-  pull(`Housing units`) %>% 
-  sum() %>% 
-  round(-1) %>% 
   prettyNum(",")
 
 rm(property, daily, GH)
@@ -297,35 +306,35 @@ rm(property, daily, GH)
 
 figure_2_1_fun <- function(regular = "", condensed = "") {
   
-  housing_loss %>% 
-    ggplot(aes(date, `Housing units`, fill = `Listing type`)) +
-    geom_col(lwd = 0) +
-    annotate("segment", x = key_date_covid, xend = key_date_covid,
-             y = 0, yend = Inf, alpha = 0.3) +
-    annotate("curve", x = as.Date("2019-08-01"), 
-             xend = key_date_covid - days(10),
-             y = 3000, yend = 2700, curvature = -.2, lwd = 0.25,
-             arrow = arrow(length = unit(0.05, "inches"))) +
-    annotate("text", x = as.Date("2019-05-01"), y = 3000,
+housing_loss %>% 
+  ggplot(aes(date, `Housing units`, fill = `Listing type`)) +
+  geom_col(lwd = 0) +
+  annotate("segment", x = key_date_covid, xend = key_date_covid,
+           y = 0, yend = Inf, alpha = 0.3) +
+  annotate("curve", x = as.Date("2019-08-01"), 
+           xend = key_date_covid - days(10),
+           y = 7000, yend = 6700, curvature = -.2, lwd = 0.25,
+           arrow = arrow(length = unit(0.05, "inches"))) +
+  annotate("text", x = as.Date("2019-05-01"), y = 7000,
            label = "COVID-19 \nAirbnb's response", family = condensed) +
-    annotate("segment", x = key_date_regulations, xend = key_date_regulations,
-             y = 0, yend = Inf, alpha = 0.3) +
-    annotate("curve", x = as.Date("2018-06-01"), 
-             xend = key_date_regulations - days(10),
-             y = 3200, yend = 3100, curvature = -.2, lwd = 0.25,
-             arrow = arrow(length = unit(0.05, "inches"))) +
-    annotate("text", x = as.Date("2018-02-01"), y = 3200,
-             label = "Regulations", family = condensed) +
-    scale_fill_manual(values = col_palette[c(2, 3)]) +
-    scale_x_date(name = NULL, limits = c(as.Date("2016-10-01"), NA)) +
-    scale_y_continuous(name = NULL, label = scales::comma) +
-    theme_minimal() +
-    theme(legend.position = "bottom", 
-          panel.grid.minor.x = element_blank(),
-          text = element_text(face = "plain", family = regular),
-          legend.title = element_text(face = "bold", family = regular, 
-                                      size = 10),
-          legend.text = element_text( size = 10, family = regular))
+  annotate("segment", x = key_date_regulations, xend = key_date_regulations,
+           y = 0, yend = Inf, alpha = 0.3) +
+  annotate("curve", x = as.Date("2020-06-01"), 
+           xend = key_date_regulations - days(10),
+           y = 7200, yend = 7100, curvature = -.2, lwd = 0.25,
+           arrow = arrow(length = unit(0.05, "inches"))) +
+  annotate("text", x = as.Date("2020-06-01"), y = 7100,
+           label = "Regulations", family = condensed) +
+  scale_fill_manual(values = col_palette[c(2, 4)]) +
+  scale_x_date(name = NULL, limits = c(as.Date("2016-10-01"), NA)) +
+  scale_y_continuous(name = NULL, label = scales::comma) +
+  theme_minimal() +
+  theme(legend.position = "bottom", 
+        panel.grid.minor.x = element_blank(),
+        text = element_text(face = "plain", family = regular),
+        legend.title = element_text(face = "bold", family = regular, 
+                                    size = 10),
+        legend.text = element_text( size = 10, family = regular))
   
 }
 
@@ -339,7 +348,7 @@ if (build_figures) {
 
 ```
 
-At the end of 2019, there were `r FREH_2019` FREH listings in the City of Vancouver, and `r GH_2019` more housing units which were operating as ghost hostels. In total, therefore, short-term rentals removed `r housing_loss_2019` housing units from Vancouver’s long-term market last year (Figure \@ref(fig:fig-2-1)). Notably, while the number of active daily listings declined by `r active_yoy_listings` over 2019, the number of housing units which STRs took off of Vancouver’s housing market increased by `r housing_loss_change` in that same time period, from `r housing_loss_2018` to `r housing_loss_2019`. This high growth rate reflects a rebound following a previous substantial decline in dedicated STRs associated with the introduction of the 2018 regulations. On the eve of Airbnb’s mass removal of non-compliant listings (August 2018), `r housing_loss_aug_2018` housing units were operating as dedicated STRs, and this number dropped by more than `r housing_loss_sep_2018` the following month, before ultimately bottoming out at `r housing_loss_jan_2019` in January 2019. Taking the seasonality of the underlying pattern into account, this nevertheless implies that between 300 and 450 housing units were (at least temporarily) restored to the long-term rental market by the introduction of the 2018 regulations—something between 12 and 24% of the total.
+At the end of 2020, there were `r FREH_2020` FREH listings in the City of Toronto, and `r GH_2020` more housing units which were operating as ghost hostels. In total, therefore, short-term rentals removed `r housing_loss_2020` housing units from Toronto’s long-term market last year (Figure \@ref(fig:fig-2-1)). Notably, while the number of active daily listings declined by `r active_yoy_listings` over 2020, the number of housing units which STRs took off of Toronto’s housing market decreased at a much sharper rate. There were `r housing_loss_change` fewer dedicated STRs in 2020 compared to 2019, from `r housing_loss_2019` to `r housing_loss_2020`. This high decline rate in commercially-operated STRs reflects that the pandemic has disproportionately affected commercial operators in the City.
 
 
 ``` {r fig-2-1, include = TRUE, fig.cap = '(ref:fig-2-1)', fig.align = "center"}
@@ -348,7 +357,7 @@ figure_2_1_fun()
 
 ```
 
-(ref:fig-2-1) _Housing units converted to dedicated STRs in the City of Vancouver (monthly average)_
+(ref:fig-2-1) _Housing units converted to dedicated STRs in the City of Toronto (monthly average)_
 
 ```{r para_2, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
@@ -363,17 +372,29 @@ housing_loss_summaries <-
   summarize(eh = mean(FREH_3[listing_type == "Entire home/apt"] > 0.5),
             pr = mean(GH[listing_type == "Private room"])) %>% 
   mutate(across(c(eh, pr), slide_dbl, mean, .before = 30)) %>% 
-  filter(date %in% as.Date(c("2016-12-31", "2019-12-31")))
+  filter(date %in% as.Date(c("2016-12-31", "2019-12-31", "2020-10-31")))
 
 eh_housing_loss <- 
   housing_loss_summaries %>% 
-  filter(date == "2019-12-31") %>% 
+  filter(date == "2020-10-31") %>% 
   pull(eh) %>% 
   scales::percent(0.1)
 
 pr_housing_loss <- 
   housing_loss_summaries %>% 
-  filter(date == "2019-12-31") %>% 
+  filter(date == "2020-10-31") %>% 
+  pull(pr) %>% 
+  scales::percent(0.1)
+
+eh_housing_loss_2019 <- 
+  housing_loss_summaries %>% 
+  filter(date == "2020-12-31") %>% 
+  pull(eh) %>% 
+  scales::percent(0.1)
+
+pr_housing_loss_2019 <- 
+  housing_loss_summaries %>% 
+  filter(date == "2020-12-31") %>% 
   pull(pr) %>% 
   scales::percent(0.1)
 
@@ -419,8 +440,9 @@ figure_2_2_fun <- function(regular = "", condensed = "") {
              y = 0, yend = Inf, alpha = 0.3) +
     annotate("segment", x = key_date_regulations, xend = key_date_regulations,
              y = 0, yend = Inf, alpha = 0.3) +
+    scale_x_date(name=NULL) +
     scale_y_continuous(name = NULL, labels = scales::percent) +
-    scale_colour_manual(values = col_palette[c(2, 3)]) +
+    scale_colour_manual(values = col_palette[c(2, 4)]) +
     theme_minimal() +
     theme(legend.position = "bottom",
           panel.grid.minor.x = element_blank(),
@@ -440,7 +462,7 @@ if (build_figures) {
 
 ```
 
-However, the result of falling numbers of listings but increasing numbers of listings contributing to housing loss is that the proportion of all active listings which are either FREH or ghost hostels has increased enormously from 2018 to 2019. At the end of 2019 close to two thirds (`r eh_housing_loss`) of entire-home listings and more than four in ten (`r pr_housing_loss`) private-room listings were taking housing off the market in Vancouver (Figure \@ref(fig:fig-2-2)). Three years earlier, the proportions were only `r eh_housing_loss_2016` and `r pr_housing_loss_2016` respectively. It is possible but highly unlikely that FREH listings were operating out of their host’s principal residences, since these are cases where the entire home is available for rent most of the year. FREH listings, like multilistings, are thus a probable indicator of non-conformity with the City’s regulations.
+Combined with the falling numbers of listings contributing to housing loss is the decreasing proportion of STRs out of all active listings which are either FREH or ghosts hostels in 2020. At the end of 2020 only a quarter (`r eh_housing_loss`) of entire-home listings and less than half of (`r pr_housing_loss`) private-room listings were taking housing off the market in Toronto (Figure \@ref(fig:fig-2-2)). In 2019, two thirds of entire-home listings (`r eh_housing_loss_2019`) and half (`r pr_housing_loss_2019`) of the private-room listings contributed to housing loss. It is interesting to note that the proportion of entire-home listings contributing to housing loss has decreased to even lower levels than that of 2016 (`r eh_housing_loss_2019`) thanks to the pandemic.
 
 ``` {r fig-2-2, include = TRUE, fig.cap = '(ref:fig-2-2)', fig.align = "center"}
 
@@ -448,36 +470,36 @@ figure_2_2_fun()
 
 ```
 
-(ref:fig-2-2) _The percentage of active STR listings contributing to housing loss each day in Vancouver (14-day average)_
+(ref:fig-2-2) _The percentage of active STR listings contributing to housing loss each day in Toronto (14-day average)_
 
-Table \@ref(tab:tab-2-1) summarizes STR-induced housing loss patterns by neighbourhood. It demonstrates that the City-wide trend of shrinking total numbers of active listings but growing numbers of dedicated STRs also holds in most neighbourhoods. Also, year-over-year growth of housing loss has been evenly distributed between virtually all areas, with an average of 45.0% city-wide, returning, in absolute numbers, to 2017 levels already by the end of 2019. This indicates that, although the regulations might have decreased the number of commercial operations in the short run (2018), there seems to be a return to business-as-usual in 2019.
+Table \@ref(tab:tab-2-1) summarizes STR-induced housing loss patterns by neighbourhood. It demonstrates that the City-wide trend of shrinking housing loss due to the pandemic holds in all neighbourhoods. Also, year-over-year decline of housing loss has been evenly distributed between virtually all wards, with an average of -59.3%. The following section takes a closer look at the impact of Covid-19 on frequently rented entire-home listings.
 
 ``` {r tab-2-1, include = TRUE}
 
 library(kableExtra)
 
-LA_housing_table %>% 
+WD_housing_table %>% 
   summarize(
     dwellings = sum(dwellings),
     housing_loss_2018 = sum(housing_loss_2018),
     housing_loss_2019 = sum(housing_loss_2019),
     yoy_change = (housing_loss_2019 - housing_loss_2018) / housing_loss_2018,
     housing_loss_pct_2019 = housing_loss_2019 / dwellings) %>% 
-  mutate(area = "City of Vancouver") %>% 
-  bind_rows(LA_housing_table) %>% 
-  relocate(area) %>% 
+  mutate(ward = "City of Toronto") %>% 
+  bind_rows(WD_housing_table) %>% 
+  relocate(ward) %>% 
   select(-dwellings) %>% 
   filter(housing_loss_2019 > 50) %>% 
   mutate(across(c(housing_loss_2018, housing_loss_2019), round, -1)) %>% 
   mutate(across(c(yoy_change, housing_loss_pct_2019), round, 4)) %>% 
   arrange(desc(housing_loss_2019)) %>%
-  rename(Area = area,
+  rename(Ward = ward,
          `Housing loss (2019)` = housing_loss_2019,
          `Housing loss (2018)` = housing_loss_2018,
          `Annual growth (%)` = yoy_change,
          `% of housing lost (2019)` = housing_loss_pct_2019) %>% 
-  kbl(caption = paste0("STR-induced housing loss by local area in the City", 
-                       "of Vancouver (for boroughs with at least 50 housing ",
+  kbl(caption = paste0("STR-induced housing loss by ward in the City", 
+                       "of Toronto (for boroughs with at least 50 housing ",
                        "units lost in 2019)"),
       align = "lrrrr") %>%
   kable_styling(latex_options = "scale_down") %>%
@@ -489,12 +511,12 @@ LA_housing_table %>%
 
 qload(here("output", "cmhc.qsm"), nthreads = availableCores())
 
-# Vacancy rate downtown
-vacancy_downtown <- 
+# Vacancy rate downtown (Toronto (Central))
+downtown_spadina <- 
   annual_vacancy %>% 
   filter(dwelling_type == "Total",
          bedroom == "Total",
-         zone %in% c(3),
+         zone %in% c(1),
          !is.na(vacancy)) %>% 
   group_by(zone) %>% 
   filter(date == max(date)) %>% 
@@ -509,11 +531,12 @@ vacancy_downtown <-
 figure_2_3_fun <- function(regular = "", condensed = "") {
   
   left_map <- 
-    housing_loss_area %>% 
+    housing_loss_WD %>% 
+    filter(date=="2020") %>% 
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = housing_loss_pct), colour = "white") +
-    scale_fill_gradientn(colors = col_palette[c(2, 3, 1, 4)], 
+    scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
                          na.value = "grey80",
                          limits = c(0, 0.03), oob = scales::squish, 
                          labels = scales::percent)  +
@@ -532,9 +555,9 @@ figure_2_3_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = housing_loss_pct), colour = "transparent") +
-    scale_fill_gradientn(colors = col_palette[c(2, 3, 1, 4)], 
+    scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
                          na.value = "grey80",
-                         limits = c(0, 0.03), oob = scales::squish, 
+                         limits = c(0, 0.05), oob = scales::squish, 
                          labels = scales::percent)  +
     guides(fill = guide_colourbar(title = "% housing\nlost to STR",
                                   title.vjust = 1)) + 
@@ -561,7 +584,7 @@ if (build_figures) {
 
 ```
 
-The `r housing_loss_2019` housing units taken off of Vancouver’s housing market in 2019 are `r housing_loss_pct_dwelling` of the total amount of housing in the city, and this housing loss has been concentrated in small parts of the city. This is more or less the same in relative to the total housing stock: Figure \@ref(fig:fig-2-3) shows the proportion of each area or dissemination area’s housing stock which was operated as a dedicated short-term rental as of the end of 2019. The maps show a tale of two cities: in most of Vancouver, there are relatively few dedicated STRs, while in the center of the city as well as Downtown, they are ubiquitous. In the Downtown area, `r housing_loss_pct_downtown` of all housing units have been converted to dedicated STRs. The figure is `r housing_loss_pct_riley` for Riley Park and `r housing_loss_pct_shaughnessy` for Shaughnessy. In Downtown, the rental vacancy rate was `r vacancy_downtown` in 2019. This means that there are more dedicated STRs in this neighbourhood than there are vacant apartments for rent.
+The `r housing_loss_2020` housing units taken off of Toronto’s housing market in 2020 are `r housing_loss_pct_dwelling` of the total amount of housing in the city, and this housing loss has been concentrated in small parts of the city. This is more or less the same in relative to the total housing stock: Figure \@ref(fig:fig-2-3) shows the proportion of each ward or dissemination area’s housing stock which was operated as a dedicated short-term rental as of the end of 2020. The maps show a tale of two cities: in most of Toronto, there are relatively few dedicated STRs, while in the center of the city as well as a few transit corridors, they are ubiquitous. In the Spadina-Fort York ward, `r housing_loss_pct_spadina` of all housing units have been converted to dedicated STRs. The figure is `r housing_loss_pct_university` for University-Rosedale and `r housing_loss_pct_centre` for Toronto Centre. In the Downtown CMHC zone, the rental vacancy rate was `r vacancy_downtown` in 2019, while the number of STRs contributing to housing loss in the Spadina-Fort York in 2019 was `r housing_loss_pct_spadina_2019`. This means that there were slightly more dedicated STRs in this neighbourhood than there were vacant apartments for rent. (2020 rental vacancy rates numbers were not yet available at the time of analysis.)
 
 ``` {r fig-2-3, include = TRUE, fig.cap = '(ref:fig-2-3)', fig.align = "center"}
 
@@ -569,7 +592,7 @@ figure_2_3_fun()
 
 ```
 
-(ref:fig-2-3) _The percentage of housing units converted to dedicated STRs in the City of Vancouver, by local area (L) and dissemination area (R)_
+(ref:fig-2-3) _The percentage of housing units converted to dedicated STRs in the City of Toronto, by ward (L) and dissemination area (R)_
 
 ## The impact of STRs on rental housing supply and vacancy rates
 
@@ -585,16 +608,16 @@ city_vacancy_2019 <-
   pull(vacancy) %>% 
   scales::percent(0.1)
 
-# Highest LA vacancy
-highest_vacancy_LA <- 
+# Highest WD vacancy
+highest_vacancy_WD <- 
   annual_vacancy %>% 
   filter(date == 2019, dwelling_type == "Total", bedroom == "Total", 
          quality == "a") %>% 
   filter(vacancy == max(vacancy)) %>% 
   pull(zone_name)
 
-# Highest LA vacancy rate
-highest_vacancy_LA_rate <- 
+# Highest WD vacancy rate
+highest_vacancy_WD_rate <- 
   annual_vacancy %>% 
   filter(date == 2019, dwelling_type == "Total", bedroom == "Total", 
          quality == "a") %>% 
@@ -602,36 +625,36 @@ highest_vacancy_LA_rate <-
   pull(vacancy) %>% 
   scales::percent(0.1)
 
-# Highest LA vacancy rental units
-highest_vacancy_LA_apts <- 
+# Highest WD vacancy rental units
+highest_vacancy_WD_apts <- 
   annual_units %>% 
-  filter(zone_name == highest_vacancy_LA, 
+  filter(zone_name == highest_vacancy_WD, 
          date == 2019, dwelling_type == "Total", 
          bedroom == "Total") %>% 
   pull(units) %>%
   round(-2) %>% 
   prettyNum(",")
 
-# Highest LA vacancy vacant rental units
-highest_vacancy_LA_vac_apts <- 
+# Highest WD vacancy vacant rental units
+highest_vacancy_WD_vac_apts <- 
     annual_units %>% 
-  filter(zone_name == highest_vacancy_LA_apts, 
+  filter(zone_name == highest_vacancy_WD_apts, 
          date == 2019, dwelling_type == "Total", 
          bedroom == "Total") %>% 
   pull(units) %>%
-  {. * parse_number(highest_vacancy_LA_rate) / 100} %>% 
+  {. * parse_number(highest_vacancy_WD_rate) / 100} %>% 
   round(-2) %>% 
   prettyNum(",")
 
-# 3+ bedroom vacancy rate Downtown
-downtown_vac_3_bed <- 
+# 3+ bedroom vacancy rate Spadina-Fort York
+spadina_vac_3_bed <- 
   annual_vacancy %>% 
-  filter(zone_name == "Downtown", date == 2019, dwelling_type == "Total",
+  filter(zone_name == "Spadina-Fort York", date == 2019, dwelling_type == "Total",
          bedroom == "3 Bedroom +") %>% 
   pull(vacancy) %>% 
   scales::percent(0.1)
 
-# Southeast Vancouver renter %
+# Southeast Toronto renter %
 southgran_renters_pct <- 
   cmhc %>% 
   as_tibble() %>% 
@@ -642,7 +665,7 @@ southgran_renters_pct <-
   pull(p_renter) %>% 
   scales::percent(0.1)
 
-# Southeast Vancouver owner %
+# Southeast Toronto owner %
 southgran_owners_pct <- 
   cmhc %>% 
   as_tibble() %>% 
@@ -683,7 +706,7 @@ strs_by_zone <-
   st_drop_geometry() %>% 
   select(property_ID, zone) %>% 
   left_join(daily, .) %>% 
-  filter(housing, date >= LTM_start_date, date <= LTM_end_date, 
+  filter(housing, date >= start_2019, date <= end_2019, 
          status != "B") %>% 
   count(zone) %>% 
   mutate(active_strs = n / 365)
@@ -741,9 +764,9 @@ rm(property, daily, GH, annual_avg_rent, annual_units, annual_vacancy,
 
 ```
 
-In 2019, the City of Vancouver’s rental vacancy rate stood at only `r city_vacancy_2019`—a crisis-level rate, albeit slightly higher than the previous few years. The standard rule of thumb is that a healthy rental market should have a vacancy rate of at least 3%, and all 10 of the CMHC's zones in Vancouver are substantially below that. `r highest_vacancy_LA` has the highest vacancy rate at only `r highest_vacancy_LA_rate`, which means that, of the zone’s approximately `r highest_vacancy_LA_apts` rental apartments, fewer than `r highest_vacancy_LA_vac_apts` were available to be rented by prospective tenants in October 2019, when CMHC’s survey was conducted. In general, vacancy rates are even lower for family-sized housing units (defined by CMHC as units with two or more bedrooms). For example, the vacancy rate for units with three or more bedrooms was `r downtown_vac_3_bed` for the Downtown zone.
+In 2019, the City of Toronto’s rental vacancy rate stood at only `r city_vacancy_2019`—a crisis-level rate, albeit slightly higher than the previous few years. The standard rule of thumb is that a healthy rental market should have a vacancy rate of at least 3%, and all 10 of the CMHC's zones in Toronto are substantially below that. `r highest_vacancy_WD` has the highest vacancy rate at only `r highest_vacancy_WD_rate`, which means that, of the zone’s approximately `r highest_vacancy_WD_apts` rental apartments, fewer than `r highest_vacancy_WD_vac_apts` were available to be rented by prospective tenants in October 2019, when CMHC’s survey was conducted. In general, vacancy rates are even lower for family-sized housing units (defined by CMHC as units with two or more bedrooms). For example, the vacancy rate for units with three or more bedrooms was `r spadina_vac_3_bed` for the Spadina-Fort York zone.
 
-Given the thousands of housing units which we have documented as having been converted to dedicated STRs in Vancouver, it is highly likely that the STR market is negatively affecting rental housing supply and the vacancy rate. One way to evaluate this possibility is to compare the net change in rental housing units in an area with the effective reductions in rental housing supply caused by the growth in dedicated STRs. Figure \@ref(fig:fig-2-4) makes this comparison, showing the change in primary rental housing units (i.e. apartments and townhouses, but not condominiums being used as rentals) per CMHC zone between 2018 and 2019, and the effective change in housing units once the impact of STRs taking housing off of the market is factored in. We assume that STR conversions happen in the same proportion as existing tenure arrangements in the neighbourhood. For example, in the South Granville/Oak zone, `r southgran_renters_pct` of households are renters, so we assume that `r southgran_renters_pct` of housing units converted to dedicated STRs would have been rental housing, and the remaining `r southgran_owners_pct` would have been ownership housing. (We also assume CMHC has not removed dedicated STRs from their counts of primary rental units. In principle CMHC would not consider dedicated STRs to be rental units, but the difficulty in identifying dedicated STRs implies that the safest approach is to assume that dedicated STRs remain in the CMHC rental count.)
+Given the thousands of housing units which we have documented as having been converted to dedicated STRs in Toronto, it is highly likely that the STR market is negatively affecting rental housing supply and the vacancy rate. One way to evaluate this possibility is to compare the net change in rental housing units in an area with the effective reductions in rental housing supply caused by the growth in dedicated STRs. Figure \@ref(fig:fig-2-4) makes this comparison, showing the change in primary rental housing units (i.e. apartments and townhouses, but not condominiums being used as rentals) per CMHC zone between 2018 and 2019, and the effective change in housing units once the impact of STRs taking housing off of the market is factored in. We assume that STR conversions happen in the same proportion as existing tenure arrangements in the neighbourhood. For example, in the South Granville/Oak zone, `r southgran_renters_pct` of households are renters, so we assume that `r southgran_renters_pct` of housing units converted to dedicated STRs would have been rental housing, and the remaining `r southgran_owners_pct` would have been ownership housing. (We also assume CMHC has not removed dedicated STRs from their counts of primary rental units. In principle CMHC would not consider dedicated STRs to be rental units, but the difficulty in identifying dedicated STRs implies that the safest approach is to assume that dedicated STRs remain in the CMHC rental count.)
 
 ``` {r make_fig_2_4}
 
@@ -792,7 +815,7 @@ if (build_figures) {
 
 ```
 
-Between 2018 and 2019, the City of Vancouver as a whole saw an `r total_unit_change`-unit increase, more than half of which occurred in Southeast Vancouver. In a zone like Downtown, where there is a high concentration of STR operations and a growth in housing loss, the zone’s net rental housing change is greatly affected by new STR conversions in 2019. In almost every single of the ten CMHC zones (shown in Figure \@ref(fig:fig-2-4)), new STR conversions in 2019 either mostly cancelled out new rental housing production, or substantially decreased the net rental housing supply from 2018 to 2019.
+Between 2018 and 2019, the City of Toronto as a whole saw an `r total_unit_change`-unit increase, more than half of which occurred in Southeast Toronto. In a zone like Spadina-Fort York, where there is a high concentration of STR operations and a growth in housing loss, the zone’s net rental housing change is greatly affected by new STR conversions in 2019. In almost every single of the ten CMHC zones (shown in Figure \@ref(fig:fig-2-4)), new STR conversions in 2019 either mostly cancelled out new rental housing production, or substantially decreased the net rental housing supply from 2018 to 2019.
 
 ``` {r fig-2-4, include = TRUE, fig.cap = '(ref:fig-2-4)', fig.align = "center"}
 
@@ -851,9 +874,9 @@ figure_2_5_fun()
 
 ```
 
-(ref:fig-2-5) _Current rental vacancy rate in the City of Vancouver (L), and hypothetical vacancy rate if dedicated STRs returned to rental market (R), by CMHC zone_
+(ref:fig-2-5) _Current rental vacancy rate in the City of Toronto (L), and hypothetical vacancy rate if dedicated STRs returned to rental market (R), by CMHC zone_
 
-To be clear, in a scenario where thousands of dedicated STRs returned to the long-term market, these units would not actually remain vacant, but would be absorbed into the rental housing supply. Eventually the result would be a combination of lower rents and a vacancy rate lower than depicted in the map but higher than the current vacancy rate. Nevertheless, Figure \@ref(fig:fig-2-5) demonstrates that the number of housing units which have left Vancouver’s long-term market to be operated as STRs is sufficient to significantly constrain housing availability in the city.
+To be clear, in a scenario where thousands of dedicated STRs returned to the long-term market, these units would not actually remain vacant, but would be absorbed into the rental housing supply. Eventually the result would be a combination of lower rents and a vacancy rate lower than depicted in the map but higher than the current vacancy rate. Nevertheless, Figure \@ref(fig:fig-2-5) demonstrates that the number of housing units which have left Toronto’s long-term market to be operated as STRs is sufficient to significantly constrain housing availability in the city.
 
 ## The impact of STRs on residential rents
 
@@ -919,7 +942,7 @@ strs_by_zone <-
   st_drop_geometry() %>% 
   select(property_ID, zone) %>% 
   left_join(daily, .) %>% 
-  filter(housing, date >= LTM_start_date, date <= LTM_end_date, 
+  filter(housing, date >= start_2019, date <= end_2019, 
          status != "B") %>% 
   count(zone) %>% 
   mutate(active_strs = n / 365)
@@ -947,10 +970,10 @@ rent_table <-
   select(-zone, -n) %>% 
   add_row(
     tibble_row(
-      zone_name = "City of Vancouver",
+      zone_name = "City of Toronto",
       active_strs = nrow(
-        filter(daily, housing, status != "B", date >= LTM_start_date, 
-               date <= LTM_end_date)) / 365,
+        filter(daily, housing, status != "B", date >= start_2019, 
+               date <= end_2019)) / 365,
       avg_rent_2015 = (filter(city_avg_rent, date == 2015, 
                               bedroom == "Total"))$avg_rent,
       avg_rent_2019 = (filter(city_avg_rent, date == 2019, 
@@ -980,7 +1003,7 @@ rm(property, daily, GH, annual_units, annual_vacancy, city_avg_rent, city_units,
 
 ```
 
-Residential rents are rising rapidly in Vancouver. Between 2018 and 2019, CMHC recorded a `r avg_rent_increase_2019` increase in average rents in the City of Vancouver, with even higher numbers for studios and 1-bedrooms—increases which far outstripped inflation or local income growth. Are STRs responsible for any of this growth in rents? STRs could plausibly affect rents in the long-term housing market through two channels. On the one hand, if housing units which otherwise could house residents are converted into tourist accommodations, this will shrink the size of the local rental market, which, in the face of constant demand, will result in higher rents. Second, by offering a new revenue stream to homeowners and potentially some tenants who are willing to become part-time home sharers, STRs can increase the economic value of residential properties. Both phenomena would be expected to increase housing costs and rents, since there is less available housing stock, and since the economic potential of the existing stock is increased.
+Residential rents are rising rapidly in Toronto. Between 2018 and 2019, CMHC recorded a `r avg_rent_increase_2019` increase in average rents in the City of Toronto, with even higher numbers for studios and 1-bedrooms—increases which far outstripped inflation or local income growth. Are STRs responsible for any of this growth in rents? STRs could plausibly affect rents in the long-term housing market through two channels. On the one hand, if housing units which otherwise could house residents are converted into tourist accommodations, this will shrink the size of the local rental market, which, in the face of constant demand, will result in higher rents. Second, by offering a new revenue stream to homeowners and potentially some tenants who are willing to become part-time home sharers, STRs can increase the economic value of residential properties. Both phenomena would be expected to increase housing costs and rents, since there is less available housing stock, and since the economic potential of the existing stock is increased.
 
 ``` {r make_fig_2_6}
 
@@ -1031,7 +1054,7 @@ if (build_figures) {
 
 ```
 
-A US study evaluated the impact of STR growth on housing prices and rents using an analysis of STR listings across the United States from 2012 to 2016 (Barron et al. 2017). The researchers found that 1% growth in the number of STR listings predicts a 0.018% increase in monthly rents and 0.026% increase in house prices. While these numbers may seem small, they were multiplied by STR listing growth rates, which had been quite high over the study period. This model was developed to account for a wide range of locations, so we are able to apply the average values of their model to Vancouver to obtain a rough estimate of the impact which STR growth has had on residential rents. Between 2015 and 2019, we estimate that STRs have been responsible for a `r str_rent_increase` increase in the average monthly rent. As average rents have risen `r total_rent_increase` in this time period, this implies that approximately `r rent_increase_share` of the total rent increases over the last five years have been caused by the growth of STRs. Put differently, from 2015 to 2019, the average renter household in Vancouver has paid an additional `r extra_rent_paid` in rent because of the impact of STRs on the housing market. Figure \@ref(fig:fig-2-6) shows the estimated rent increases by CMHC zone, for the zones where enough data is present to make reliable calculations. Table \@ref(tab:tab-rent) summarizes our rent increase estimates and other related data by CMCH zone. (These results, along with those in the previous paragraph, should be interpreted as rough estimates, as the parameters of the model were developed in the United States.)
+A US study evaluated the impact of STR growth on housing prices and rents using an analysis of STR listings across the United States from 2012 to 2016 (Barron et al. 2017). The researchers found that 1% growth in the number of STR listings predicts a 0.018% increase in monthly rents and 0.026% increase in house prices. While these numbers may seem small, they were multiplied by STR listing growth rates, which had been quite high over the study period. This model was developed to account for a wide range of locations, so we are able to apply the average values of their model to Toronto to obtain a rough estimate of the impact which STR growth has had on residential rents. Between 2015 and 2019, we estimate that STRs have been responsible for a `r str_rent_increase` increase in the average monthly rent. As average rents have risen `r total_rent_increase` in this time period, this implies that approximately `r rent_increase_share` of the total rent increases over the last five years have been caused by the growth of STRs. Put differently, from 2015 to 2019, the average renter household in Toronto has paid an additional `r extra_rent_paid` in rent because of the impact of STRs on the housing market. Figure \@ref(fig:fig-2-6) shows the estimated rent increases by CMHC zone, for the zones where enough data is present to make reliable calculations. Table \@ref(tab:tab-rent) summarizes our rent increase estimates and other related data by CMCH zone. (These results, along with those in the previous paragraph, should be interpreted as rough estimates, as the parameters of the model were developed in the United States.)
 
 ``` {r fig-2-6, include = TRUE, fig.cap = '(ref:fig-2-6)', fig.align = "center"}
 
@@ -1039,7 +1062,7 @@ figure_2_6_fun()
 
 ```
 
-(ref:fig-2-6) _Estimated cumulative asking rent increases in the City of Vancouver, by CMHC zone_
+(ref:fig-2-6) _Estimated cumulative asking rent increases in the City of Toronto, by CMHC zone_
 
 ``` {r tab-rent, include = TRUE}
 
@@ -1059,7 +1082,7 @@ rent_table %>%
               "STR share of rent increase",
               "Avg. extra rent paid due to STRs (2015-2019")) %>% 
   kbl(caption = paste0("STR impacts on residential rents in the City of ", 
-                       "of Vancouver, by CMHC zone"),
+                       "of Toronto, by CMHC zone"),
       align = "lrrrrrrr") %>%
   kable_styling(latex_options = "scale_down") %>%
   row_spec(1, background = paste0(col_palette[2], "50"))

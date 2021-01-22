@@ -655,328 +655,6 @@ In general, the number of STR listings available in the City of Toronto peaks du
   
 <br>
 
-## STR growth rates
-
-``` {r make_fig_1_2}
-
-figure_1_2_fun <- function(regular = "", condensed = "") {
-  
-  daily_variation %>% 
-  ggplot(aes(date, value, colour = var)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
-  annotate("segment", x = key_date_covid, xend = key_date_covid,
-           y = -Inf, yend = Inf, alpha = 0.3) +
-  geom_line(lwd = 1, na.rm = TRUE) +
-  scale_x_date(name = NULL) +
-  scale_y_continuous(name = NULL, limits = c(-1, NA), 
-                     labels = scales::percent) +
-  scale_color_manual(name = NULL, values = col_palette[c(5, 1)]) +
-  theme_minimal() +
-  theme(legend.position = "bottom", panel.grid.minor.x = element_blank(),
-        text = element_text(family = regular))
-
-}
-
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_1_2.pdf"), 
-         plot = figure_1_2_fun("Futura", "Futura Condensed"), 
-         width = 8, height = 5, units = "in", useDingbats = FALSE)
-  
-  extrafont::embed_fonts(here("output", "figures", "figure_1_2.pdf"))
-}
-
-```
-
-Until the end of 2020, the number of active STRs listings steadily increased in the City of Toronto. Figure \@ref(fig:fig-1-2) shows the change in active listings and revenue relative to one year earlier, which is a convenient way to remove seasonal variation to identify underlying growth trends. The figure indicates that, throughout 2017 and the first half of 2018, there was great growth in the revenue earned by hosts. From mid-2018 to late 2019, both active listings and revenue were greater than the year before, albeit with less growth. Both active listings and revenue grew sharply during the 2019 winter season. The pandemic halted Toronto's STR market growth, with active listings and revenue declining since March.
-
-``` {r fig-1-2, include = TRUE, fig.cap = '(ref:fig-1-2)', fig.align = "center"}
-
-figure_1_2_fun()
-
-```
-
-(ref:fig-1-2) _Change in daily active listings and host revenue compared to one year earlier (14-day average)_
-
-
-``` {r para_4, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
-
-qload(here("output", "str_processed.qsm"), nthreads = availableCores())
-
-# YOY listing growth, 2016-2017
-listing_growth_2017 <- 
-  daily %>% 
-  filter(housing, status != "B", date >= start_2019 - years(3),
-         date <= end_2019 - years(2)) %>% 
-  group_by(year_2017 = date >= start_2019 - years(2)) %>% 
-  summarize(n = n() / 365) %>% 
-  summarize(change = (n[2] - n[1]) / n[1]) %>% 
-  pull(change) %>% 
-  scales::percent(0.1)
-
-# YOY listing growth, 2017-2018
-listing_growth_2018 <- 
-  daily %>% 
-  filter(housing, status != "B", date >= start_2019 - years(2),
-         date <= end_2019 - years(1)) %>% 
-  group_by(year_2018 = date >= start_2019 - years(1)) %>% 
-  summarize(n = n() / 365) %>% 
-  summarize(change = (n[2] - n[1]) / n[1]) %>% 
-  pull(change) %>% 
-  scales::percent(0.1)
-
-#' YOY listing growth, 2018-2019
-listing_growth_2019 <- 
-  daily %>% 
-  filter(housing, status != "B", date >= start_2019 - years(1),
-         date <= end_2019) %>% 
-  group_by(year_2019 = date >= start_2019) %>% 
-  summarize(n = n() / 365) %>% 
-  summarize(change = (n[2] - n[1]) / n[1])  %>% 
-  pull(change) %>% 
-  scales::percent(0.1)
-
-# End month
-end_month <- 
-  max(daily$date) %>% 
-  substr(6, 7) %>% 
-  as.numeric() %>% 
-  {month.name[.]}
-
-# YOY listing growth, 2019-2020
-listing_growth_2020 <- 
-  daily %>% 
-  filter(housing, status != "B", date >= start_2019,
-         date <= end_2020,
-         (date <= max(daily$date) - years(1) | date >= start_2020),
-         date != "2020-02-29") %>%
-  group_by(year_2020 = date >= start_2020) %>% 
-  summarize(n = n() / as.numeric((max(daily$date) - as.Date("2020-01-01")))) %>% 
-  summarize(change = (n[2] - n[1]) / n[1])  %>% 
-  pull(change) %>% 
-  scales::percent(0.1)
-
-rm(property, daily, GH)
-
-```
-
-Overall, the year-over-year change in average active listings from 2016 to 2017 (12 months) was `r listing_growth_2017`, the year-over-year change from 2017 to 2018 was `r listing_growth_2018`, and the year-over-year change from 2018 to 2019 was `r listing_growth_2019`. In 2020, active listings fell thanks to the Covid-19 pandemic. The year-over-year change in active daily listings for 2020 so far (January to `r end_month`) is `r listing_growth_2020`.
-
-``` {r para_5, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
-
-qload(here("output", "str_processed.qsm"), nthreads = availableCores())
-
-# YOY reservation change, 2019-2020
-reservation_change_2020 <- 
-  daily %>%
-  filter(housing, status == "R", date >= start_2020 - years(1),
-         date <= end_2020) %>%
-  group_by(year_2020 = date >= start_2020) %>%
-  summarize(n = n()) %>%
-  summarize(change = (n[2] - n[1]) / n[1]) %>% 
-  pull(change) %>% 
-  scales::percent(0.1)
-
-# YOY reservation change, 2018-2019
-reservation_change_2019 <- 
-  daily %>%
-  filter(housing, status == "R", date >= start_2019 - years(1),
-         date <= end_2019) %>%
-  group_by(year_2019 = date >= start_2019) %>%
-  summarize(n = n()) %>%
-  summarize(change = (n[2] - n[1]) / n[1]) %>% 
-  pull(change) %>% 
-  scales::percent(0.1)
-
-# Reservation counts, 2019-2020
-reservation_count_2020 <- 
-  daily %>%
-  filter(housing, status == "R", date >= start_2020 - years(1),
-         date <= end_2020) %>%
-  group_by(year_2020 = date >= start_2020) %>%
-  summarize(n = n()) %>% 
-  mutate(n = n / 1000000,
-         n = round(n, 2),
-         n = paste0(n, " million")) %>% 
-  pull(n)
-
-# Reservation counts, 2018-2019
-reservation_count_2019 <- 
-  daily %>%
-  filter(housing, status == "R", date >= start_2019 - years(1),
-         date <= end_2019) %>%
-  group_by(year_2019 = date >= start_2019) %>%
-  summarize(n = n()) %>% 
-  mutate(n = n / 1000000,
-         n = round(n, 2),
-         n = paste0(n, " million")) %>% 
-  pull(n)
-
-# YOY revenue change, 2019-2020
-active_yoy_revenue_2020 <- 
-  daily %>%
-  filter(housing, status == "R", date >= start_2019,
-         date <= end_2019 + years(1),
-         (date <= "2019-07-31" | date >= start_2019 + years(1)),
-         date != "2020-02-29") %>%
-  group_by(year_2020 = date >= start_2019 + years(1)) %>%
-  summarize(revenue = sum(price)) %>%
-  summarize(change = (revenue[2] - revenue[1]) / revenue[1]) %>% 
-  pull(change) %>% 
-  {. * -1} %>% 
-  scales::percent(0.1)
-
-
-rm(property, daily, GH)
-
-```
-
-```{r active_listings, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
-
-qload(here("output", "str_processed.qsm"), nthreads = availableCores())
-
-active_by_status <- 
-  daily %>% 
-  filter(housing, date >= "2016-01-01", status %in% c("R", "A")) %>% 
-  count(date, status)
-
-reserved_nights_increase_2019 <- 
-  daily %>% 
-  filter(housing, status == "R", date >= LTM_start_date - years(1), 
-         date <= LTM_end_date) %>% 
-  count(date_2019 = date >= LTM_start_date) %>% 
-  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
-  pull(growth) %>% 
-  scales::percent(0.1)
-
-reserved_nights_decrease_2020 <- 
-  daily %>% 
-  filter(housing, status == "R", date >= start_2020 - years(1), 
-         date <= end_2020) %>% 
-  count(date_2019 = date >= start_2020) %>% 
-  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
-  pull(growth) %>% 
-  scales::percent(0.1)
-
-reserved_nights_increase_jan_feb <- 
-  daily %>% 
-  filter(housing, status == "R", date >= start_2019, 
-         month(date) %in% c(1, 2)) %>% 
-  count(date_2020 = date >= start_2020) %>% 
-  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
-  pull(growth) %>% 
-  scales::percent(0.1)
-
-
-rm(property, daily, GH)
-
-```
-
-``` {r make_fig_5_1}
-
-figure_5_1_fun <- function(regular = "", condensed = "") {
-  
-  active_by_status %>% 
-    group_by(status) %>% 
-    mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
-    ungroup() %>% 
-    filter(date >= "2018-01-01") %>% 
-    ggplot(aes(date, n, color = status)) +
-    geom_line(lwd = 1) +
-    scale_x_date(name = NULL) +
-    scale_y_continuous(name = NULL, limits = c(0, NA), label = scales::comma) +
-    scale_color_manual(name = NULL,
-                       labels = c("Available listings", "Reserved listings"), 
-                       values = col_palette[c(2, 4)]) +
-    theme_minimal() +
-    theme(legend.position = "bottom", 
-          panel.grid.minor.x = element_blank(),
-          text = element_text(face = "plain", family = regular),
-          legend.text = element_text(size = 10, family = regular))
-
-}
-
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_5_1.pdf"), 
-         plot = figure_5_1_fun("Futura", "Futura Condensed"), 
-         width = 8, height = 5, units = "in", useDingbats = FALSE)
-  
-  extrafont::embed_fonts(here("output", "figures", "figure_5_1.pdf"))
-}
-
-```
-
-When it comes to reserved and available listings, reservations generally spike during the winter holidays, but otherwise are low from November to February, and then increase steadily from March to August before reclining again. Available nights follow a roughly opposite pattern, since availability is higher when fewer reservations are made. Figure \@ref(fig:fig-5-1) shows the number of STR listings available and reserved each day in Toronto. While the total reserved nights increased by a rapid `r reserved_nights_increase_jan_feb` in the first two months of 2020, they have overall decreased by `r reserved_nights_decrease_2020` in 2020 compared to 2019. There was `r reservation_change_2020` fewer nights reserved in 2020, from `r reservation_count_2020[1]` reserved nights in 2019 to `r reservation_count_2020[2]` reserved nights in 2020. 
-
-??? Trend about reservations ??? then dive into prices
-
-In terms of revenue, 2020 revenue decreased by a staggering `r active_yoy_revenue` compared to 2019. To offer some perspective, from 2018 to 2019, reservations and revenue increased by `r reservation_change_2019` and `r active_yoy_revenue`, respectively. 
-  
-<br>
-
-## Toronto in comparison with other major Canadian cities
-
-``` {r para_6, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "national_comparison.qs"))}
-
-national_comparison <- qread(here("output", "national_comparison.qs"),
-                             nthreads = availableCores())
-
-van_active_per_1000 <- 
-  national_comparison %>% 
-  filter(city == "Vancouver") %>% 
-  pull(listings_per_1000) %>% 
-  round(1) %>% 
-  prettyNum(",")
-
-to_active_per_1000 <- 
-  national_comparison %>% 
-  filter(city == "Toronto") %>% 
-  pull(listings_per_1000) %>% 
-  round(1) %>% 
-  prettyNum(",")
-
-van_rev_per_listing <- 
-  national_comparison %>% 
-  filter(city == "Vancouver") %>% 
-  pull(revenue_per_listing) %>% 
-  round(-2) %>% 
-  scales::dollar()
-
-to_rev_per_listing <- 
-  national_comparison %>% 
-  filter(city == "Toronto") %>% 
-  pull(revenue_per_listing) %>% 
-  round(-2) %>% 
-  scales::dollar()
-
-```
-
-In 2020, Toronto had the largest STR market in the country by both active listing numbers (`r avg_listings_active`) and host revenue (`r annual_rev`), followed in both cases by Montreal and Vancouver (Table \@ref(tab:tab-1-1)). However, in relative terms, Vancouver stands considerably ahead of both Toronto and Montreal. Vancouver had the most active listings per 1000 households (`r van_active_per_1000` compared to `r to_active_per_1000` in Toronto) and the most revenue per listing (`r van_rev_per_listing` compared to `r to_rev_per_listing` in Toronto).
-
-``` {r tab-1-1, include = TRUE}
-
-library(kableExtra)
-
-national_comparison <- qread(here("output", "national_comparison.qs"),
-                             nthreads = availableCores())
-
-national_comparison %>% 
-  transmute(
-    city, 
-    active_daily_listings = prettyNum(round(active_daily_listings, -1), ","),
-    listings_per_1000 = round(listings_per_1000, 1),
-    revenue = scales::dollar(revenue, 0.1, 1/1000000),
-    revenue_per_listing = scales::dollar(revenue_per_listing, 100)) %>% 
-  set_names(c("City", "Active listings", "Listings per 1000 households",
-              "Annual revenue (million)", "Revenue per listing")) %>% 
-  kbl(caption = "2019 STR activity in the largest ten Canadian municipalities",
-      align = "lrrrr") %>%
-  kable_styling(latex_options="scale_down") %>%
-  row_spec(9, background = paste0(col_palette[2], "50"))
-  
-```
-
-<br>
-
 ## Location of STR listings and revenue
 
 ``` {r para_7}
@@ -1237,6 +915,272 @@ listing_type_breakdown %>%
 
 In 2020 entire-home listings accounted for `r eh_listings` of all daily active listings, and `r eh_revenue` of total host revenue. (Private rooms accounted for nearly all of the remainder.) Moreover, the dominance of entire-home listings in Toronto’s STR market is increasing over time.
 
+<br>
+
+## STR growth rates
+
+``` {r make_fig_1_2}
+
+figure_1_2_fun <- function(regular = "", condensed = "") {
+  
+  daily_variation %>% 
+  ggplot(aes(date, value, colour = var)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  annotate("segment", x = key_date_covid, xend = key_date_covid,
+           y = -Inf, yend = Inf, alpha = 0.3) +
+  geom_line(lwd = 1, na.rm = TRUE) +
+  scale_x_date(name = NULL) +
+  scale_y_continuous(name = NULL, limits = c(-1, NA), 
+                     labels = scales::percent) +
+  scale_color_manual(name = NULL, values = col_palette[c(5, 1)]) +
+  theme_minimal() +
+  theme(legend.position = "bottom", panel.grid.minor.x = element_blank(),
+        text = element_text(family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_1_2.pdf"), 
+         plot = figure_1_2_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_1_2.pdf"))
+}
+
+```
+
+Until the end of 2020, the number of active STRs listings steadily increased in the City of Toronto. Figure \@ref(fig:fig-1-2) shows the change in active listings and revenue relative to one year earlier, which is a convenient way to remove seasonal variation to identify underlying growth trends. The figure indicates that, throughout 2017 and the first half of 2018, there was great growth in the revenue earned by hosts. From mid-2018 to late 2019, both active listings and revenue were greater than the year before, albeit with less growth. Both active listings and revenue grew sharply during the 2019 winter season. The pandemic halted Toronto's STR market growth, with active listings and revenue declining since March.
+
+``` {r fig-1-2, include = TRUE, fig.cap = '(ref:fig-1-2)', fig.align = "center"}
+
+figure_1_2_fun()
+
+```
+
+(ref:fig-1-2) _Change in daily active listings and host revenue compared to one year earlier (14-day average)_
+
+
+``` {r para_4, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+# YOY listing growth, 2016-2017
+listing_growth_2017 <- 
+  daily %>% 
+  filter(housing, status != "B", date >= start_2019 - years(3),
+         date <= end_2019 - years(2)) %>% 
+  group_by(year_2017 = date >= start_2019 - years(2)) %>% 
+  summarize(n = n() / 365) %>% 
+  summarize(change = (n[2] - n[1]) / n[1]) %>% 
+  pull(change) %>% 
+  scales::percent(0.1)
+
+# YOY listing growth, 2017-2018
+listing_growth_2018 <- 
+  daily %>% 
+  filter(housing, status != "B", date >= start_2019 - years(2),
+         date <= end_2019 - years(1)) %>% 
+  group_by(year_2018 = date >= start_2019 - years(1)) %>% 
+  summarize(n = n() / 365) %>% 
+  summarize(change = (n[2] - n[1]) / n[1]) %>% 
+  pull(change) %>% 
+  scales::percent(0.1)
+
+#' YOY listing growth, 2018-2019
+listing_growth_2019 <- 
+  daily %>% 
+  filter(housing, status != "B", date >= start_2019 - years(1),
+         date <= end_2019) %>% 
+  group_by(year_2019 = date >= start_2019) %>% 
+  summarize(n = n() / 365) %>% 
+  summarize(change = (n[2] - n[1]) / n[1])  %>% 
+  pull(change) %>% 
+  scales::percent(0.1)
+
+# End month
+end_month <- 
+  max(daily$date) %>% 
+  substr(6, 7) %>% 
+  as.numeric() %>% 
+  {month.name[.]}
+
+# YOY listing growth, 2019-2020
+listing_growth_2020 <- 
+  daily %>% 
+  filter(housing, status != "B", date >= start_2019,
+         date <= end_2020,
+         (date <= max(daily$date) - years(1) | date >= start_2020),
+         date != "2020-02-29") %>%
+  group_by(year_2020 = date >= start_2020) %>% 
+  summarize(n = n() / as.numeric((max(daily$date) - as.Date("2020-01-01")))) %>% 
+  summarize(change = (n[2] - n[1]) / n[1])  %>% 
+  pull(change) %>% 
+  scales::percent(0.1)
+
+rm(property, daily, GH)
+
+```
+
+Overall, the year-over-year change in average active listings from 2016 to 2017 (12 months) was `r listing_growth_2017`, the year-over-year change from 2017 to 2018 was `r listing_growth_2018`, and the year-over-year change from 2018 to 2019 was `r listing_growth_2019`. In 2020, active listings fell thanks to the Covid-19 pandemic. The year-over-year change in active daily listings for 2020 so far (January to `r end_month`) is `r listing_growth_2020`.
+
+``` {r para_5, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+# YOY reservation change, 2019-2020
+reservation_change_2020 <- 
+  daily %>%
+  filter(housing, status == "R", date >= start_2020 - years(1),
+         date <= end_2020) %>%
+  group_by(year_2020 = date >= start_2020) %>%
+  summarize(n = n()) %>%
+  summarize(change = (n[2] - n[1]) / n[1]) %>% 
+  pull(change) %>% 
+  scales::percent(0.1)
+
+# YOY reservation change, 2018-2019
+reservation_change_2019 <- 
+  daily %>%
+  filter(housing, status == "R", date >= start_2019 - years(1),
+         date <= end_2019) %>%
+  group_by(year_2019 = date >= start_2019) %>%
+  summarize(n = n()) %>%
+  summarize(change = (n[2] - n[1]) / n[1]) %>% 
+  pull(change) %>% 
+  scales::percent(0.1)
+
+# Reservation counts, 2019-2020
+reservation_count_2020 <- 
+  daily %>%
+  filter(housing, status == "R", date >= start_2020 - years(1),
+         date <= end_2020) %>%
+  group_by(year_2020 = date >= start_2020) %>%
+  summarize(n = n()) %>% 
+  mutate(n = n / 1000000,
+         n = round(n, 2),
+         n = paste0(n, " million")) %>% 
+  pull(n)
+
+# Reservation counts, 2018-2019
+reservation_count_2019 <- 
+  daily %>%
+  filter(housing, status == "R", date >= start_2019 - years(1),
+         date <= end_2019) %>%
+  group_by(year_2019 = date >= start_2019) %>%
+  summarize(n = n()) %>% 
+  mutate(n = n / 1000000,
+         n = round(n, 2),
+         n = paste0(n, " million")) %>% 
+  pull(n)
+
+# YOY revenue change, 2019-2020
+active_yoy_revenue_2020 <- 
+  daily %>%
+  filter(housing, status == "R", date >= start_2019,
+         date <= end_2019 + years(1),
+         (date <= "2019-07-31" | date >= start_2019 + years(1)),
+         date != "2020-02-29") %>%
+  group_by(year_2020 = date >= start_2019 + years(1)) %>%
+  summarize(revenue = sum(price)) %>%
+  summarize(change = (revenue[2] - revenue[1]) / revenue[1]) %>% 
+  pull(change) %>% 
+  {. * -1} %>% 
+  scales::percent(0.1)
+
+
+rm(property, daily, GH)
+
+```
+
+```{r active_listings, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+active_by_status <- 
+  daily %>% 
+  filter(housing, date >= "2016-01-01", status %in% c("R", "A")) %>% 
+  count(date, status)
+
+reserved_nights_increase_2019 <- 
+  daily %>% 
+  filter(housing, status == "R", date >= start_2019 - years(1), 
+         date <= end_2019) %>% 
+  count(date_2019 = date >= start_2019) %>% 
+  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
+  pull(growth) %>% 
+  scales::percent(0.1)
+
+reserved_nights_decrease_2020 <- 
+  daily %>% 
+  filter(housing, status == "R", date >= start_2020 - years(1), 
+         date <= end_2020) %>% 
+  count(date_2019 = date >= start_2020) %>% 
+  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
+  pull(growth) %>% 
+  scales::percent(0.1)
+
+reserved_nights_increase_jan_feb <- 
+  daily %>% 
+  filter(housing, status == "R", date >= start_2019, 
+         month(date) %in% c(1, 2)) %>% 
+  count(date_2020 = date >= start_2020) %>% 
+  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
+  pull(growth) %>% 
+  scales::percent(0.1)
+
+
+rm(property, daily, GH)
+
+```
+
+``` {r make_fig_5_1}
+
+figure_5_1_fun <- function(regular = "", condensed = "") {
+  
+  active_by_status %>% 
+    group_by(status) %>% 
+    mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+    ungroup() %>% 
+    filter(date >= "2018-01-01") %>% 
+    ggplot(aes(date, n, color = status)) +
+    geom_line(lwd = 1) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = NULL, limits = c(0, NA), label = scales::comma) +
+    scale_color_manual(name = NULL,
+                       labels = c("Available listings", "Reserved listings"), 
+                       values = col_palette[c(2, 4)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.text = element_text(size = 10, family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_5_1.pdf"), 
+         plot = figure_5_1_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_5_1.pdf"))
+}
+
+```
+
+When it comes to reserved and available listings, reservations generally spike during the winter holidays, but otherwise are low from November to February, and then increase steadily from March to August before reclining again. Available nights follow a roughly opposite pattern, since availability is higher when fewer reservations are made. Figure \@ref(fig:fig-5-1) shows the number of STR listings available and reserved each day in Toronto. While the total reserved nights increased by a rapid `r reserved_nights_increase_jan_feb` in the first two months of 2020, they have overall decreased by `r reserved_nights_decrease_2020` in 2020 compared to 2019. There was `r reservation_change_2020` fewer nights reserved in 2020, from `r reservation_count_2020[1]` reserved nights in 2019 to `r reservation_count_2020[2]` reserved nights in 2020. 
+
+``` {r fig-5-1, include = TRUE, fig.cap = '(ref:fig-5-1)', fig.align = "center"}
+
+figure_5_1_fun()
+
+```
+
+(ref:fig-5-1) _Available and reserved listings since 2018 (14-day average)_
+
+Figure \@ref(fig:fig-5-2) provides a closer look at daily reservations since 2019, comparing the actual trajectory of reservations during the pandemic with what the trajectory of reservations would have been expected to be in the absence of the pandemic and previous growth in Toronto's STR market. (To do this, we use seasonal decomposition to identify the regular seasonal fluctuations in STR activity and separate them from the underlying patterns of growth or decline.) In total, from March through October 2020, we estimate that there have been `r res_total_pandemic_dif` fewer STR nights reserved than would normally have been expected to occur. The `r res_total_pandemic` total nights reserved in this time period is only `r res_total_pandemic_pct` of the `r res_total_pandemic_trend` nights total that would represent the previous growth trend.
+
+In terms of revenue, 2020 revenue decreased by a staggering `r active_yoy_revenue` compared to 2019. To offer some perspective, from 2018 to 2019, reservations and revenue increased by `r reservation_change_2019` and `r active_yoy_revenue`, respectively. Based on previous growth trends, it is possible to estimate the total loss in revenue incurred by STR hosts, combining the loss of revenue of reservations that never occurred and the lower of reservations that did occur. Throughout the May-October period of 2020, nightly prices have been an average of `r nightly_price_dif` lower than expected. Spread across the `r res_total_pandemic` nights reserved during this period, this means that STR operators collectively earned `r total_price_dif` less than they would have on their bookings in the absence of the pandemic. When the lower prices on reservations which did occur is combined with the reservations which did not occur, our estimate is that Vancouver’s STR hosts lost a total of `r total_revenue_lost` million in revenue between March and September 2020 because of the Covid-19 pandemic.
+  
 <br>
 
 ## Revenue distribution among STR hosts
@@ -1530,6 +1474,70 @@ figure_1_4_fun()
 ```
 
 (ref:fig-1-4) _STR host revenue distribution in the City of Toronto_
+
+<br>
+
+## Toronto in comparison with other major Canadian cities
+
+``` {r para_6, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "national_comparison.qs"))}
+
+national_comparison <- qread(here("output", "national_comparison.qs"),
+                             nthreads = availableCores())
+
+van_active_per_1000 <- 
+  national_comparison %>% 
+  filter(city == "Vancouver") %>% 
+  pull(listings_per_1000) %>% 
+  round(1) %>% 
+  prettyNum(",")
+
+to_active_per_1000 <- 
+  national_comparison %>% 
+  filter(city == "Toronto") %>% 
+  pull(listings_per_1000) %>% 
+  round(1) %>% 
+  prettyNum(",")
+
+van_rev_per_listing <- 
+  national_comparison %>% 
+  filter(city == "Vancouver") %>% 
+  pull(revenue_per_listing) %>% 
+  round(-2) %>% 
+  scales::dollar()
+
+to_rev_per_listing <- 
+  national_comparison %>% 
+  filter(city == "Toronto") %>% 
+  pull(revenue_per_listing) %>% 
+  round(-2) %>% 
+  scales::dollar()
+
+```
+
+In 2020, Toronto had the largest STR market in the country by both active listing numbers (`r avg_listings_active`) and host revenue (`r annual_rev`), followed in both cases by Montreal and Vancouver (Table \@ref(tab:tab-1-1)). However, in relative terms, Vancouver stands considerably ahead of both Toronto and Montreal. Vancouver had the most active listings per 1000 households (`r van_active_per_1000` compared to `r to_active_per_1000` in Toronto) and the most revenue per listing (`r van_rev_per_listing` compared to `r to_rev_per_listing` in Toronto).
+
+``` {r tab-1-1, include = TRUE}
+
+library(kableExtra)
+
+national_comparison <- qread(here("output", "national_comparison.qs"),
+                             nthreads = availableCores())
+
+national_comparison %>% 
+  transmute(
+    city, 
+    active_daily_listings = prettyNum(round(active_daily_listings, -1), ","),
+    listings_per_1000 = round(listings_per_1000, 1),
+    revenue = scales::dollar(revenue, 0.1, 1/1000000),
+    revenue_per_listing = scales::dollar(revenue_per_listing, 100)) %>% 
+  set_names(c("City", "Active listings", "Listings per 1000 households",
+              "Annual revenue (million)", "Revenue per listing")) %>% 
+  kbl(caption = "2019 STR activity in the largest ten Canadian municipalities",
+      align = "lrrrr") %>%
+  kable_styling(latex_options="scale_down") %>%
+  row_spec(9, background = paste0(col_palette[2], "50"))
+  
+```
 
 <br>
 

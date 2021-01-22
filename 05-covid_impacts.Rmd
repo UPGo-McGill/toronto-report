@@ -45,40 +45,31 @@ active_by_status <-
 
 reserved_nights_increase_2019 <- 
   daily %>% 
-  filter(housing, status == "R", date >= LTM_start_date - years(1), 
-         date <= LTM_end_date) %>% 
-  count(date_2019 = date >= LTM_start_date) %>% 
+  filter(housing, status == "R", date >= start_2019 - years(1), 
+         date <= end_2019) %>% 
+  count(date_2019 = date >= start_2019) %>% 
   summarize(growth = (n[2] - n[1]) / n[1]) %>% 
   pull(growth) %>% 
   scales::percent(0.1)
 
-peak_reserved_nights <- 
+reserved_nights_decrease_2020 <- 
   daily %>% 
-  filter(housing, status == "R", date >= LTM_start_date) %>% 
-  count(date, sort = TRUE) %>% 
-  slice(1) %>% 
-  pull(n) %>% 
-  round(-2) %>% 
-  prettyNum(",")
+  filter(housing, status == "R", date >= start_2020 - years(1), 
+         date <= end_2020) %>% 
+  count(date_2019 = date >= start_2020) %>% 
+  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
+  pull(growth) %>% 
+  scales::percent(0.1)
 
 reserved_nights_increase_jan_feb <- 
   daily %>% 
-  filter(housing, status == "R", date >= LTM_start_date, 
+  filter(housing, status == "R", date >= start_2019, 
          month(date) %in% c(1, 2)) %>% 
-  count(date_2020 = date >= LTM_start_date + years(1)) %>% 
+  count(date_2020 = date >= start_2020) %>% 
   summarize(growth = (n[2] - n[1]) / n[1]) %>% 
   pull(growth) %>% 
   scales::percent(0.1)
 
-reserved_nights_increase_mar_sep <- 
-  daily %>% 
-  filter(housing, status == "R", date >= LTM_start_date, 
-         month(date) %in% 3:9) %>% 
-  count(date_2020 = date >= LTM_start_date + years(1)) %>% 
-  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
-  pull(growth) %>% 
-  scales::percent(0.1) %>% 
-  str_remove("-")
 
 rm(property, daily, GH)
 

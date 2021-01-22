@@ -655,6 +655,186 @@ In general, the number of STR listings available in the City of Toronto peaks du
   
 <br>
 
+## Location of STR listings and revenue
+
+``` {r para_7}
+
+spadina_listing_pct <- 
+  WD_breakdown %>% 
+  filter(ward == "Spadina-Fort York") %>% 
+  pull(listings_pct) %>% 
+  scales::percent(0.1)
+
+spadina_rev_pct <- 
+  WD_breakdown %>% 
+  filter(ward == "Spadina-Fort York") %>% 
+  pull(rev_pct) %>% 
+  scales::percent(0.1)
+
+university_listing_pct <- 
+  WD_breakdown %>% 
+  filter(ward == "University-Rosedale") %>% 
+  pull(listings_pct) %>% 
+  scales::percent(0.1)
+
+university_rev_pct <- 
+  WD_breakdown %>% 
+  filter(ward == "University-Rosedale") %>% 
+  pull(rev_pct) %>% 
+  scales::percent(0.1)
+
+centre_listing_pct <- 
+  WD_breakdown %>% 
+  filter(ward == "Toronto Centre") %>% 
+  pull(listings_pct) %>% 
+  scales::percent(0.1)
+
+centre_rev_pct <- 
+  WD_breakdown %>% 
+  filter(ward == "Toronto Centre") %>% 
+  pull(rev_pct) %>% 
+  scales::percent(0.1)
+
+spadina_per_cap <- 
+  WD_breakdown %>% 
+  filter(ward == "Spadina-Fort York") %>% 
+  pull(listings_pct) %>% 
+  scales::percent(0.1)
+
+university_per_cap <- 
+  WD_breakdown %>% 
+  filter(ward == "University-Rosedale") %>% 
+  pull(listings_pct) %>% 
+  scales::percent(0.1)
+
+min_per_cap <- 
+  WD_breakdown %>% 
+  filter(active_listings > 100) %>% 
+  pull(listings_pct) %>% 
+  min() %>% 
+  scales::percent(0.1)
+
+max_per_cap <- 
+  WD_breakdown %>% 
+  filter(active_listings > 100, 
+         !active_listings %in% c("Spadina-Fort York", "Toronto Centre")) %>% 
+  pull(listings_pct) %>% 
+  max() %>% 
+  scales::percent(0.1)
+
+```
+
+``` {r make_fig_1_3}
+
+figure_1_3_fun <- function(regular = "", condensed = "") {
+  
+  left_map <- 
+    active_ward %>% 
+    ggplot() +
+    geom_sf(data = province, colour = "transparent", fill = "grey93") +
+    geom_sf(aes(fill = percentage), colour = "white") +
+    scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
+                         na.value = "grey80",
+                         limits = c(0, 0.04), oob = scales::squish, 
+                         labels = scales::percent)  +
+    guides(fill = guide_colourbar(title = "STRs/\ndwelling",
+                                  title.vjust = 1)) + 
+    gg_bbox(active_DA) +
+    theme_void() +
+    theme(text = element_text(family = regular, face = "plain"),
+          legend.title = element_text(family = regular, face = "bold",
+                                      size = 7),
+          legend.title.align = 0.9,
+          legend.text = element_text(family = regular, size = 5),
+          panel.border = element_rect(colour = "white", size = 2))
+  
+  right_map <- 
+    active_DA %>% 
+    ggplot() +
+    geom_sf(data = province, colour = "transparent", fill = "grey93") +
+    geom_sf(aes(fill = percentage), colour = "transparent") +
+    scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
+                         na.value = "grey80",
+                         limits = c(0, 0.1), oob = scales::squish, 
+                         labels = scales::percent)  +
+    guides(fill = guide_colourbar(title = "STRs/\ndwelling",
+                                  title.vjust = 1)) + 
+    gg_bbox(active_DA) +
+    theme_void() +
+    theme(text = element_text(family = regular, face = "plain"),
+          legend.title = element_text(family = regular, face = "bold",
+                                      size = 7),
+          legend.title.align = 0.9,
+          legend.text = element_text(family = regular, size = 5),
+          panel.border = element_rect(colour = "white", size = 2))
+  
+  left_map + right_map + plot_layout(guide = "collect") & 
+    theme(legend.position = "bottom", legend.key.width = unit(1.8, "lines"))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_1_3.pdf"), 
+         plot = figure_1_3_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 4.2, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_1_3.pdf"))
+}
+
+```
+
+STR activity in Toronto is highly concentrated in the Spadina-Fort York ward, which includes the Waterfront area (Figure \@ref(fig:fig-1-3)). This ward accounts for `r spadina_listing_pct` of all listings in 2019, and an even higher share of host revenue (`r spadina_rev_pct`). Spadina-Fort York is followed by the University-Rosedale ward (`r university_listing_pct` of active listings and `r university_rev_pct` of revenue) and the Toronto Centre ward (`r centre_listing_pct` of active listings and `r centre_rev_pct` of revenue). When measured in per-capita terms, Spadina-Fort York and University have the highest concentrations of STRs, at `r spadina_per_cap` and `r university_per_cap` respectively. In all other wards STRs account for between `r min_per_cap` and `r max_per_cap` of total dwellings.
+
+
+``` {r fig-1-3, include = TRUE, fig.cap = '(ref:fig-1-3)', fig.align = "center"}
+
+figure_1_3_fun()
+
+```
+
+(ref:fig-1-3) _Active STRs as a share of all dwelling units in Toronto, by local ward (L) and dissemination area (R)_
+
+``` {r tab-1-2, include = TRUE}
+
+library(kableExtra)
+
+WD_breakdown %>% 
+  select(ward, active_listings, active_growth, listings_pct_dwellings,
+         annual_rev, rev_growth) %>% 
+  filter(active_listings > 100) %>% 
+  arrange(-active_listings) %>% 
+  mutate(active_listings = prettyNum(round(active_listings, -1), ","),
+         active_growth = scales::percent(active_growth, 0.1),
+         listings_pct_dwellings = scales::percent(listings_pct_dwellings, 0.1),
+         annual_rev = scales::dollar(annual_rev, 0.1, scale = 1 / 1000000),
+         rev_growth = scales::percent(rev_growth, 0.1)) %>%
+  add_row(ward = "City of Toronto",
+          active_listings = avg_listings_active,
+          active_growth = paste0("-", active_yoy_listings),
+          listings_pct_dwellings = {
+            avg_listings_active %>% 
+              parse_number() %>% 
+              {. / sum(WD$dwellings)} %>% 
+              scales::percent(0.1)},
+          annual_rev = str_remove(annual_rev, " million"),
+          rev_growth = active_yoy_revenue,
+          .before = 1) %>% 
+  set_names(c("Ward", 
+              "Active listings",
+              "Annual listing growth",
+              "Active listings as % of dwellings",
+              "Annual revenue (million)",
+              "Annual revenue growth")) %>% 
+  kbl(caption = "Local wards with at least 100 daily active listings in 2019",
+               align = "lrrrrr") %>% 
+  kable_styling(latex_options="scale_down") %>% 
+  row_spec(1, background = paste0(col_palette[2], "50"))
+
+  
+```
+
+<br>
+
 ## STR growth rates
 
 ``` {r make_fig_1_2}
@@ -907,9 +1087,17 @@ if (build_figures) {
 
 When it comes to reserved and available listings, reservations generally spike during the winter holidays, but otherwise are low from November to February, and then increase steadily from March to August before reclining again. Available nights follow a roughly opposite pattern, since availability is higher when fewer reservations are made. Figure \@ref(fig:fig-5-1) shows the number of STR listings available and reserved each day in Toronto. While the total reserved nights increased by a rapid `r reserved_nights_increase_jan_feb` in the first two months of 2020, they have overall decreased by `r reserved_nights_decrease_2020` in 2020 compared to 2019. There was `r reservation_change_2020` fewer nights reserved in 2020, from `r reservation_count_2020[1]` reserved nights in 2019 to `r reservation_count_2020[2]` reserved nights in 2020. 
 
-??? Trend about reservations ??? then dive into prices
+``` {r fig-5-1, include = TRUE, fig.cap = '(ref:fig-5-1)', fig.align = "center"}
 
-In terms of revenue, 2020 revenue decreased by a staggering `r active_yoy_revenue` compared to 2019. To offer some perspective, from 2018 to 2019, reservations and revenue increased by `r reservation_change_2019` and `r active_yoy_revenue`, respectively. 
+figure_5_1_fun()
+
+```
+
+(ref:fig-5-1) _Available and reserved listings since 2018 (14-day average)_
+
+Figure \@ref(fig:fig-5-2) provides a closer look at daily reservations since 2019, comparing the actual trajectory of reservations during the pandemic with what the trajectory of reservations would have been expected to be in the absence of the pandemic and previous growth in Toronto's STR market. (To do this, we use seasonal decomposition to identify the regular seasonal fluctuations in STR activity and separate them from the underlying patterns of growth or decline.) In total, from March through October 2020, we estimate that there have been `r res_total_pandemic_dif` fewer STR nights reserved than would normally have been expected to occur. The `r res_total_pandemic` total nights reserved in this time period is only `r res_total_pandemic_pct` of the `r res_total_pandemic_trend` nights total that would represent the previous growth trend.
+
+In terms of revenue, 2020 revenue decreased by a staggering `r active_yoy_revenue` compared to 2019. To offer some perspective, from 2018 to 2019, reservations and revenue increased by `r reservation_change_2019` and `r active_yoy_revenue`, respectively. Based on previous growth trends, it is possible to estimate the total loss in revenue incurred by STR hosts, combining the loss of revenue of reservations that never occurred and the lower of reservations that did occur. Throughout the May-October period of 2020, nightly prices have been an average of `r nightly_price_dif` lower than expected. Spread across the `r res_total_pandemic` nights reserved during this period, this means that STR operators collectively earned `r total_price_dif` less than they would have on their bookings in the absence of the pandemic. When the lower prices on reservations which did occur is combined with the reservations which did not occur, our estimate is that Vancouver’s STR hosts lost a total of `r total_revenue_lost` million in revenue between March and September 2020 because of the Covid-19 pandemic.
   
 <br>
 
@@ -972,186 +1160,6 @@ national_comparison %>%
       align = "lrrrr") %>%
   kable_styling(latex_options="scale_down") %>%
   row_spec(9, background = paste0(col_palette[2], "50"))
-  
-```
-
-<br>
-
-## Location of STR listings and revenue
-
-``` {r para_7}
-
-spadina_listing_pct <- 
-  WD_breakdown %>% 
-  filter(ward == "Spadina-Fort York") %>% 
-  pull(listings_pct) %>% 
-  scales::percent(0.1)
-
-spadina_rev_pct <- 
-  WD_breakdown %>% 
-  filter(ward == "Spadina-Fort York") %>% 
-  pull(rev_pct) %>% 
-  scales::percent(0.1)
-
-university_listing_pct <- 
-  WD_breakdown %>% 
-  filter(ward == "University-Rosedale") %>% 
-  pull(listings_pct) %>% 
-  scales::percent(0.1)
-
-university_rev_pct <- 
-  WD_breakdown %>% 
-  filter(ward == "University-Rosedale") %>% 
-  pull(rev_pct) %>% 
-  scales::percent(0.1)
-
-centre_listing_pct <- 
-  WD_breakdown %>% 
-  filter(ward == "Toronto Centre") %>% 
-  pull(listings_pct) %>% 
-  scales::percent(0.1)
-
-centre_rev_pct <- 
-  WD_breakdown %>% 
-  filter(ward == "Toronto Centre") %>% 
-  pull(rev_pct) %>% 
-  scales::percent(0.1)
-
-spadina_per_cap <- 
-  WD_breakdown %>% 
-  filter(ward == "Spadina-Fort York") %>% 
-  pull(listings_pct) %>% 
-  scales::percent(0.1)
-
-university_per_cap <- 
-  WD_breakdown %>% 
-  filter(ward == "University-Rosedale") %>% 
-  pull(listings_pct) %>% 
-  scales::percent(0.1)
-
-min_per_cap <- 
-  WD_breakdown %>% 
-  filter(active_listings > 100) %>% 
-  pull(listings_pct) %>% 
-  min() %>% 
-  scales::percent(0.1)
-
-max_per_cap <- 
-  WD_breakdown %>% 
-  filter(active_listings > 100, 
-         !active_listings %in% c("Spadina-Fort York", "Toronto Centre")) %>% 
-  pull(listings_pct) %>% 
-  max() %>% 
-  scales::percent(0.1)
-
-```
-
-``` {r make_fig_1_3}
-
-figure_1_3_fun <- function(regular = "", condensed = "") {
-  
-  left_map <- 
-    active_ward %>% 
-    ggplot() +
-    geom_sf(data = province, colour = "transparent", fill = "grey93") +
-    geom_sf(aes(fill = percentage), colour = "white") +
-    scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
-                         na.value = "grey80",
-                         limits = c(0, 0.04), oob = scales::squish, 
-                         labels = scales::percent)  +
-    guides(fill = guide_colourbar(title = "STRs/\ndwelling",
-                                  title.vjust = 1)) + 
-    gg_bbox(active_DA) +
-    theme_void() +
-    theme(text = element_text(family = regular, face = "plain"),
-          legend.title = element_text(family = regular, face = "bold",
-                                      size = 7),
-          legend.title.align = 0.9,
-          legend.text = element_text(family = regular, size = 5),
-          panel.border = element_rect(colour = "white", size = 2))
-  
-  right_map <- 
-    active_DA %>% 
-    ggplot() +
-    geom_sf(data = province, colour = "transparent", fill = "grey93") +
-    geom_sf(aes(fill = percentage), colour = "transparent") +
-    scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
-                         na.value = "grey80",
-                         limits = c(0, 0.1), oob = scales::squish, 
-                         labels = scales::percent)  +
-    guides(fill = guide_colourbar(title = "STRs/\ndwelling",
-                                  title.vjust = 1)) + 
-    gg_bbox(active_DA) +
-    theme_void() +
-    theme(text = element_text(family = regular, face = "plain"),
-          legend.title = element_text(family = regular, face = "bold",
-                                      size = 7),
-          legend.title.align = 0.9,
-          legend.text = element_text(family = regular, size = 5),
-          panel.border = element_rect(colour = "white", size = 2))
-  
-  left_map + right_map + plot_layout(guide = "collect") & 
-    theme(legend.position = "bottom", legend.key.width = unit(1.8, "lines"))
-
-}
-
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_1_3.pdf"), 
-         plot = figure_1_3_fun("Futura", "Futura Condensed"), 
-         width = 8, height = 4.2, units = "in", useDingbats = FALSE)
-  
-  extrafont::embed_fonts(here("output", "figures", "figure_1_3.pdf"))
-}
-
-```
-
-STR activity in Toronto is highly concentrated in the Spadina-Fort York ward, which includes the Waterfront area (Figure \@ref(fig:fig-1-3)). This ward accounts for `r spadina_listing_pct` of all listings in 2019, and an even higher share of host revenue (`r spadina_rev_pct`). Spadina-Fort York is followed by the University-Rosedale ward (`r university_listing_pct` of active listings and `r university_rev_pct` of revenue) and the Toronto Centre ward (`r centre_listing_pct` of active listings and `r centre_rev_pct` of revenue). When measured in per-capita terms, Spadina-Fort York and University have the highest concentrations of STRs, at `r spadina_per_cap` and `r university_per_cap` respectively. In all other wards STRs account for between `r min_per_cap` and `r max_per_cap` of total dwellings.
-
-
-``` {r fig-1-3, include = TRUE, fig.cap = '(ref:fig-1-3)', fig.align = "center"}
-
-figure_1_3_fun()
-
-```
-
-(ref:fig-1-3) _Active STRs as a share of all dwelling units in Toronto, by local ward (L) and dissemination area (R)_
-
-``` {r tab-1-2, include = TRUE}
-
-library(kableExtra)
-
-WD_breakdown %>% 
-  select(ward, active_listings, active_growth, listings_pct_dwellings,
-         annual_rev, rev_growth) %>% 
-  filter(active_listings > 100) %>% 
-  arrange(-active_listings) %>% 
-  mutate(active_listings = prettyNum(round(active_listings, -1), ","),
-         active_growth = scales::percent(active_growth, 0.1),
-         listings_pct_dwellings = scales::percent(listings_pct_dwellings, 0.1),
-         annual_rev = scales::dollar(annual_rev, 0.1, scale = 1 / 1000000),
-         rev_growth = scales::percent(rev_growth, 0.1)) %>%
-  add_row(ward = "City of Toronto",
-          active_listings = avg_listings_active,
-          active_growth = paste0("-", active_yoy_listings),
-          listings_pct_dwellings = {
-            avg_listings_active %>% 
-              parse_number() %>% 
-              {. / sum(WD$dwellings)} %>% 
-              scales::percent(0.1)},
-          annual_rev = str_remove(annual_rev, " million"),
-          rev_growth = active_yoy_revenue,
-          .before = 1) %>% 
-  set_names(c("Ward", 
-              "Active listings",
-              "Annual listing growth",
-              "Active listings as % of dwellings",
-              "Annual revenue (million)",
-              "Annual revenue growth")) %>% 
-  kbl(caption = "Local wards with at least 100 daily active listings in 2019",
-               align = "lrrrrr") %>% 
-  kable_styling(latex_options="scale_down") %>% 
-  row_spec(1, background = paste0(col_palette[2], "50"))
-
   
 ```
 

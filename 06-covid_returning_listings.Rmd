@@ -807,7 +807,7 @@ bedroom_match_table <-
 bedroom_match_table <-
   property %>% 
   st_drop_geometry() %>% 
-  filter(housing, active >= "2019-01-01", created <= "2019-12-31") %>% 
+  filter(housing, active >= "2020-01-01", created <= "2020-12-31") %>% 
   count(bedrooms) %>% 
   filter(!is.na(bedrooms)) %>% 
   rowwise() %>% 
@@ -817,7 +817,7 @@ bedroom_match_table <-
   rename(bedrooms = group) %>% 
   mutate(pct = round(pct / sum(pct), 3)) %>% 
   mutate(bedrooms = c("Studio", "1-bedroom", "2-bedroom", "3+-bedroom")) %>% 
-  mutate(Category = "STR market (2019)", .before = bedrooms) %>% 
+  mutate(Category = "STR market (2020)", .before = bedrooms) %>% 
   bind_rows(bedroom_match_table, .)
 
 bedroom_match_table <-
@@ -871,7 +871,7 @@ nonmatch_2br_pct <-
 
 str_2br_pct <- 
   bedroom_match_table %>% 
-  filter(Category == "STR market (2019)") %>% 
+  filter(Category == "STR market (2020)") %>% 
   pull(`2-bedroom`) %>% 
   scales::percent(0.1)
 
@@ -896,7 +896,7 @@ nonmatch_studio_pct <-
 str_studio_pct <- 
   str_2br_pct <- 
   bedroom_match_table %>% 
-  filter(Category == "STR market (2019)") %>% 
+  filter(Category == "STR market (2020)") %>% 
   pull(Studio) %>% 
   scales::percent(0.1)
 
@@ -1321,7 +1321,7 @@ if (build_figures) {
 
 ```
 
-STR hosts which transferred listings to the long-term rental market had substantially higher STR revenue in 2019 than hosts who did not transfer listings. The median listing revenue was `r median_listing_rev` in the entire City of Toronto in 2019. The annual median revenue of hosts who transferred listings to the LTR market was `r median_host_rev_match`, while the median revenue of hosts who did not transfer listings was somewhat less at `r median_host_rev_no_match`. Moreover, many of Toronto’s highest earning STR hosts turned to LTR platforms during the COVID-19 pandemic. For example, `r host_250k_match` of the `r host_250k` hosts that made more than $250,000 in the past year listed at least one of their STR units on an LTR platform. On average these top earning hosts listed `r host_250k_match_n_units` units on LTR platforms, compared to `r host_all_match_n_units` units for all other hosts. Figure \@ref(fig:fig-6-6) compares the 2019 annual revenue distribution of STR hosts that shifted listings to the long-term market and hosts that did not. Hosts whose STR listings matched to LTR listings have a revenue distribution with higher bars to the right, indicating that they earned more money.
+STR hosts which transferred listings to the long-term rental market had substantially higher STR revenue in 2020 than hosts who did not transfer listings. The median listing revenue was `r median_listing_rev` in the entire City of Toronto in 2020. The annual median revenue of hosts who transferred listings to the LTR market was `r median_host_rev_match`, while the median revenue of hosts who did not transfer listings was somewhat less at `r median_host_rev_no_match`. Moreover, many of Toronto’s highest earning STR hosts turned to LTR platforms during the COVID-19 pandemic. For example, `r host_250k_match` of the `r host_250k` hosts that made more than $250,000 in the past year listed at least one of their STR units on an LTR platform. On average these top earning hosts listed `r host_250k_match_n_units` units on LTR platforms, compared to `r host_all_match_n_units` units for all other hosts. Figure \@ref(fig:fig-6-6) compares the 2020 annual revenue distribution of STR hosts that shifted listings to the long-term market and hosts that did not. Hosts whose STR listings matched to LTR listings have a revenue distribution with higher bars to the right, indicating that they earned more money.
 
 ``` {r fig-6-6, include = TRUE, fig.cap = '(ref:fig-6-6)', fig.align = "center"}
 

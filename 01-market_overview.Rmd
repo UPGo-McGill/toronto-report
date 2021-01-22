@@ -496,7 +496,7 @@ if (build_figures) {
 
 ```
 
-Active daily listings are listings which were displayed on Airbnb or VRBO on a given day, and were either reserved or available for a reservation. It is the most reliable means of determining the overall size of the STR market in a location, particularly with respect to change over time. In 2020 there was an average of `r avg_listings_active` active daily listings (Figure \@ref(fig:fig-1-1)) operated by an average of `r avg_hosts` hosts. These hosts collectively earned `r annual_rev`—an average of `r avg_rev_per_listing` per daily active listing or `r avg_rev_per_host` per active host. 
+Active daily listings are listings which were displayed on Airbnb or VRBO on a given day, and were either reserved or available for a reservation. It is the most reliable means of determining the overall size of the STR market in a location, particularly with respect to change over time. In 2020 there was an average of `r avg_listings_active` active daily listings (Figure \@ref(fig:fig-1-1)) operated by an average of `r avg_hosts` hosts. These hosts collectively earned `r annual_rev`—an average of `r avg_rev_per_listing` per daily active listing or `r avg_rev_per_host` per active host. The 2020 STR market has significantly been impacted by the Covid-19, both because of the broad decline in travel demand and of Airbnb's announcement of an emergency cancellation policy which enabled guests to cancel their reservations if the reservation start date was between March 14 and July 31, 2020 (Airbnb 2020). To compare, there was an average of `r avg_listings_active19` active daily listings in 2019, operated by `r avg_hosts19` hosts, who earned on average `r avg_rev_per_host19`. 
 
 ``` {r fig-1-1, include = TRUE, fig.cap = '(ref:fig-1-1)', fig.align = "center"}
 
@@ -649,7 +649,7 @@ rm(property, daily, GH)
 
 ```
 
-Active daily listings peaked in `r highest_activity_date` at `r highest_activity_amount`, and have since declined. Due to the Covid-19 pandemic, there were  `r active_yoy_listings` less listings active on average in 2020 than in 2019, and `r active_yoy_revenue` less revenue. Compared to 2018, active listings increease by `r active_yoy_listings19` in 2019 and revenues grew by `r active_yoy_revenue19`.
+Active daily listings peaked in `r highest_activity_date` at `r highest_activity_amount`, and have since declined. Due to the Covid-19 pandemic, there were `r active_yoy_listings` less active listings on average in 2020 than in 2019, and `r active_yoy_revenue` less revenue. Prior to 2020, Toronto's STR market was growing at a great rate. Compared to 2018, active listings and revenue respectively increased by `r active_yoy_listings19` and `r active_yoy_revenue19` in 2019.
 
 In general, the number of STR listings available in the City of Toronto peaks during late summer and winter holidays and falling in between these periods (Figure \@ref(fig:fig-1-1)). There is one major exception the March to December 2020 period, where activity has been sharply below the seasonal trend because of the Covid-19 pandemic.
   
@@ -830,7 +830,86 @@ rm(property, daily, GH)
 
 ```
 
-As for the growth rate of reservations and host revenue, in 2020, the number of reserved nights decreased by `r reservation_change_2020`, from `r reservation_count_2020[1]` reserved nights in 2019 to `r reservation_count_2020[2]` reserved nights in 2020, while revenue decreased by a staggering `r active_yoy_revenue`. Comparatively, from 2018 to 2019, reservations and revenue increased by `r reservation_change_2019` and `r active_yoy_revenue`, respectively.
+```{r active_listings, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+active_by_status <- 
+  daily %>% 
+  filter(housing, date >= "2016-01-01", status %in% c("R", "A")) %>% 
+  count(date, status)
+
+reserved_nights_increase_2019 <- 
+  daily %>% 
+  filter(housing, status == "R", date >= LTM_start_date - years(1), 
+         date <= LTM_end_date) %>% 
+  count(date_2019 = date >= LTM_start_date) %>% 
+  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
+  pull(growth) %>% 
+  scales::percent(0.1)
+
+reserved_nights_decrease_2020 <- 
+  daily %>% 
+  filter(housing, status == "R", date >= start_2020 - years(1), 
+         date <= end_2020) %>% 
+  count(date_2019 = date >= start_2020) %>% 
+  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
+  pull(growth) %>% 
+  scales::percent(0.1)
+
+reserved_nights_increase_jan_feb <- 
+  daily %>% 
+  filter(housing, status == "R", date >= start_2019, 
+         month(date) %in% c(1, 2)) %>% 
+  count(date_2020 = date >= start_2020) %>% 
+  summarize(growth = (n[2] - n[1]) / n[1]) %>% 
+  pull(growth) %>% 
+  scales::percent(0.1)
+
+
+rm(property, daily, GH)
+
+```
+
+``` {r make_fig_5_1}
+
+figure_5_1_fun <- function(regular = "", condensed = "") {
+  
+  active_by_status %>% 
+    group_by(status) %>% 
+    mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
+    ungroup() %>% 
+    filter(date >= "2018-01-01") %>% 
+    ggplot(aes(date, n, color = status)) +
+    geom_line(lwd = 1) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = NULL, limits = c(0, NA), label = scales::comma) +
+    scale_color_manual(name = NULL,
+                       labels = c("Available listings", "Reserved listings"), 
+                       values = col_palette[c(2, 4)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.text = element_text(size = 10, family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_5_1.pdf"), 
+         plot = figure_5_1_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_5_1.pdf"))
+}
+
+```
+
+When it comes to reserved and available listings, reservations generally spike during the winter holidays, but otherwise are low from November to February, and then increase steadily from March to August before reclining again. Available nights follow a roughly opposite pattern, since availability is higher when fewer reservations are made. Figure \@ref(fig:fig-5-1) shows the number of STR listings available and reserved each day in Toronto. While the total reserved nights increased by a rapid `r reserved_nights_increase_jan_feb` in the first two months of 2020, they have overall decreased by `r reserved_nights_decrease_2020` in 2020 compared to 2019. There was `r reservation_change_2020` fewer nights reserved in 2020, from `r reservation_count_2020[1]` reserved nights in 2019 to `r reservation_count_2020[2]` reserved nights in 2020. 
+
+??? Trend about reservations ??? then dive into prices
+
+In terms of revenue, 2020 revenue decreased by a staggering `r active_yoy_revenue` compared to 2019. To offer some perspective, from 2018 to 2019, reservations and revenue increased by `r reservation_change_2019` and `r active_yoy_revenue`, respectively. 
   
 <br>
 

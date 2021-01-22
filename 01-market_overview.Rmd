@@ -129,7 +129,7 @@ active_WD <-
   count(ward, date) %>% 
   group_by(ward) %>% 
   summarize(n = mean(n, na.rm = TRUE)) %>%
-  left_join(ward, .) %>% 
+  left_join(WD, .) %>% 
   mutate(percentage = n / dwellings, n = round(n, digit = -1)) %>% 
   select(ward, n, dwellings, percentage)
 
@@ -871,7 +871,7 @@ to_rev_per_listing <-
 
 ```
 
-In 2019, Toronto had the largest STR market in the country by both active listing numbers (`r avg_listings_active`) and host revenue (`r annual_rev`), followed in both cases by Montreal and Vancouver (Table \@ref(tab:tab-1-1)). However, in relative terms, Vancouver stands considerably ahead of both Toronto and Montreal. Vancouver had the most active listings per 1000 households (`r van_active_per_1000` compared to `r to_active_per_1000` in Toronto) and the most revenue per listing (`r van_rev_per_listing` compared to `r to_rev_per_listing` in Toronto).
+In 2020, Toronto had the largest STR market in the country by both active listing numbers (`r avg_listings_active`) and host revenue (`r annual_rev`), followed in both cases by Montreal and Vancouver (Table \@ref(tab:tab-1-1)). However, in relative terms, Vancouver stands considerably ahead of both Toronto and Montreal. Vancouver had the most active listings per 1000 households (`r van_active_per_1000` compared to `r to_active_per_1000` in Toronto) and the most revenue per listing (`r van_rev_per_listing` compared to `r to_rev_per_listing` in Toronto).
 
 ``` {r tab-1-1, include = TRUE}
 
@@ -914,6 +914,18 @@ spadina_rev_pct <-
   pull(rev_pct) %>% 
   scales::percent(0.1)
 
+university_listing_pct <- 
+  WD_breakdown %>% 
+  filter(ward == "University-Rosedale") %>% 
+  pull(listings_pct) %>% 
+  scales::percent(0.1)
+
+university_rev_pct <- 
+  WD_breakdown %>% 
+  filter(ward == "University-Rosedale") %>% 
+  pull(rev_pct) %>% 
+  scales::percent(0.1)
+
 centre_listing_pct <- 
   WD_breakdown %>% 
   filter(ward == "Toronto Centre") %>% 
@@ -926,27 +938,15 @@ centre_rev_pct <-
   pull(rev_pct) %>% 
   scales::percent(0.1)
 
-TKTK_listing_pct <- 
-  WD_breakdown %>% 
-  filter(ward == "TKTK") %>% 
-  pull(listings_pct) %>% 
-  scales::percent(0.1)
-
-TKTK_rev_pct <- 
-  WD_breakdown %>% 
-  filter(ward == "TKTK") %>% 
-  pull(rev_pct) %>% 
-  scales::percent(0.1)
-
-downtown_per_cap <- 
+spadina_per_cap <- 
   WD_breakdown %>% 
   filter(ward == "Spadina-Fort York") %>% 
   pull(listings_pct) %>% 
   scales::percent(0.1)
 
-riley_per_cap <- 
+university_per_cap <- 
   WD_breakdown %>% 
-  filter(ward == "Toronto Centre") %>% 
+  filter(ward == "University-Rosedale") %>% 
   pull(listings_pct) %>% 
   scales::percent(0.1)
 
@@ -976,9 +976,9 @@ figure_1_3_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = percentage), colour = "white") +
-    scale_fill_gradientn(colors = col_palette[c(5, 2, 3, 7, 4)], 
+    scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
                          na.value = "grey80",
-                         limits = c(0, 0.05), oob = scales::squish, 
+                         limits = c(0, 0.04), oob = scales::squish, 
                          labels = scales::percent)  +
     guides(fill = guide_colourbar(title = "STRs/\ndwelling",
                                   title.vjust = 1)) + 
@@ -996,9 +996,9 @@ figure_1_3_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = percentage), colour = "transparent") +
-    scale_fill_gradientn(colors = col_palette[c(5, 2, 3, 7, 4)], 
+    scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
                          na.value = "grey80",
-                         limits = c(0, 0.05), oob = scales::squish, 
+                         limits = c(0, 0.1), oob = scales::squish, 
                          labels = scales::percent)  +
     guides(fill = guide_colourbar(title = "STRs/\ndwelling",
                                   title.vjust = 1)) + 
@@ -1026,7 +1026,7 @@ if (build_figures) {
 
 ```
 
-STR activity in Toronto is highly concentrated in the Spadina-Fort York ward, which includes the Waterfront area (Figure \@ref(fig:fig-1-3)). This ward accounts for `r spadina_listing_pct` of all listings in 2019, and an even higher share of host revenue (`r spadina_rev_pct`). Spadina-Fort York is followed by the Toronto Centre ward (`r centre_listing_pct` of active listings and `r centre_rev_pct` of revenue) and the TKTK ward (`r west_listing_pct` of active listings and `r west_rev_pct` of revenue). When measured in per-capita terms, Spadina-Fort York and TKTK have the highest concentrations of STRs, at `r spadina_per_cap` and `r riley_per_cap` respectively. In all other wards STRs account for between `r min_per_cap` and `r max_per_cap` of total dwellings.
+STR activity in Toronto is highly concentrated in the Spadina-Fort York ward, which includes the Waterfront area (Figure \@ref(fig:fig-1-3)). This ward accounts for `r spadina_listing_pct` of all listings in 2019, and an even higher share of host revenue (`r spadina_rev_pct`). Spadina-Fort York is followed by the University-Rosedale ward (`r university_listing_pct` of active listings and `r university_rev_pct` of revenue) and the Toronto Centre ward (`r centre_listing_pct` of active listings and `r centre_rev_pct` of revenue). When measured in per-capita terms, Spadina-Fort York and University have the highest concentrations of STRs, at `r spadina_per_cap` and `r university_per_cap` respectively. In all other wards STRs account for between `r min_per_cap` and `r max_per_cap` of total dwellings.
 
 
 ``` {r fig-1-3, include = TRUE, fig.cap = '(ref:fig-1-3)', fig.align = "center"}
@@ -1036,8 +1036,6 @@ figure_1_3_fun()
 ```
 
 (ref:fig-1-3) _Active STRs as a share of all dwelling units in Toronto, by local ward (L) and dissemination area (R)_
-
-TKTK REVISIT WITH PROCESSED DATAWhile current STR activity is more concentrated Spadina-Fort York, new STR growth is occurring in other wards. In Table \@ref(tab:tab-1-2), entries are orange if the ward's value is higher than the City average, and blue if it is lower (TKTK NOT CURRENTLY IMPLEMENTED). The table reveals an overall inverse relationship between current STR activity and growth trends; while for example Downtown accounts for a plurality of existing listings and revenue, both listing and revenue growth is substantially higher in outlying wards (Marpole and Dunbar-Southlands, for example). This pattern points to an ongoing decentralization of STR activity in Toronto. 
 
 ``` {r tab-1-2, include = TRUE}
 

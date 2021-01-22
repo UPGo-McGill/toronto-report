@@ -56,7 +56,7 @@ reserved_nights_decrease_2020 <-
   daily %>% 
   filter(housing, status == "R", date >= start_2020 - years(1), 
          date <= end_2020) %>% 
-  count(date_2019 = date >= start_2020) %>% 
+  count(date_2020 = date >= start_2020) %>% 
   summarize(growth = (n[2] - n[1]) / n[1]) %>% 
   pull(growth) %>% 
   scales::percent(0.1)
@@ -69,7 +69,6 @@ reserved_nights_increase_jan_feb <-
   summarize(growth = (n[2] - n[1]) / n[1]) %>% 
   pull(growth) %>% 
   scales::percent(0.1)
-
 
 rm(property, daily, GH)
 
@@ -139,10 +138,10 @@ reservations <-
   model(x11 = feasts:::X11(n, type = "additive")) %>% 
   components()
 
-# Get March-Oct seasonal
-mar_oct_seasonal <- 
+# Get March-Nov seasonal
+mar_nov_seasonal <- 
   reservations %>% 
-  slice(39:46) %>% 
+  slice(39:47) %>% 
   pull(seasonal)
 
 # Get Feb trend
@@ -155,12 +154,13 @@ feb_trend <-
 trends <-
   tibble(
     date = as.Date(c("2020-03-16", "2020-04-16", "2020-05-16", "2020-06-16",
-                     "2020-07-16", "2020-08-16", "2020-09-16", "2020-10-16")),
-    trend = (feb_trend + mar_oct_seasonal) / c(31, 30, 31, 30, 31, 31, 30, 31))
+                     "2020-07-16", "2020-08-16", "2020-09-16", "2020-10-16",
+                     "2020-10-31")),
+    trend = (feb_trend + mar_nov_seasonal) / 
+      c(31, 30, 31, 30, 31, 31, 30, 31, 30))
 
-# Set Seo 30 value to average of September and October
-#trends[8,]$trend <- mean(trends[7:8,]$trend)
-# I don't think we need to average for October since we have the entire month?
+# Set Oct 31 value to average of October and November
+trends[9,]$trend <- mean(trends[8:9,]$trend)
 
 reservations <- 
   active_by_status %>% 
@@ -182,22 +182,22 @@ reservations <-
   bind_rows(reservations) 
 
 # Reservation comparisons
-sep_res_table <- 
+res_table <- 
   reservations %>% 
-  filter(date == "2020-09-30") %>% 
+  filter(date == "2020-10-31") %>% 
   mutate(dif = trend - n, pct_change = 1 - n / trend)
 
-res_sep_2020 <- 
-  prettyNum(round(sep_res_table$n, -1), ",")
+res_2020 <- 
+  prettyNum(round(res_table$n, -1), ",")
 
-res_sep_2020_trend <- 
-  prettyNum(round(sep_res_table$trend, -1), ",")
+res_2020_trend <- 
+  prettyNum(round(res_table$trend, -1), ",")
 
-res_sep_2020_pct <- 
-  scales::percent(1 - sep_res_table$n / sep_res_table$trend, 0.1)
+res_2020_pct <- 
+  scales::percent(1 - res_table$n / res_table$trend, 0.1)
 
-res_sep_2020_dif <- 
-    prettyNum(round(sep_res_table$trend - sep_res_table$n, -1), ",")
+res_2020_dif <- 
+    prettyNum(round(res_table$trend - res_table$n, -1), ",")
 
 pandemic_reservations <- 
   reservations %>% 

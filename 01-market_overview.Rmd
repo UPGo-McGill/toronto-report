@@ -1339,6 +1339,133 @@ figure_5_2_fun()
 
 (ref:fig-5-2) _Actual and expected reservations during the Covid-19 pandemic (7-day average)_
 
+```{r prices, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+# Get average nightly prices
+average_prices <- 
+  daily %>% 
+  filter(housing, status == "R", date >= "2016-01-01",
+         listing_type == "Entire home/apt") %>% 
+  group_by(date) %>% 
+  summarize(price = mean(price))
+
+# Create monthly price time series
+monthly_prices <- 
+  average_prices %>% 
+  tsibble::as_tsibble() %>% 
+  tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
+  summarize(price = mean(price))
+
+# Get March-November seasonal
+mar_nov_price_seasonal <- 
+  monthly_prices %>% 
+  filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
+  model(x11 = feasts:::X11(price, type = "additive")) %>% 
+  components() %>%
+  slice(39:47) %>% 
+  pull(seasonal)
+
+# Get Feb trend
+feb_price_trend <- 
+  monthly_prices %>% 
+  filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
+  model(x11 = feasts:::X11(price, type = "additive")) %>% 
+  components() %>% 
+  slice(50) %>% 
+  pull(trend)
+
+# Apply March-Sep seasonal component to Feb trend
+mar_nov_price_trend <- 
+  tibble(
+    date = as.Date(c("2020-03-16", "2020-04-16", "2020-05-16", "2020-06-16",
+                     "2020-07-16", "2020-08-16", "2020-09-16", "2020-10-16",
+                     "2020-10-31")),
+    trend = (feb_price_trend + mar_nov_price_seasonal))
+
+# Set Oct 31 value to average of October and November
+mar_nov_price_trend[9,]$trend <- mean(mar_nov_price_trend[8:9,]$trend)
+
+# Apply to daily averages to get trend
+average_prices <- 
+  average_prices %>% 
+  mutate(yearmon = tsibble::yearmonth(date)) %>% 
+  inner_join(mar_nov_price_trend) %>% 
+  group_by(yearmon) %>% 
+  mutate(trend = price * trend / mean(price)) %>% 
+  ungroup() %>% 
+  select(date, trend) %>% 
+  left_join(average_prices, .)
+
+nightly_price_dif <- 
+  average_prices %>% 
+  filter(date >= "2020-03-01") %>% 
+  summarize(dif = 1 - sum(price) / sum(trend)) %>% 
+  pull(dif) %>% 
+  scales::percent(0.1)
+
+total_price_dif <- 
+  average_prices %>%
+  rename(price_trend = trend) %>% 
+  filter(date >= "2020-03-01") %>% 
+  left_join(reservations) %>% 
+  mutate(rev_dif = n * (price_trend - price)) %>% 
+  tally(rev_dif) %>% 
+  pull(n) %>% 
+  scales::dollar(0.1, 1 / 1000000, suffix = " million")
+
+total_revenue_lost <- 
+  average_prices %>%
+  rename(price_trend = trend) %>% 
+  filter(date >= "2020-03-01") %>% 
+  left_join(reservations) %>% 
+  mutate(total_rev_dif = n * (price_trend - price) + 
+           (trend - n) * price_trend) %>% 
+  tally(total_rev_dif) %>% 
+  pull(n) %>% 
+  scales::dollar(0.1, 1 / 1000000, suffix = " million")
+
+rm(property, daily, GH)
+
+```
+
+``` {r make_fig_5_3}
+
+figure_5_3_fun <- function(regular = "", condensed = "") {
+  
+  average_prices %>% 
+    mutate(across(c(price, trend), slide_dbl, mean, na.rm = TRUE, 
+                  .before = 6)) %>% 
+    mutate(trend = if_else(date == "2020-02-29", price, trend)) %>% 
+    filter(date >= "2019-01-01") %>% 
+    pivot_longer(-date) %>% 
+    ggplot(aes(date, value, colour = name)) +
+    geom_line(lwd = 1) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = NULL, limits = c(50, NA),
+                       label = scales::label_dollar(accuracy = 1)) +
+    scale_color_manual(name = NULL, values = col_palette[c(5, 1)],
+                       labels = c("Actual nightly price", 
+                                  "Expected nightly price")) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.text = element_text( size = 10, family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_5_3.pdf"), 
+         plot = figure_5_3_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_5_3.pdf"))
+}
+
+```
+
 In terms of revenue, 2020 revenue decreased by a staggering `r active_yoy_revenue` compared to 2019. To offer some perspective, from 2018 to 2019, STR revenue increased by `r active_yoy_revenue`. Based on previous growth trends, it is possible to estimate the total loss in revenue incurred by STR hosts, combining the loss of revenue of reservations that never occurred and the lower nightly price of reservations that did occur. Throughout the May-October period of 2020, nightly prices have been an average of `r nightly_price_dif` lower than expected. Spread across the `r res_total_pandemic` nights reserved during this period, this means that STR operators collectively earned `r total_price_dif` less than they would have on their bookings in the absence of the pandemic. When the lower prices on reservations which did occur is combined with the reservations which did not occur, our estimate is that Toronto’s STR hosts lost a total of `r total_revenue_lost` million in revenue between March and October 2020 because of the Covid-19 pandemic.
   
 <br>

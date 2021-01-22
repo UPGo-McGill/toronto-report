@@ -164,11 +164,12 @@ feb_trend <-
 trends <-
   tibble(
     date = as.Date(c("2020-03-16", "2020-04-16", "2020-05-16", "2020-06-16",
-                     "2020-07-16", "2020-08-16", "2020-09-16", "2020-09-30")),
-    trend = (feb_trend + mar_oct_seasonal) / c(31, 30, 31, 30, 31, 31, 30, 30))
+                     "2020-07-16", "2020-08-16", "2020-09-16", "2020-10-16")),
+    trend = (feb_trend + mar_oct_seasonal) / c(31, 30, 31, 30, 31, 31, 30, 31))
 
 # Set Seo 30 value to average of September and October
-trends[8,]$trend <- mean(trends[7:8,]$trend)
+#trends[8,]$trend <- mean(trends[7:8,]$trend)
+# I don't think we need to average for October since we have the entire month?
 
 reservations <- 
   active_by_status %>% 

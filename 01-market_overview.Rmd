@@ -1183,70 +1183,6 @@ In terms of revenue, 2020 revenue decreased by a staggering `r active_yoy_revenu
   
 <br>
 
-## Toronto in comparison with other major Canadian cities
-
-``` {r para_6, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "national_comparison.qs"))}
-
-national_comparison <- qread(here("output", "national_comparison.qs"),
-                             nthreads = availableCores())
-
-van_active_per_1000 <- 
-  national_comparison %>% 
-  filter(city == "Vancouver") %>% 
-  pull(listings_per_1000) %>% 
-  round(1) %>% 
-  prettyNum(",")
-
-to_active_per_1000 <- 
-  national_comparison %>% 
-  filter(city == "Toronto") %>% 
-  pull(listings_per_1000) %>% 
-  round(1) %>% 
-  prettyNum(",")
-
-van_rev_per_listing <- 
-  national_comparison %>% 
-  filter(city == "Vancouver") %>% 
-  pull(revenue_per_listing) %>% 
-  round(-2) %>% 
-  scales::dollar()
-
-to_rev_per_listing <- 
-  national_comparison %>% 
-  filter(city == "Toronto") %>% 
-  pull(revenue_per_listing) %>% 
-  round(-2) %>% 
-  scales::dollar()
-
-```
-
-In 2020, Toronto had the largest STR market in the country by both active listing numbers (`r avg_listings_active`) and host revenue (`r annual_rev`), followed in both cases by Montreal and Vancouver (Table \@ref(tab:tab-1-1)). However, in relative terms, Vancouver stands considerably ahead of both Toronto and Montreal. Vancouver had the most active listings per 1000 households (`r van_active_per_1000` compared to `r to_active_per_1000` in Toronto) and the most revenue per listing (`r van_rev_per_listing` compared to `r to_rev_per_listing` in Toronto).
-
-``` {r tab-1-1, include = TRUE}
-
-library(kableExtra)
-
-national_comparison <- qread(here("output", "national_comparison.qs"),
-                             nthreads = availableCores())
-
-national_comparison %>% 
-  transmute(
-    city, 
-    active_daily_listings = prettyNum(round(active_daily_listings, -1), ","),
-    listings_per_1000 = round(listings_per_1000, 1),
-    revenue = scales::dollar(revenue, 0.1, 1/1000000),
-    revenue_per_listing = scales::dollar(revenue_per_listing, 100)) %>% 
-  set_names(c("City", "Active listings", "Listings per 1000 households",
-              "Annual revenue (million)", "Revenue per listing")) %>% 
-  kbl(caption = "2019 STR activity in the largest ten Canadian municipalities",
-      align = "lrrrr") %>%
-  kable_styling(latex_options="scale_down") %>%
-  row_spec(9, background = paste0(col_palette[2], "50"))
-  
-```
-
-<br>
-
 ## Revenue distribution among STR hosts
 
 A crucial concept for understanding the structure of an STR market is the distinction between casual STRs (“home sharing”) and dedicated STRs (“commercial operations”). One way to capture this distinction is to examine the distribution of revenue among STR hosts. Is revenue widely distributed between many part-time hosts of single listings, or concentrated among a small number of commercial operators who control many full-time listings?
@@ -1538,6 +1474,70 @@ figure_1_4_fun()
 ```
 
 (ref:fig-1-4) _STR host revenue distribution in the City of Toronto_
+
+<br>
+
+## Toronto in comparison with other major Canadian cities
+
+``` {r para_6, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "national_comparison.qs"))}
+
+national_comparison <- qread(here("output", "national_comparison.qs"),
+                             nthreads = availableCores())
+
+van_active_per_1000 <- 
+  national_comparison %>% 
+  filter(city == "Vancouver") %>% 
+  pull(listings_per_1000) %>% 
+  round(1) %>% 
+  prettyNum(",")
+
+to_active_per_1000 <- 
+  national_comparison %>% 
+  filter(city == "Toronto") %>% 
+  pull(listings_per_1000) %>% 
+  round(1) %>% 
+  prettyNum(",")
+
+van_rev_per_listing <- 
+  national_comparison %>% 
+  filter(city == "Vancouver") %>% 
+  pull(revenue_per_listing) %>% 
+  round(-2) %>% 
+  scales::dollar()
+
+to_rev_per_listing <- 
+  national_comparison %>% 
+  filter(city == "Toronto") %>% 
+  pull(revenue_per_listing) %>% 
+  round(-2) %>% 
+  scales::dollar()
+
+```
+
+In 2020, Toronto had the largest STR market in the country by both active listing numbers (`r avg_listings_active`) and host revenue (`r annual_rev`), followed in both cases by Montreal and Vancouver (Table \@ref(tab:tab-1-1)). However, in relative terms, Vancouver stands considerably ahead of both Toronto and Montreal. Vancouver had the most active listings per 1000 households (`r van_active_per_1000` compared to `r to_active_per_1000` in Toronto) and the most revenue per listing (`r van_rev_per_listing` compared to `r to_rev_per_listing` in Toronto).
+
+``` {r tab-1-1, include = TRUE}
+
+library(kableExtra)
+
+national_comparison <- qread(here("output", "national_comparison.qs"),
+                             nthreads = availableCores())
+
+national_comparison %>% 
+  transmute(
+    city, 
+    active_daily_listings = prettyNum(round(active_daily_listings, -1), ","),
+    listings_per_1000 = round(listings_per_1000, 1),
+    revenue = scales::dollar(revenue, 0.1, 1/1000000),
+    revenue_per_listing = scales::dollar(revenue_per_listing, 100)) %>% 
+  set_names(c("City", "Active listings", "Listings per 1000 households",
+              "Annual revenue (million)", "Revenue per listing")) %>% 
+  kbl(caption = "2019 STR activity in the largest ten Canadian municipalities",
+      align = "lrrrr") %>%
+  kable_styling(latex_options="scale_down") %>%
+  row_spec(9, background = paste0(col_palette[2], "50"))
+  
+```
 
 <br>
 

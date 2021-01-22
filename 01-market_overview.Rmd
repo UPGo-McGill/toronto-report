@@ -1177,7 +1177,167 @@ figure_5_1_fun()
 
 (ref:fig-5-1) _Available and reserved listings since 2018 (14-day average)_
 
+```{r reservation_trend, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+library(feasts)
+library(fabletools)
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+# Create and decompose reservations time series
+reservations <- 
+  active_by_status %>% 
+  filter(status == "R") %>% 
+  tsibble::as_tsibble() %>% 
+  tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
+  summarize(n = sum(n)) %>% 
+  filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
+  model(x11 = feasts:::X11(n, type = "additive")) %>% 
+  components()
+
+# Get March-Nov seasonal
+mar_nov_seasonal <- 
+  reservations %>% 
+  slice(39:47) %>% 
+  pull(seasonal)
+
+# Get Feb trend
+feb_trend <- 
+  reservations %>% 
+  slice(50) %>% 
+  pull(trend)
+
+# Apply March-Oct seasonal component to Feb trend
+trends <-
+  tibble(
+    date = as.Date(c("2020-03-16", "2020-04-16", "2020-05-16", "2020-06-16",
+                     "2020-07-16", "2020-08-16", "2020-09-16", "2020-10-16",
+                     "2020-10-31")),
+    trend = (feb_trend + mar_nov_seasonal) / 
+      c(31, 30, 31, 30, 31, 31, 30, 31, 30))
+
+# Set Oct 31 value to average of October and November
+trends[9,]$trend <- mean(trends[8:9,]$trend)
+
+reservations <- 
+  active_by_status %>% 
+  filter(status == "R") %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6)) %>% 
+  filter(date >= "2019-01-01") %>% 
+  left_join(trends) %>% 
+  select(-status) %>% 
+  mutate(trend = if_else(date == "2020-03-01", n, trend)) %>% 
+  filter(date >= "2020-03-01") %>% 
+  mutate(trend = zoo::na.approx(trend))
+
+reservations <- 
+  active_by_status %>% 
+  filter(status == "R") %>% 
+  mutate(n = slide_dbl(n, mean, .before = 6)) %>% 
+  filter(date >= "2019-01-01", date <= "2020-02-29") %>% 
+  select(-status) %>% 
+  bind_rows(reservations) 
+
+# Reservation comparisons
+res_table <- 
+  reservations %>% 
+  filter(date == "2020-10-31") %>% 
+  mutate(dif = trend - n, pct_change = 1 - n / trend)
+
+res_2020 <- 
+  prettyNum(round(res_table$n, -1), ",")
+
+res_2020_trend <- 
+  prettyNum(round(res_table$trend, -1), ",")
+
+res_2020_pct <- 
+  scales::percent(1 - res_table$n / res_table$trend, 0.1)
+
+res_2020_dif <- 
+    prettyNum(round(res_table$trend - res_table$n, -1), ",")
+
+pandemic_reservations <- 
+  reservations %>% 
+  filter(date >= "2020-03-01") %>% 
+  summarize(across(c(n, trend), sum)) %>% 
+  mutate(dif = trend - n, pct = n / trend)
+
+res_total_pandemic_dif <- 
+    prettyNum(round(pandemic_reservations$trend - pandemic_reservations$n, -2), 
+              ",")
+
+res_total_pandemic <- 
+  prettyNum(round(pandemic_reservations$n, -2), ",")
+
+res_total_pandemic_pct <- 
+  scales::percent(pandemic_reservations$n / pandemic_reservations$trend, 0.1)
+
+res_total_pandemic_trend <- 
+    prettyNum(round(pandemic_reservations$trend, -2), ",")
+
+rm(property, daily, GH)
+
+```
+
+``` {r make_fig_5_2}
+
+figure_5_2_fun <- function(regular = "", condensed = "") {
+  
+  reservations %>% 
+    pivot_longer(-date) %>% 
+    filter(!is.na(value)) %>%
+    ggplot() +
+    geom_ribbon(aes(x = date, ymin = n, ymax = trend, group = 1),
+                data = reservations, fill = col_palette[3], 
+                alpha = 0.3) +
+    geom_line(aes(date, value, color = name), lwd = 1) +
+    geom_text(aes(x = as.Date("2020-09-30"), 
+                  y = mean(value[date == as.Date("2020-09-30")]),
+                  label = paste(
+                    prettyNum(round(abs(diff(
+                      value[date == as.Date("2020-09-30")])), -1), ","),
+                    "fewer", "reservations", "than", "expected", sep = "\n")), 
+              inherit.aes = FALSE, hjust = 1, family = condensed, 
+              nudge_x = -4) +
+    geom_segment(aes(x = as.Date("2020-09-30"), xend = as.Date("2020-09-30"),
+                     y = min(value[date == as.Date("2020-09-30")]),
+                     yend = max(value[date == as.Date("2020-09-30")])),
+                 colour = col_palette[1],
+                 arrow = arrow(length = unit(0.1, "cm"), ends = "both",
+                               type = "open")) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = NULL, limits = c(0, NA), label = scales::comma) +
+    scale_color_manual(name = NULL, labels = c("Actual reservations", 
+                                               "Expected reservations"), 
+                       values = col_palette[c(4, 2)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom", 
+          panel.grid.minor.x = element_blank(),
+          text = element_text(face = "plain", family = regular),
+          legend.text = element_text( size = 10, family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_5_2.pdf"), 
+         plot = figure_5_2_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_5_2.pdf"))
+}
+
+```
+
+
 Figure \@ref(fig:fig-5-2) provides a closer look at daily reservations since 2019, comparing the actual trajectory of reservations during the pandemic with what the trajectory of reservations would have been expected to be in the absence of the pandemic and previous growth in Toronto's STR market. (To do this, we use seasonal decomposition to identify the regular seasonal fluctuations in STR activity and separate them from the underlying patterns of growth or decline.) In total, from March through October 2020, we estimate that there have been `r res_total_pandemic_dif` fewer STR nights reserved than would normally have been expected to occur. The `r res_total_pandemic` total nights reserved in this time period is only `r res_total_pandemic_pct` of the `r res_total_pandemic_trend` nights total that would represent the previous growth trend.
+
+``` {r fig-5-2, include = TRUE, fig.cap = '(ref:fig-5-2)', fig.align = "center"}
+
+figure_5_2_fun()
+
+```
+
+(ref:fig-5-2) _Actual and expected reservations during the Covid-19 pandemic (7-day average)_
 
 In terms of revenue, 2020 revenue decreased by a staggering `r active_yoy_revenue` compared to 2019. To offer some perspective, from 2018 to 2019, reservations and revenue increased by `r reservation_change_2019` and `r active_yoy_revenue`, respectively. Based on previous growth trends, it is possible to estimate the total loss in revenue incurred by STR hosts, combining the loss of revenue of reservations that never occurred and the lower of reservations that did occur. Throughout the May-October period of 2020, nightly prices have been an average of `r nightly_price_dif` lower than expected. Spread across the `r res_total_pandemic` nights reserved during this period, this means that STR operators collectively earned `r total_price_dif` less than they would have on their bookings in the absence of the pandemic. When the lower prices on reservations which did occur is combined with the reservations which did not occur, our estimate is that Vancouver’s STR hosts lost a total of `r total_revenue_lost` million in revenue between March and September 2020 because of the Covid-19 pandemic.
   

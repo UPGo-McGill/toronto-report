@@ -197,6 +197,19 @@ housing_loss_pct_WD <-
   st_drop_geometry() %>% 
   filter(ward %in% c("Spadina-Fort York", "University-Rosedale", "Toronto Centre"))
 
+housing_loss_pct_spadina_2019 <- 
+  WD %>% 
+  left_join(FREH_WD) %>% 
+  left_join(GH_WD) %>% 
+  filter(date == "2019") %>% 
+  mutate(GH = if_else(is.na(GH), 0L, GH),
+         housing_loss_per_dwelling = (FREH + GH) / dwellings,
+         housing_loss_per_dwelling = round(housing_loss_per_dwelling, 3)) %>% 
+  st_drop_geometry() %>% 
+  filter(ward %in% c("Spadina-Fort York")) %>% 
+    pull(housing_loss_per_dwelling) %>% 
+  scales::percent(0.1)
+
 housing_loss_pct_spadina <- 
   housing_loss_pct_WD %>% 
   filter(ward == "Spadina-Fort York") %>% 
@@ -498,12 +511,12 @@ WD_housing_table %>%
 
 qload(here("output", "cmhc.qsm"), nthreads = availableCores())
 
-# Vacancy rate spadina
-vacancy_spadina <- 
+# Vacancy rate downtown (Toronto (Central))
+downtown_spadina <- 
   annual_vacancy %>% 
   filter(dwelling_type == "Total",
          bedroom == "Total",
-         zone %in% c(3),
+         zone %in% c(1),
          !is.na(vacancy)) %>% 
   group_by(zone) %>% 
   filter(date == max(date)) %>% 
@@ -519,10 +532,11 @@ figure_2_3_fun <- function(regular = "", condensed = "") {
   
   left_map <- 
     housing_loss_WD %>% 
+    filter(date=="2020") %>% 
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = housing_loss_pct), colour = "white") +
-    scale_fill_gradientn(colors = col_palette[c(2, 3, 1, 4)], 
+    scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
                          na.value = "grey80",
                          limits = c(0, 0.03), oob = scales::squish, 
                          labels = scales::percent)  +
@@ -541,9 +555,9 @@ figure_2_3_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = housing_loss_pct), colour = "transparent") +
-    scale_fill_gradientn(colors = col_palette[c(2, 3, 1, 4)], 
+    scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
                          na.value = "grey80",
-                         limits = c(0, 0.03), oob = scales::squish, 
+                         limits = c(0, 0.05), oob = scales::squish, 
                          labels = scales::percent)  +
     guides(fill = guide_colourbar(title = "% housing\nlost to STR",
                                   title.vjust = 1)) + 
@@ -570,7 +584,7 @@ if (build_figures) {
 
 ```
 
-The `r housing_loss_2019` housing units taken off of Toronto’s housing market in 2019 are `r housing_loss_pct_dwelling` of the total amount of housing in the city, and this housing loss has been concentrated in small parts of the city. This is more or less the same in relative to the total housing stock: Figure \@ref(fig:fig-2-3) shows the proportion of each ward or dissemination area’s housing stock which was operated as a dedicated short-term rental as of the end of 2019. The maps show a tale of two cities: in most of Toronto, there are relatively few dedicated STRs, while in the center of the city as well as Spadina-Fort York, they are ubiquitous. In the Spadina-Fort York ward, `r housing_loss_pct_spadina` of all housing units have been converted to dedicated STRs. The figure is `r housing_loss_pct_university` for University-Rosedale and `r housing_loss_pct_centre` for Toronto Centre. In Spadina-Fort York, the rental vacancy rate was `r vacancy_spadina` in 2019. This means that there are more dedicated STRs in this neighbourhood than there are vacant apartments for rent.
+The `r housing_loss_2020` housing units taken off of Toronto’s housing market in 2020 are `r housing_loss_pct_dwelling` of the total amount of housing in the city, and this housing loss has been concentrated in small parts of the city. This is more or less the same in relative to the total housing stock: Figure \@ref(fig:fig-2-3) shows the proportion of each ward or dissemination area’s housing stock which was operated as a dedicated short-term rental as of the end of 2020. The maps show a tale of two cities: in most of Toronto, there are relatively few dedicated STRs, while in the center of the city as well as a few transit corridors, they are ubiquitous. In the Spadina-Fort York ward, `r housing_loss_pct_spadina` of all housing units have been converted to dedicated STRs. The figure is `r housing_loss_pct_university` for University-Rosedale and `r housing_loss_pct_centre` for Toronto Centre. In the Downtown CMHC zone, the rental vacancy rate was `r vacancy_downtown` in 2019, while the number of STRs contributing to housing loss in the Spadina-Fort York in 2019 was `r housing_loss_pct_spadina_2019`. This means that there were slightly more dedicated STRs in this neighbourhood than there were vacant apartments for rent. (2020 rental vacancy rates numbers were not yet available at the time of analysis.)
 
 ``` {r fig-2-3, include = TRUE, fig.cap = '(ref:fig-2-3)', fig.align = "center"}
 

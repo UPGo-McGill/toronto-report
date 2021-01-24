@@ -1207,8 +1207,8 @@ highest_vacancy_zone_apts <-
 
 # Highest zone vacancy vacant rental units
 highest_vacancy_zone_vac_apts <- 
-    annual_units %>% 
-  filter(zone_name == highest_vacancy_zone_apts, 
+  annual_units %>% 
+  filter(zone_name == highest_vacancy_zone, 
          date == 2019, dwelling_type == "Total", 
          bedroom == "Total") %>% 
   pull(units) %>%
@@ -1224,25 +1224,25 @@ toronto_central_vac_3_bed <-
   pull(vacancy) %>% 
   scales::percent(0.1)
 
-# Southeast Toronto renter %
-southgran_renters_pct <- 
+# Toronto West renter %
+toronto_west_renters_pct <- 
   cmhc %>% 
   as_tibble() %>% 
   select(-geometry) %>% 
   mutate(p_renter = renter_households / total_households) %>% 
   select(zone_name, p_renter) %>% 
-  filter(zone_name == "South Granville/Oak") %>% 
+  filter(zone_name == "Toronto (West)") %>% 
   pull(p_renter) %>% 
   scales::percent(0.1)
 
-# Southeast Toronto owner %
-southgran_owners_pct <- 
+# Toronto West owner %
+toronto_west_owners_pct <- 
   cmhc %>% 
   as_tibble() %>% 
   select(-geometry) %>% 
   mutate(p_renter = renter_households / total_households) %>% 
   select(zone_name, p_renter) %>% 
-  filter(zone_name == "South Granville/Oak") %>% 
+  filter(zone_name == "Toronto (West)") %>% 
   pull(p_renter) %>% 
   {1 - .} %>% 
   scales::percent(0.1)

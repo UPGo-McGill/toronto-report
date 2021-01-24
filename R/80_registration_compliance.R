@@ -13,25 +13,68 @@
 #' External dependencies:
 #' - None
 
+#upgo_connect(registration = TRUE)
+
+#registration_remote
+
 source("R/01_startup.R")
 
 qload("output/str_processed.qsm", nthreads = availableCores())
 qload("output/geometry.qsm", nthreads = availableCores())
-load("output/registration.Rdata")
+qload("output/reg_3.qs", nthreads = availableCores())
+#qload("output/FREH_model.qsm", nthreads = availableCores())
 
-upgo_connect(registration = TRUE)
+# Prepare new objects -----------------------------------------------------
 
-registration_remote
+# Upload open data's STR file
+str_reg <- read.csv("data/str.csv") %>% 
+  rename(registration = operator_registration_number,
+         id=X_id)
 
-### 4.1  ----------------------
+# Make sure there are no duplicates in this file
+(lengths(str_reg))-(str_reg %>% 
+                      distinct(registration, .keep_all = TRUE) %>% 
+                      lengths())
 
-# how many listings removed by Airbnb in August 2018
-property %>%  
-  filter(scraped >= key_date_regulations, scraped <= "2018-09-01") %>% 
-  nrow() %>% 
-  round(digits = -1)
-# We did not use that number because it does not take in account the natural
-# turnover of airbnb listings. instead we used the number given by Airbnb
+# Join open data's scrape with Airbnb scrape
+reg <- left_join(reg_3, str_reg, by = "registration")
+
+# Select property_IDs that are using duplicate registration numbers
+duplicates <- 
+  reg %>% 
+  count(registration) %>% 
+  filter(n>=2, n<=274) %>% 
+  pull(registration)
+
+# Categorize registration licences by type
+# First, change the formatting
+reg <- 
+  reg %>% 
+  mutate(registration = toupper(registration),
+         registration = case_when(
+           is.na(registration) ~ NA_character_,
+           registration == "NO LISTING" ~ "NO LISTING",
+           registration == "EXEMPT" ~ "EXEMPT",
+           str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
+           TRUE ~ "INVALID")
+  ) 
+
+# Make sure that duplicates are entered
+reg$registration_analyzed <- ifelse(reg$registration %in% duplicates, "Duplicate", reg$registration)
+
+# Categorize the rest
+reg <- 
+  reg %>% 
+  mutate(registration_analyzed = ifelse(registration == "NO LISTING", "Inactive listing", registration_analyzed),
+         registration_analyzed = ifelse(registration == "EXEMPT", "Exempt", registration_analyzed),
+         registration_analyzed = ifelse(registration == "INVALID", "Invalid", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration, "STR-\\d{4}-\\w{6}") & is.na(id), 
+                                        "Fake License", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
+                                        "Conform", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
+  )
+
 
 # Daily counts of displayed listings and licenses
 active_listings <- 

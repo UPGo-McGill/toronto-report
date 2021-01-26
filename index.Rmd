@@ -1,5 +1,5 @@
 ---
-title: "Short-term Rentals in Vancouver: Market Overview and Regulatory Impact Analysis"
+title: "Short-term Rentals in Toronto: Market Overview and Regulatory Impact Analysis"
 site: bookdown::bookdown_site
 author: "David Wachsmuth, Maxime Bélanger De Blois and Cloé St-Hilaire"
 date: "`r format(Sys.time(), '%d %B %Y')`"

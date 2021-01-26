@@ -244,16 +244,16 @@ license_activity <-
   inner_join(license_activity, revenue_regulations, by = "property_ID") %>% 
   mutate(revenue_reg = if_else(is.na(revenue_reg), 0, revenue_reg))
 
-invalid <- 
-  license_activity %>% 
-  filter(registration_analyzed != "Conform", registration_analyzed != "Exempt") %>% 
-  summarize(n = n(), across(per_A:revenue_reg, mean)) %>% 
-  mutate(registration_analyzed = "Non-conforming")
+#invalid <- 
+#  license_activity %>% 
+#  filter(registration_analyzed != "Conform", registration_analyzed != "Exempt") %>% 
+#  summarize(n = n(), across(per_A:revenue_reg, mean)) %>% 
+#  mutate(registration_analyzed = "Non-conforming")
 
 all_listings <- 
   license_activity %>% 
   summarize(n = n(), across(per_A:revenue_reg, mean)) %>% 
-  mutate(license_status = "All listings")
+  mutate(registration_analyzed = "All listings")
 
 license_activity <-
   all_listings %>% 
@@ -264,7 +264,6 @@ license_activity <-
   select(registration_analyzed, everything())
 
 license_activity %>% 
-  select(-license_status) %>% 
   set_names(c("Conformity status", "Number of listings", "Available", 
               "Reserved", "Blocked", "Revenue per night since COVID-19", 
               "Revenue per night since start of 2019")) %>% 
@@ -279,108 +278,228 @@ license_activity %>%
 
 
 
-### Commercial listings compliance ---------------------------------
+### Compliance by commercial type and license conformity ---------------------------------
 
-commercial_2020 <- 
+FREH_09 <-
   daily %>% 
-  filter(date >= "2020-01-01", # because current registration IDs starts at beginning of year
-         FREH_3 >= 0.5 | multi) %>% 
-  pull(property_ID) %>% unique()
-
-conformity_status %>% 
-  filter(property_ID %in% commercial_2020, 
-         active >= max(active, na.rm = T) - days(30),
-         registration_analyzed != "Inactive listing") %>% 
-  nrow()
-
-conformity_status %>% 
-  filter(property_ID %in% commercial_2020, 
-         active >= max(active, na.rm = T) - days(30),
-         registration_analyzed != "Inactive listing") %>% nrow()/
-  conformity_status %>% 
-  filter(active >= max(active, na.rm = T) - days(30),
-         registration_analyzed != "Inactive listing") %>% nrow()
-
-conformity_status %>% 
-  st_drop_geometry() %>% 
-  filter(property_ID %in% commercial_2020, 
-         active >= max(active, na.rm = T) - days(30),
-         registration_analyzed != "Inactive listing") %>% 
-  count(registration_analyzed) %>% 
-  mutate(per = str_glue("{round(n/sum(n), digits = 3)*100}%"))
-
-conformity_status %>% 
-  st_drop_geometry() %>% 
-  filter(property_ID %in% commercial_2020, 
-         active >= max(active, na.rm = T) - days(30),
-         registration_analyzed != "Inactive listing") %>% 
-  ggplot()+
-  geom_histogram(stat = "count", aes(registration_analyzed, fill = registration_analyzed))+
-  xlab("")+
-  ylab("Number of listings")+
-  guides(x = guide_axis(angle = 10))+
-  # scale_fill_manual(name = "Registration conformity", values = col_palette[c(4, 1, 2, 3, 6)])+
-  theme_minimal()
-
-
-
-
-
-
-
-# New table ---------------------------------------------------------------
-
-# modification of daily to join with the new df with commercial status
-daily_FREH_09 <- 
-  daily %>% 
-  filter(property_ID %in% filter(conformity_status, 
-                                 registration_analyzed != 
-                                   "Inactive listing")$property_ID) %>% 
-  select(property_ID, date, FREH_3) %>% 
-  filter(date >= "2020-09-01") %>% 
-  arrange(desc(FREH_3)) %>% 
-  mutate(FREH = ifelse(FREH_3 >= 0.5, TRUE, FALSE)) %>%
+  filter(property_ID %in% january_listings$property_ID) %>% 
+  filter(date >= "2020-09-01", FREH_3 >= 0.5) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
-  select(property_ID, FREH) %>% 
-  distinct()
+  mutate(FREH_09 = TRUE) %>% 
+  select(property_ID, FREH_09)
 
-daily_multi_09 <- 
+FREH_01 <-
   daily %>% 
-  filter(property_ID %in% filter(conformity_status, 
-                                 registration_analyzed != 
-                                   "Inactive listing")$property_ID) %>% 
-  select(property_ID, date, multi) %>% 
-  filter(date >= "2020-09-01") %>% 
-  arrange(desc(multi)) %>%
+  filter(property_ID %in% january_listings$property_ID) %>% 
+  filter(date >= "2020-01-01", FREH_3 >= 0.5) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
-  select(property_ID, multi) %>% 
-  distinct()
+  mutate(FREH_01 = TRUE) %>% 
+  select(property_ID, FREH_01)
 
-daily_scraped_in_september <- 
-  inner_join(daily_FREH_09, daily_multi_09)
+multi_09 <- 
+  daily %>% 
+  filter(property_ID %in% january_listings$property_ID) %>% 
+  filter(date >= "2020-09-01", multi) %>%
+  distinct(property_ID, .keep_all = TRUE) %>% 
+  mutate(multi_09 = TRUE) %>% 
+  select(property_ID, multi_09)
 
-# Creation of a new df for improved graph
-conformity_status_commercial_09 <- 
-  conformity_status %>% 
+multi_01 <- 
+  daily %>% 
+  filter(property_ID %in% january_listings$property_ID) %>% 
+  filter(date >= "2020-01-01", multi) %>%
+  distinct(property_ID, .keep_all = TRUE) %>% 
+  mutate(multi_01 = TRUE) %>% 
+  select(property_ID, multi_01)
+
+license_scrape <- 
+  january_listings %>% 
+  left_join(FREH_09) %>% 
+  left_join(FREH_01) %>% 
+  left_join(multi_09) %>% 
+  left_join(multi_01) %>% 
+  mutate(
+    status_09 = case_when(
+      active < "2020-09-01" ~ "Inactive",
+      FREH_09 ~ "FREH",
+      multi_09 ~ "Multilisting",
+      TRUE ~ "Non-commercial"),
+    status_01 = case_when(
+      active < "2020-01-01" ~ "Inactive",
+      FREH_01 ~ "FREH",
+      multi_01 ~ "Multilisting",
+      TRUE ~ "Non-commercial")) %>% 
+  select(-c(FREH_09:multi_01)) %>% 
+  mutate(status_09 = factor(status_09, levels = c("Inactive", "Non-commercial",
+                                                  "Multilisting", "FREH")),
+         status_01 = factor(status_01, levels = c("Inactive", "Non-commercial",
+                                                  "Multilisting", "FREH")),
+         license_status = factor(registration_analyzed, 
+                                 levels = c("No license", "Fake License", "Invalid", 
+                                            "Duplicates", "Exempt", "Conform", "Inactive listing")))
+
+scraped_number <- 
+  nrow(license_scrape) %>% 
+  prettyNum(",")
+
+valid_pct <- 
+  license_scrape %>% 
   st_drop_geometry() %>% 
-  inner_join(daily_scraped_in_september, by = "property_ID") %>% 
-  select(property_ID, active, registration_analyzed, FREH, multi) %>% 
-  mutate(fill = ifelse(active >= "2020-09-01" & FREH == T, "FREH", "TBD"),
-         fill = ifelse(active >= "2020-09-01" & FREH == F & multi == T, "ML", 
-                       fill),
-         fill = ifelse(active >= "2020-09-01" & FREH == F & multi == F, 
-                       "Non-commercial", fill),
-         fill = ifelse(active < "2020-09-01" | is.na(active), "Inactive", fill))
+  summarize(pct = mean(license_status == "Valid")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
 
-# plotting them
-conformity_status_commercial_09 %>% 
+exempt_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  summarize(pct = mean(license_status == "Exempt")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+expired_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  summarize(pct = mean(license_status == "Expired")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+problem_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  summarize(pct = mean(license_status %in% c("Fake", "Invalid", 
+                                             "No license"))) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+freh_valid_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(status_09 == "FREH") %>% 
+  summarize(pct = mean(license_status == "Valid")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+freh_no_license_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(status_09 == "FREH") %>% 
+  summarize(pct = mean(license_status == "No license")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+min_no_license_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(status_09 != "FREH") %>% 
+  summarize(pct = mean(license_status == "No license")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+inactive_expired_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(status_09 == "Inactive") %>% 
+  summarize(pct = mean(license_status == "Expired")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+eh_multiple_license <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(license_status == "Valid", active >= "2020-09-01") %>% 
+  filter(listing_type == "Entire home/apt") %>% 
+  count(registration, sort = TRUE) %>% 
+  filter(n > 1) %>%
+  pull(n) %>% 
+  sum()
+
+eh_multiple_license_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(license_status == "Valid", active >= "2020-09-01") %>% 
+  filter(listing_type == "Entire home/apt") %>% 
+  nrow() %>% 
+  {eh_multiple_license / .} %>% 
+  scales::percent(0.1)
+
+
+fig_left_1 <- 
+  license_scrape %>%
   ggplot() +
-  geom_histogram(stat = "count", aes(registration_analyzed, fill = fill))+
-  # geom_bar(position = "fill", stat = "count", aes(registration_analyzed, fill = fill)) +
-  xlab("") +
-  ylab("Number of listings") +
-  guides(x = guide_axis(angle = 10)) +
-  scale_fill_manual(name = "Listing type", values = col_palette[c(4, 2, 1, 6)]) +
-  scale_y_continuous(labels = scales::percent_format()) +
-  theme_minimal()
+  geom_histogram(aes(reorder(license_status, desc(license_status)), 
+                     fill = status_09), stat = "count") + 
+  xlab(NULL) +
+  scale_fill_manual(name = "Listing status", 
+                    values = col_palette[c(6, 2, 1, 4)]) +
+  scale_y_continuous(name = NULL, labels = scales::comma) +
+  theme_minimal() +    
+  theme(legend.position = "bottom", 
+        panel.grid.minor.x = element_blank(),
+        text = element_text(face = "plain"),
+        legend.title = element_text(face = "bold",  
+                                    size = 10),
+        legend.text = element_text(size = 10))
 
+fig_right_1 <- 
+  license_scrape %>% 
+  ggplot() +
+  geom_bar(aes(reorder(license_status, desc(license_status)), 
+               fill = status_09), position = "fill", stat = "count") +
+  xlab(NULL) +
+  scale_fill_manual(name = "Listing status", 
+                    values = col_palette[c(6, 2, 1, 4)]) +
+  scale_y_continuous(name = NULL, labels = scales::percent) +
+  theme_minimal() +
+  theme(legend.position = "bottom", 
+        panel.grid.minor.x = element_blank(),
+        text = element_text(face = "plain"),
+        legend.title = element_text(face = "bold",  
+                                    size = 10),
+        legend.text = element_text(size = 10))
+
+fig_left_2 <- 
+  license_scrape %>% 
+  ggplot() +
+  geom_histogram(aes(reorder(status_09, desc(status_09)), 
+                     fill = license_status), stat = "count") + 
+  xlab(NULL) +
+  scale_fill_manual(name = "License status", 
+                    values = col_palette[c(6, 3, 2, 1, 4, 5, 7)]) +
+  scale_y_continuous(name = NULL, labels = scales::comma) +
+  theme_minimal() +
+  theme(legend.position = "bottom", 
+        panel.grid.minor.x = element_blank(),
+        text = element_text(face = "plain"),
+        legend.title = element_text(face = "bold",  
+                                    size = 10),
+        legend.text = element_text(size = 10))
+
+fig_right_2 <- 
+  license_scrape %>% 
+  ggplot() +
+  geom_bar(aes(reorder(status_09, desc(status_09)), fill = license_status), 
+           position = "fill", stat = "count") +
+  xlab(NULL) +
+  scale_fill_manual(name = "License status", 
+                    values = col_palette[c(6, 3, 2, 1, 4, 5, 7)]) +
+  scale_y_continuous(name = NULL, labels = scales::percent) +
+  theme_minimal() +
+  theme(legend.position = "bottom", 
+        panel.grid.minor.x = element_blank(),
+        text = element_text(face = "plain"),
+        legend.title = element_text(face = "bold",  
+                                    size = 10),
+        legend.text = element_text(size = 10))
+
+p1 <- 
+  fig_left_1 + fig_right_1 + plot_layout(guides = 'collect', ncol = 2,
+                                         tag_level = 'new') & 
+  theme(legend.position = "bottom")
+
+p2 <- 
+  fig_left_2 + fig_right_2 + plot_layout(guides = 'collect', ncol = 2,
+                                         tag_level = 'new') & 
+  theme(legend.position = "bottom")
+
+(p1 / p2) + plot_layout(ncol = 1) + 
+  plot_annotation(tag_levels = c("A", "1"))

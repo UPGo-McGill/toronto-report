@@ -38,7 +38,7 @@ end_2019 <- as.Date("2019-12-31")
 start_2020 <- as.Date("2020-01-01")
 end_2020 <- as.Date("2020-12-31")
 col_palette <-
-  c("#14325C", "#5398D9", "#F4E3B1", "#D96B0C", "#A53A3B", "#A2E8AF")
+  c("#14325C", "#5398D9", "#F4E3B1", "#D96B0C", "#A53A3B", "#A2E8AF", "#C7C9C9")
 
 
 # Optionally install and activate fonts -----------------------------------

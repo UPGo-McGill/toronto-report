@@ -1,57 +1,57 @@
 # Executive summary {-}
 
-**This report analyzes short-term rentals (STRs) in the City of Vancouver, with specific reference to the 2018 City regulations and the 2020 Covid-19 pandemic. It provides a general market overview of STRs in Vancouver. It measures the impact of STRs on Vancouver’s housing market, particularly relating to housing affordability and availability, through an assessment of the presence of commercially-operated STRs in Vancouver’s areas. It assesses the impact of the City’s STR regulations on the size and character of the STR market, and assesses compliance rates among current STR operators. It measures the impact of COVID-19 on the STR market, in terms of active listings, reservations and nightly prices. And it provides an analysis of STR units that have returned to the longer-term rental market, describing their spatial distribution, asking rents, the extent to which they are commercial operations, and whether they are likely to return to the STR market when conditions improve.**
+**This report analyzes short-term rentals (STRs) in the City of Toronto, with specific reference to the 2020 Covid-19 pandemic and the 2021 City regulations. It provides a general market overview of STRs in Toronto. It measures the impact of STRs on Toronto’s housing market, particularly relating to housing affordability and availability, through an assessment of the presence of commercially-operated STRs in Toronto’s areas. It assesses the impact of the City’s STR regulations on the size and character of the STR market, and assesses compliance rates among current STR operators. It measures the impact of COVID-19 on the STR market, in terms of active listings, reservations and nightly prices. And it provides an analysis of STR units that have returned to the longer-term rental market, describing their spatial distribution, asking rents, the extent to which they are commercial operations, and whether they are likely to return to the STR market when conditions improve.**
 
 \noindent\rule{\textwidth}{1pt}
 
-**SHORT-TERM RENTALS IN VANCOUVER: MARKET OVERVIEW**
+<!-- **SHORT-TERM RENTALS IN Toronto: MARKET OVERVIEW** -->
 
-- There were 3,890 active STR listings in Vancouver housing units in 2019, which collectively earned $151.4 million.
-- A quarter of all listings are in the Downtown area.
-- More than two thirds (69.6%) of Vancouver’s STR listings are entire homes, and entire homes are responsible for 86.3% of all revenue.
-- Revenue is concentrated unevenly among hosts, with the top 10% earning 43.2% of revenue, and the top 1% earning 13.6%, but Vancouver has much less revenue concentration than other large cities in Canada.
-- Commercial operators who control multiple STR listings account for 34.7% listings and 30.6% revenue, and those shares have been falling consistently since the introduction of the City’s 2018 STR regulations.
+<!-- - There were 3,890 active STR listings in Toronto housing units in 2019, which collectively earned $151.4 million. -->
+<!-- - A quarter of all listings are in the Downtown area. -->
+<!-- - More than two thirds (69.6%) of Toronto’s STR listings are entire homes, and entire homes are responsible for 86.3% of all revenue. -->
+<!-- - Revenue is concentrated unevenly among hosts, with the top 10% earning 43.2% of revenue, and the top 1% earning 13.6%, but Toronto has much less revenue concentration than other large cities in Canada. -->
+<!-- - Commercial operators who control multiple STR listings account for 34.7% listings and 30.6% revenue, and those shares have been falling consistently since the introduction of the City’s 2018 STR regulations. -->
 
-**SHORT-TERM RENTALS IN VANCOUVER: HOUSING IMPACTS**
+<!-- **SHORT-TERM RENTALS IN Toronto: HOUSING IMPACTS** -->
 
-- Short-term rentals removed 2,570 housing units from Vancouver’s long-term market in 2019—an increase of 41.9% from 2018.
-- The 2018 regulations returned between 300 and 500 dedicated STRs to the long-term market in the early days of their existence, but those gains have since been partially offset by a rapid growth in dedicated STRs throughout 2019.
-- Almost two thirds of all entire-home listings and four in ten private-room listings are dedicated STRs.
-- In the Downtown area, 1.9% of all housing has been converted to dedicated STRs, while the figure is 1.5% in Riley Park and 1.4% in Shaughnessy.
-- Between 2015 and 2019, STRs have been responsible for a 2.1% increase in average monthly rent, and the average renter household in Vancouver has paid an additional $1,390 in rent because of the impact of STRs.
+<!-- - Short-term rentals removed 2,570 housing units from Toronto’s long-term market in 2019—an increase of 41.9% from 2018. -->
+<!-- - The 2018 regulations returned between 300 and 500 dedicated STRs to the long-term market in the early days of their existence, but those gains have since been partially offset by a rapid growth in dedicated STRs throughout 2019. -->
+<!-- - Almost two thirds of all entire-home listings and four in ten private-room listings are dedicated STRs. -->
+<!-- - In the Downtown area, 1.9% of all housing has been converted to dedicated STRs, while the figure is 1.5% in Riley Park and 1.4% in Shaughnessy. -->
+<!-- - Between 2015 and 2019, STRs have been responsible for a 2.1% increase in average monthly rent, and the average renter household in Toronto has paid an additional $1,390 in rent because of the impact of STRs. -->
 
-**SHORT-TERM RENTALS IN VANCOUVER: REGULATORY IMPACTS**
+<!-- **SHORT-TERM RENTALS IN Toronto: REGULATORY IMPACTS** -->
 
-- The 2018 implementation of the City of Vancouver's STR licensing system created a one-time negative shock in the number of STR listings in Vancouver, which was disproportionately concentrated among listings which were present on STR platforms but not actively being rented.
-- The longer-term impact of the regulations on the number of active STR listings in Vancouver plausibly ranges from between 600 and 1,510 listings removed, or 14.2% to 35.8% of the total number of listings.
-- The plausible range for the longer-term impact on commercial listings is between 80 and 980 commercial listings removed, or 3.0% to 35.0% of the total commercial listings.
-- Comparisons with other jurisdictions uniformly suggest that the real impact of the City's STR regulations is at the higher end of the trend analysis scenarios.
-- Among commercial STR operations, multilistings have been particularly constrained by the City's regulations, while dedicated FREH listings have grown less than they otherwise would have, but at something closer to the rate expected in the absence of regulations.
-- We estimate that the City's regulations have returned between 300 and 500 units of housing to the long-term market.
+<!-- - The 2018 implementation of the City of Toronto's STR licensing system created a one-time negative shock in the number of STR listings in Toronto, which was disproportionately concentrated among listings which were present on STR platforms but not actively being rented. -->
+<!-- - The longer-term impact of the regulations on the number of active STR listings in Toronto plausibly ranges from between 600 and 1,510 listings removed, or 14.2% to 35.8% of the total number of listings. -->
+<!-- - The plausible range for the longer-term impact on commercial listings is between 80 and 980 commercial listings removed, or 3.0% to 35.0% of the total commercial listings. -->
+<!-- - Comparisons with other jurisdictions uniformly suggest that the real impact of the City's STR regulations is at the higher end of the trend analysis scenarios. -->
+<!-- - Among commercial STR operations, multilistings have been particularly constrained by the City's regulations, while dedicated FREH listings have grown less than they otherwise would have, but at something closer to the rate expected in the absence of regulations. -->
+<!-- - We estimate that the City's regulations have returned between 300 and 500 units of housing to the long-term market. -->
 
-**SHORT-TERM RENTALS IN VANCOUVER: REGULATORY COMPLIANCE**
+<!-- **SHORT-TERM RENTALS IN Toronto: REGULATORY COMPLIANCE** -->
 
-- Throughout 2019, the percentage of STR listings operating with valid STR licenses increased consistently, from 30.7% at the  beginning of the year to 77.0% at the end.
-- Among listings active in mid-October 2020, 29.0% were operating with a valid license, 32.2% with an expired license, and 33.7% with an invalid or fake license, or with no license at all.
-- FREH listings had the highest rate of valid licenses (56.9%) among listing categories, although all commercial listings are per se in violation of the City's principal residence requirement.
-- 10.6% of active entire-home listings displayed a license number used by at least one other active entire-home listing, suggesting that license numbers are being shared in violation of the regulations.
-- Non-conforming listings are concentrated in and around Downtown Vancouver; the West End is the area with the highest percentage of non-conforming listings (79.4%).
-- Entire-home listings with license numbers are booked more frequently and earn more revenue than listings without licenses, but there is no substantial difference between listings with valid or non-conforming license numbers, suggesting that STR guests are reluctant to book reservations in listings without a license number.
+<!-- - Throughout 2019, the percentage of STR listings operating with valid STR licenses increased consistently, from 30.7% at the  beginning of the year to 77.0% at the end. -->
+<!-- - Among listings active in mid-October 2020, 29.0% were operating with a valid license, 32.2% with an expired license, and 33.7% with an invalid or fake license, or with no license at all. -->
+<!-- - FREH listings had the highest rate of valid licenses (56.9%) among listing categories, although all commercial listings are per se in violation of the City's principal residence requirement. -->
+<!-- - 10.6% of active entire-home listings displayed a license number used by at least one other active entire-home listing, suggesting that license numbers are being shared in violation of the regulations. -->
+<!-- - Non-conforming listings are concentrated in and around Downtown Toronto; the West End is the area with the highest percentage of non-conforming listings (79.4%). -->
+<!-- - Entire-home listings with license numbers are booked more frequently and earn more revenue than listings without licenses, but there is no substantial difference between listings with valid or non-conforming license numbers, suggesting that STR guests are reluctant to book reservations in listings without a license number. -->
 
-**COVID-19: THE IMPACT OF THE PANDEMIC ON THE STR MARKET**
+<!-- **COVID-19: THE IMPACT OF THE PANDEMIC ON THE STR MARKET** -->
 
-- STR activity in Vancouver has suffered an unprecedented collapse during the COVID-19 pandemic.
-- Reservations from March to September 2020 are down 57.6% over 2019. 
-- Prices for reservations which did occur are down 33.0% from their previous trend.
-- In total, the pandemic has reduced STR host revenue in Vancouver by $130.7 million from March to September.
-- The number of frequently-rented entire home listings dropped from 2,680 in January 2020 to just 940 in August 2020.
-- 39.2% of FREH listings were permanently deactivated and 22.9% were temporarily blocked.
+<!-- - STR activity in Toronto has suffered an unprecedented collapse during the COVID-19 pandemic. -->
+<!-- - Reservations from March to September 2020 are down 57.6% over 2019.  -->
+<!-- - Prices for reservations which did occur are down 33.0% from their previous trend. -->
+<!-- - In total, the pandemic has reduced STR host revenue in Toronto by $130.7 million from March to September. -->
+<!-- - The number of frequently-rented entire home listings dropped from 2,680 in January 2020 to just 940 in August 2020. -->
+<!-- - 39.2% of FREH listings were permanently deactivated and 22.9% were temporarily blocked. -->
 
-**COVID-19: STRS RETURNING TO THE LONG-TERM MARKET**
+<!-- **COVID-19: STRS RETURNING TO THE LONG-TERM MARKET** -->
 
-- *Using image recognition techniques, we identified 1,339 unique Airbnb listings which were posted as long-term rentals (LTRs) on Craigslist or Kijiji between March and September 2020.
-- These former STRs have asking rents on average 25.6% higher than other LTR listings, but are correlated with a 13.5% decrease in overall asking rents in Vancouver.
-- The evidence suggests that the overwhelming majority of STR listings transferred to LTR platforms are commercial operations.
-- We estimate that 30.6% have fully transitioned back to the long-term market, 35.3% have been temporarily blocked on Airbnb and may return to being STRs in the future, and 34.1% failed to be rented on LTR platforms and instead remain active on Airbnb.
+<!-- - *Using image recognition techniques, we identified 1,339 unique Airbnb listings which were posted as long-term rentals (LTRs) on Craigslist or Kijiji between March and September 2020. -->
+<!-- - These former STRs have asking rents on average 25.6% higher than other LTR listings, but are correlated with a 13.5% decrease in overall asking rents in Toronto. -->
+<!-- - The evidence suggests that the overwhelming majority of STR listings transferred to LTR platforms are commercial operations. -->
+<!-- - We estimate that 30.6% have fully transitioned back to the long-term market, 35.3% have been temporarily blocked on Airbnb and may return to being STRs in the future, and 34.1% failed to be rented on LTR platforms and instead remain active on Airbnb. -->
 
 \newpage

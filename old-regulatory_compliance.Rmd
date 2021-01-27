@@ -551,66 +551,60 @@ The bottom row (B) of Figure \@ref(fig:fig-4-3) organizes listings by their acti
 ```{r geography, cache = TRUE, cache.lazy = FALSE}
 
 map_table <- 
-  LA %>% 
-  st_join(license_scrape) %>% 
-  filter(active >= "2020-09-01", license_status != "Exempt") %>% 
-  count(area, valid = license_status == "Valid") %>% 
-  group_by(area) %>% 
+  WD %>% 
+  st_join(january_listings %>% select(-ward)) %>% 
+  filter(active >= max(active, na.rm = T) - days(30), 
+         registration_analyzed != "Exempt") %>% 
+  count(ward, valid = registration_analyzed == "Conform") %>% 
+  group_by(ward) %>% 
   summarize(invalid = n[!valid], invalid_pct = n[!valid] / sum(n))
 
-west_end_illegal_pct <- 
+spadina_illegal_num <- 
   map_table %>% 
-  filter(area == "West End") %>% 
+  filter(ward == "Spadina-Fort York") %>% 
+  pull(invalid) %>%  
+  prettyNum(",")
+
+university_illegal_num <- 
+  map_table %>% 
+  filter(ward == "University-Rosedale") %>% 
+  pull(invalid) %>%  
+  prettyNum(",")
+
+spadina_illegal_pct <- 
+  map_table %>% 
+  filter(ward == "Spadina-Fort York") %>% 
   pull(invalid_pct) %>% 
   scales::percent(0.1)
 
-fairview_illegal_pct <- 
+willowdale_illegal_pct <- 
   map_table %>% 
-  filter(area == "Fairview") %>% 
+  filter(ward == "Willowdale") %>% 
+  pull(invalid_pct) %>% 
+  scales::percent(0.1)
+
+scar_n_illegal_pct <- 
+  map_table %>% 
+  filter(ward == "Scarborough North") %>% 
   pull(invalid_pct) %>% 
   scales::percent(0.1)
 
 ```
 
-```{r bc_water, cache = TRUE, cache.lazy = FALSE}
 
-ocean <- 
-  read_sf(here("data", "shapefiles", "lhy_000h16a_e.shp")) %>% 
-  st_transform(32610)
+``` {r make_fig_4_4}
 
-ocean <- 
-  ocean %>% 
-  st_filter(rbind(select(CMA, -everything()), select(city, -everything())))
+figure_4_4_fun <- function(regular = "", condensed = "") {
 
-river <- 
-  read_sf(here("data", "shapefiles", "lhy_000c16a_e.shp")) %>% 
-  st_transform(32610)
-
-river <- 
-  river %>% 
-  st_filter(rbind(select(CMA, -everything()), select(city, -everything())))
-
-water <- rbind(select(river, -everything()), select(ocean, -everything()))
-
-rm(ocean, river)
-
-```
-
-``` {r make_fig_4_3}
-
-figure_4_3_fun <- function(regular = "", condensed = "") {
-
-  map_table %>% 
-    ggplot() +
-    geom_sf(data = province, fill = "grey70", colour = "transparent") +
-    geom_sf(aes(fill = invalid_pct), colour = "white") +
-    geom_sf(data = water, fill = "white", colour = "transparent") +
-    scale_fill_gradientn(colors = col_palette[c(6, 1)], na.value = "grey80",
-                         labels = scales::percent_format(1))  +
-    geom_sf_text(aes(label = invalid), colour = "black", family = regular) +
-    guides(fill = guide_colourbar(title = "Non-conforming listings")) + 
-    gg_bbox(map_table) +
-    theme_void() +
+map_table %>% 
+  ggplot() +
+  geom_sf(aes(fill = invalid_pct), colour = "white") +
+  scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], na.value = "grey80",
+                       oob = scales::squish, 
+                       labels = scales::percent_format(accuracy = 1))  +
+  geom_sf_text(aes(label = invalid), colour = "black") +
+  guides(fill = guide_colourbar(title = "Non-conforming listings")) + 
+  theme_void() +
     theme(legend.position = "bottom", 
           panel.grid.minor.x = element_blank(),
           text = element_text(face = "plain", family = regular),
@@ -621,24 +615,24 @@ figure_4_3_fun <- function(regular = "", condensed = "") {
 }
 
 if (build_figures) {
-  ggsave(here("output", "figures", "figure_4_3.pdf"), 
-         plot = figure_4_3_fun("Futura", "Futura Condensed"), 
-         width = 4, height = 4.2, units = "in", useDingbats = FALSE)
+  ggsave(here("output", "figures", "figure_4_4.pdf"), 
+         plot = figure_4_4_fun("Futura", "Futura Condensed"), 
+         width = 4, height = 4.4, units = "in", useDingbats = FALSE)
   
-  extrafont::embed_fonts(here("output", "figures", "figure_4_3.pdf"))
+  extrafont::embed_fonts(here("output", "figures", "figure_4_4.pdf"))
 }
 
 ```
 
-Listing validity displays a clear spatial pattern. The local areas with the most non-conforming listings (i.e. listings with fake, invalid, expired, or missing license numbers) in both absolute and relative numbers are those closest to Downtown Vancouver (Figure \@ref(fig:fig-4-3)). The area with the highest percentage of non-conforming listings is the West End (`r west_end_illegal_pct`), followed by Fairview (`r fairview_illegal_pct`). 
+Listing validity throughout Toronto is overall still low, which is understandable since the new registration has come into effect less than a month ago. Additionally, business uncertainty among STR operators is still extremely high amidst the Covid-19 pandemic and its effects on the STR markets. Still, it is interesting to observe the concentration of non-conforming listings, both in number and percentage, in all of Toronto's wards. The wards with the most non-conforming listings (i.e. listings with fake, invalid, duplicates, or missing license numbers) in absolute terms are Spadina-Fort York with `r spadina_illegal_num` listings (`r spadina_illegal_pct`) and University-Rosedale with `r university_illegal_pct` listings (`r university_illegal_num`). In relative numbers, the wards with highest percentage of non-conforming listings are Willowdale (`r willowdale_illegal_pct`) and Scarborough North (`r scar_n_illegal_pct`) (Figure \@ref(fig:fig-4-4)).
 
-``` {r fig-4-3, include = TRUE, fig.cap = '(ref:fig-4-3)', fig.align = "center"}
+``` {r fig-4-4, include = TRUE, fig.cap = '(ref:fig-4-4)', fig.align = "center"}
 
-figure_4_3_fun()
+figure_4_4_fun()
 
 ```
 
-(ref:fig-4-3) _Geographical distribution of non-conforming listings._
+(ref:fig-4-4) _Geographical distribution of non-conforming listings._
 
 ## Daily activity of entire-home listings by regulatory compliance
 

@@ -183,13 +183,46 @@ january_listings %>%
 ### Geography of conformity status -------------------------------------------
 
 # percentage and number of non-conform active listings per area
-WD %>% 
+map_table <- 
+  WD %>% 
   st_join(january_listings %>% select(-ward)) %>% 
   filter(active >= max(active, na.rm = T) - days(30), 
          registration_analyzed != "Exempt") %>% 
   count(ward, valid = registration_analyzed == "Conform") %>% 
   group_by(ward) %>% 
-  summarize(invalid = n[!valid], invalid_pct = n[!valid] / sum(n)) %>% 
+  summarize(invalid = n[!valid], invalid_pct = n[!valid] / sum(n))
+
+spadina_illegal_num <- 
+  map_table %>% 
+  filter(ward == "Spadina-Fort York") %>% 
+  pull(invalid) %>%  
+  prettyNum(",")
+
+university_illegal_num <- 
+  map_table %>% 
+  filter(ward == "University-Rosedale") %>% 
+  pull(invalid) %>%  
+  prettyNum(",")
+
+spadina_illegal_pct <- 
+  map_table %>% 
+  filter(ward == "Spadina-Fort York") %>% 
+  pull(invalid_pct) %>% 
+  scales::percent(0.1)
+
+willowdale_illegal_pct <- 
+  map_table %>% 
+  filter(ward == "Willowdale") %>% 
+  pull(invalid_pct) %>% 
+  scales::percent(0.1)
+
+scar_n_illegal_pct <- 
+  map_table %>% 
+  filter(ward == "Scarborough North") %>% 
+  pull(invalid_pct) %>% 
+  scales::percent(0.1)
+
+map_table %>% 
   ggplot() +
   geom_sf(aes(fill = invalid_pct), colour = "white") +
   scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], na.value = "grey80",

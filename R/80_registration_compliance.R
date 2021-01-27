@@ -332,8 +332,8 @@ FREH_10 <-
   filter(property_ID %in% january_listings$property_ID) %>% 
   filter(date >= "2020-10-01", FREH_3 >= 0.5) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
-  mutate(FREH_09 = TRUE) %>% 
-  select(property_ID, FREH_09)
+  mutate(FREH_10 = TRUE) %>% 
+  select(property_ID, FREH_10)
 
 FREH_01 <-
   daily %>% 
@@ -348,8 +348,8 @@ multi_10 <-
   filter(property_ID %in% january_listings$property_ID) %>% 
   filter(date >= "2020-10-01", multi) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
-  mutate(multi_09 = TRUE) %>% 
-  select(property_ID, multi_09)
+  mutate(multi_10 = TRUE) %>% 
+  select(property_ID, multi_10)
 
 multi_01 <- 
   daily %>% 
@@ -403,6 +403,13 @@ exempt_pct <-
   pull(pct) %>% 
   scales::percent(0.1)
 
+duplicates_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  summarize(pct = mean(license_status == "Duplicates")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
 
 problem_pct <- 
   license_scrape %>% 
@@ -415,7 +422,7 @@ problem_pct <-
 freh_valid_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(status_09 == "FREH") %>% 
+  filter(status_10 == "FREH") %>% 
   summarize(pct = mean(license_status == "Conform")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
@@ -423,7 +430,7 @@ freh_valid_pct <-
 freh_no_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(status_09 == "FREH") %>% 
+  filter(status_10 == "FREH") %>% 
   summarize(pct = mean(license_status == "No license")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
@@ -431,7 +438,7 @@ freh_no_license_pct <-
 ml_duplicate_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(status_09 == "Multilisting") %>% 
+  filter(status_10 == "Multilisting") %>% 
   summarize(pct = mean(license_status == "Duplicates")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
@@ -439,7 +446,7 @@ ml_duplicate_pct <-
 min_no_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(status_09 != "FREH") %>% 
+  filter(status_10 != "FREH") %>% 
   summarize(pct = mean(license_status == "No license")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
@@ -447,8 +454,18 @@ min_no_license_pct <-
 eh_multiple_license <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Conform", active >= "2020-09-01") %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
   filter(listing_type == "Entire home/apt") %>% 
+  count(registration, sort = TRUE) %>% 
+  filter(n > 1) %>%
+  pull(n) %>% 
+  sum()
+
+pr_multiple_license <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
+  filter(listing_type == "Private room") %>% 
   count(registration, sort = TRUE) %>% 
   filter(n > 1) %>%
   pull(n) %>% 
@@ -457,8 +474,17 @@ eh_multiple_license <-
 eh_multiple_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Valid", active >= "2020-09-01") %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
   filter(listing_type == "Entire home/apt") %>% 
+  nrow() %>% 
+  {eh_multiple_license / .} %>% 
+  scales::percent(0.1)
+
+pr_multiple_license_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
+  filter(listing_type == "Private room") %>% 
   nrow() %>% 
   {eh_multiple_license / .} %>% 
   scales::percent(0.1)
@@ -468,7 +494,7 @@ fig_left_1 <-
   license_scrape %>%
   ggplot() +
   geom_histogram(aes(reorder(license_status, desc(license_status)), 
-                     fill = status_09), stat = "count") + 
+                     fill = status_10), stat = "count") + 
   xlab(NULL) +
   scale_fill_manual(name = "Listing status", 
                     values = col_palette[c(6, 2, 1, 4)]) +
@@ -485,7 +511,7 @@ fig_right_1 <-
   license_scrape %>% 
   ggplot() +
   geom_bar(aes(reorder(license_status, desc(license_status)), 
-               fill = status_09), position = "fill", stat = "count") +
+               fill = status_10), position = "fill", stat = "count") +
   xlab(NULL) +
   scale_fill_manual(name = "Listing status", 
                     values = col_palette[c(6, 2, 1, 4)]) +
@@ -501,7 +527,7 @@ fig_right_1 <-
 fig_left_2 <- 
   license_scrape %>% 
   ggplot() +
-  geom_histogram(aes(reorder(status_09, desc(status_09)), 
+  geom_histogram(aes(reorder(status_10, desc(status_10)), 
                      fill = license_status), stat = "count") + 
   xlab(NULL) +
   scale_fill_manual(name = "License status", 
@@ -518,7 +544,7 @@ fig_left_2 <-
 fig_right_2 <- 
   license_scrape %>% 
   ggplot() +
-  geom_bar(aes(reorder(status_09, desc(status_09)), fill = license_status), 
+  geom_bar(aes(reorder(status_10, desc(status_10)), fill = license_status), 
            position = "fill", stat = "count") +
   xlab(NULL) +
   scale_fill_manual(name = "License status", 

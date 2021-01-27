@@ -273,8 +273,8 @@ FREH_10 <-
   filter(property_ID %in% january_listings$property_ID) %>% 
   filter(date >= "2020-10-01", FREH_3 >= 0.5) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
-  mutate(FREH_09 = TRUE) %>% 
-  select(property_ID, FREH_09)
+  mutate(FREH_10 = TRUE) %>% 
+  select(property_ID, FREH_10)
 
 FREH_01 <-
   daily %>% 
@@ -289,8 +289,8 @@ multi_10 <-
   filter(property_ID %in% january_listings$property_ID) %>% 
   filter(date >= "2020-10-01", multi) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
-  mutate(multi_09 = TRUE) %>% 
-  select(property_ID, multi_09)
+  mutate(multi_10 = TRUE) %>% 
+  select(property_ID, multi_10)
 
 multi_01 <- 
   daily %>% 
@@ -344,6 +344,13 @@ exempt_pct <-
   pull(pct) %>% 
   scales::percent(0.1)
 
+duplicates_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  summarize(pct = mean(license_status == "Duplicates")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
 problem_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
@@ -355,7 +362,7 @@ problem_pct <-
 freh_valid_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(status_09 == "FREH") %>% 
+  filter(status_10 == "FREH") %>% 
   summarize(pct = mean(license_status == "Conform")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
@@ -363,7 +370,7 @@ freh_valid_pct <-
 freh_no_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(status_09 == "FREH") %>% 
+  filter(status_10 == "FREH") %>% 
   summarize(pct = mean(license_status == "No license")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
@@ -371,7 +378,7 @@ freh_no_license_pct <-
 ml_duplicate_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(status_09 == "Multilisting") %>% 
+  filter(status_10 == "Multilisting") %>% 
   summarize(pct = mean(license_status == "Duplicates")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
@@ -379,7 +386,7 @@ ml_duplicate_pct <-
 min_no_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(status_09 != "FREH") %>% 
+  filter(status_10 != "FREH") %>% 
   summarize(pct = mean(license_status == "No license")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
@@ -387,8 +394,18 @@ min_no_license_pct <-
 eh_multiple_license <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Conform", active >= "2020-09-01") %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
   filter(listing_type == "Entire home/apt") %>% 
+  count(registration, sort = TRUE) %>% 
+  filter(n > 1) %>%
+  pull(n) %>% 
+  sum()
+
+pr_multiple_license <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
+  filter(listing_type == "Private room") %>% 
   count(registration, sort = TRUE) %>% 
   filter(n > 1) %>%
   pull(n) %>% 
@@ -397,8 +414,17 @@ eh_multiple_license <-
 eh_multiple_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Valid", active >= "2020-09-01") %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
   filter(listing_type == "Entire home/apt") %>% 
+  nrow() %>% 
+  {eh_multiple_license / .} %>% 
+  scales::percent(0.1)
+
+pr_multiple_license_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
+  filter(listing_type == "Private room") %>% 
   nrow() %>% 
   {eh_multiple_license / .} %>% 
   scales::percent(0.1)
@@ -408,17 +434,17 @@ rm(property, daily, GH)
 ```
 
 
-In order to analyze regulatory compliance among currently active listings, we scraped all Vancouver listings on the Airbnb website in mid-October (then again at the end of October for verification purposes) and recorded the license number displayed on each listing.
+In order to analyze the evolution of regulatory compliance among currently active listings, we scraped all Toronto listings that were active on the Airbnb website at the beginning of January 2021 and recorded the license number displayed on each listing. We scraped on multiple occasions throughout the month to look at the evolution of registration compliance among active listings.
 
-``` {r make_fig_4_2}
+``` {r make_fig_4_3}
 
-figure_4_2_fun <- function(regular = "", condensed = "") {
+figure_4_3_fun <- function(regular = "", condensed = "") {
   
-  fig_left_1 <- 
+    fig_left_1 <- 
     license_scrape %>%
     ggplot() +
     geom_histogram(aes(reorder(license_status, desc(license_status)), 
-                       fill = status_09), stat = "count") + 
+                       fill = status_10), stat = "count") + 
     xlab(NULL) +
     scale_fill_manual(name = "Listing status", 
                       values = col_palette[c(6, 2, 1, 4)]) +
@@ -435,7 +461,7 @@ figure_4_2_fun <- function(regular = "", condensed = "") {
     license_scrape %>% 
     ggplot() +
     geom_bar(aes(reorder(license_status, desc(license_status)), 
-                 fill = status_09), position = "fill", stat = "count") +
+                 fill = status_10), position = "fill", stat = "count") +
     xlab(NULL) +
     scale_fill_manual(name = "Listing status", 
                       values = col_palette[c(6, 2, 1, 4)]) +
@@ -451,11 +477,11 @@ figure_4_2_fun <- function(regular = "", condensed = "") {
   fig_left_2 <- 
     license_scrape %>% 
     ggplot() +
-    geom_histogram(aes(reorder(status_09, desc(status_09)), 
+    geom_histogram(aes(reorder(status_10, desc(status_10)), 
                        fill = license_status), stat = "count") + 
     xlab(NULL) +
     scale_fill_manual(name = "License status", 
-                      values = col_palette[c(6, 3, 2, 1, 4, 5)]) +
+                      values = col_palette[c(6, 3, 2, 1, 4, 5, 7)]) +
     scale_y_continuous(name = NULL, labels = scales::comma) +
     theme_minimal() +
     theme(legend.position = "bottom", 
@@ -468,11 +494,11 @@ figure_4_2_fun <- function(regular = "", condensed = "") {
   fig_right_2 <- 
     license_scrape %>% 
     ggplot() +
-    geom_bar(aes(reorder(status_09, desc(status_09)), fill = license_status), 
+    geom_bar(aes(reorder(status_10, desc(status_10)), fill = license_status), 
              position = "fill", stat = "count") +
     xlab(NULL) +
     scale_fill_manual(name = "License status", 
-                      values = col_palette[c(6, 3, 2, 1, 4, 5)]) +
+                      values = col_palette[c(6, 3, 2, 1, 4, 5, 7)]) +
     scale_y_continuous(name = NULL, labels = scales::percent) +
     theme_minimal() +
     theme(legend.position = "bottom", 
@@ -499,26 +525,26 @@ figure_4_2_fun <- function(regular = "", condensed = "") {
 }
 
 if (build_figures) {
-  ggsave(here("output", "figures", "figure_4_2.pdf"), 
-         plot = figure_4_2_fun("Futura", "Futura Condensed"), 
+  ggsave(here("output", "figures", "figure_4_3.pdf"), 
+         plot = figure_4_3_fun("Futura", "Futura Condensed"), 
          width = 8, height = 7, units = "in", useDingbats = FALSE)
   
-  extrafont::embed_fonts(here("output", "figures", "figure_4_2.pdf"))
+  extrafont::embed_fonts(here("output", "figures", "figure_4_3.pdf"))
 }
 
 ```
 
-Figure \@ref(fig:fig-4-2) shows the `r scraped_number` listings that displayed on Airbnb in mid-October when we performed our scrape of license numbers. The top row (A) organizes listings by their license status. Out of the total `r scraped_number` listings, `r valid_pct` had a valid license. A further `r exempt_pct` claimed to be exempt, and `r expired_pct` had a license which had previously been valid but which had expired. This leaves `r problem_pct` of listings which either had an invalid license number (an entry in the license field which was not in the proper format of YY-####), a fake license number (an entry which was in the proper format but which did not correspond to an actual license number issued by the City), or no license number at all. Commercial STRs (either FREH listings or multilistings) are over-represented among listings which have valid licenses, while listings with expired licenses or no liceneses at all were disporportionately likely to be listings which had not been active on Airbnb in the month of September.
+Figure \@ref(fig:fig-4-3) shows the `r scraped_number` active listings that displayed on January 26th when we performed our fourth scrape of license numbers. The top row (A) organizes listings by their license status. Out of the total `r scraped_number` listings, `r valid_pct` had a valid license, which is a 3-point percentage increase since our first scrape on January 7th. A further `r exempt_pct` claimed to be exempt, and `r duplicates_pct` had a city-issued license, but used this license for multiple listings at the same time. This leaves `r problem_pct` of listings which either had a fake license number (an entry which was in the proper format but which did not correspond to an actual license number issued by the City) or no license number at all. FREH listings (either FREH listings or multilistings) are over-represented among listings which have valid licenses and listings using a fake license; multilistings were the ones where there were the most duplicates licenses used; while listings that are neither FREH or multilistings and listings that were displayed on Airbnb but did not receive any activity since October were disproportionately likely to be listings without any license information.
 
-``` {r fig-4-2, include = TRUE, fig.cap = '(ref:fig-4-2)', fig.align = "center"}
+``` {r fig-4-3, include = TRUE, fig.cap = '(ref:fig-4-3)', fig.align = "center"}
 
-figure_4_2_fun()
+figure_4_3_fun()
 
 ```
 
-(ref:fig-4-2) _License status and listing status (in September 2020) for listings displayed on Airbnb in mid-October 2020_
+(ref:fig-4-3) _License status and listing status (in October 2020) for listings displayed on Airbnb in end of January 2021_
 
-The bottom row (B) of Figure \@ref(fig:fig-4-2) organizes listings by their activity status on Airbnb in the month of September 2020. It demonstrates that FREH listings are the only category of listing for which a majority (`r freh_valid_pct`) had valid licenses. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's regulation, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. Most (`r inactive_expired_pct`) listings which had been inactive on Airbnb in September had a license number which had previously been invalid but was now expired—the highest rate of any listing category, and an indication that many of these inactive listings are no longer operating as STRs despite continuing to be displayed on Airbnb.
+The bottom row (B) of Figure \@ref(fig:fig-4-3) organizes listings by their activity status on Airbnb in the month of October 2020. It demonstrates that FREH listings are the only category of listing where a significant proportion (`r freh_valid_pct`) had valid licenses. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's regulation, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings and `r pr_multiple_license` (`r pr_multiple_license_pct`) of active private room listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. 
 
 ## Geographic distribution of non-conforming listings
 

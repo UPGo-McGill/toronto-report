@@ -26,7 +26,7 @@ build_figures <- TRUE
 
 ```
 
-**Since the beginning of 2021, the percentage of STR listings operating with valid STR licenses increased consistently, from XX% on January 7th to 77.0% on January 28th. Among active active listings at the end of January 2021, 9.9% were operating with a valid license, 7.3% used a valid license for multiple listings, 79.2% displayed no licenses and listings that were either exempt or using a fake license amountd to less than 2% respectively. FREH listings have the highest rate of valid licenses (27.9%) among listing categories. Multilistings have the highest rate of duplicate licenses (17.7%). In total, 10.6% of active entire-home listings displayed a license number used by at least one other active entire-home listing, suggesting that license numbers are being shared in violation of the regulations. Non-conforming listings are concentrated in and around the Spadina Fort-York ward; however, the West End is the ward with the highest percentage of non-conforming listings (79.4%). Listings that are exempt of the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019.**
+**Since the beginning of 2021, the percentage of STR listings operating with valid STR licenses increased consistently, from XX% on January 7th to 77.0% on January 28th. Among active active listings at the end of January 2021, 9.9% were operating with a valid license, 7.3% used a valid license for multiple listings, 79.2% displayed no licenses and listings that were either exempt or using a fake license amountd to less than 2% respectively. FREH listings have the highest rate of valid licenses (27.9%) among listing categories. Multilistings have the highest rate of duplicate licenses (17.7%). In total, 10.6% of active entire-home listings displayed a license number used by at least one other active entire-home listing, suggesting that license numbers are being shared in violation of the regulations. Non-conforming listings are concentrated in and around the Spadina Fort-York ward; however, Willowdale is the ward with the highest percentage of non-conforming listings (94.0%). Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019.**
 
 ## How many listings have licenses?
 
@@ -150,11 +150,11 @@ rm(property, daily, GH)
 
 As of the first of January, all STR operators in Toronto are required to have a municipal license. This means that all listings displayed on Airbnb (with the exception of properties rented exclusively for 30 days at a time or longer, and hotels and other tourist accommodations which are regulated separately) must have a license. Following the announcement of the coming into effect of the by-law, Airbnb's biggest competitor - VRBO - pulled out of the Toronto market. For listings currently operating in Toronto, license numbers are publicly displayed, and below we compare listing activity with license status. Our team scraped the Airbnb website on five occassions during the month of January 2021 to assess the impact of the new STR by-law on active listing and by listing type (entire-home listings, private rooms, FREH and multilistings). We have connected those scrapes with the City's Short-Term License database (available on Open Data), as well as with AirDNA's dataset until the end of 2020. 
 
-``` {r make_fig_4_1}
+``` {r make_fig_3_1}
 
-figure_4_1_fun <- function(regular = "", condensed = "") {
+figure_3_1_fun <- function(regular = "", condensed = "") {
   
-  fig_4_1 <- 
+  fig_3_1 <- 
     ggplot(data=table_total)+
     geom_line(aes(x=date, y= n), color=col_palette[5]) + 
     scale_x_date(name=NULL)+
@@ -165,11 +165,11 @@ figure_4_1_fun <- function(regular = "", condensed = "") {
 }
 
 if (build_figures) {
-  ggsave(here("output", "figures", "figure_4_1.pdf"), 
-         plot = figure_4_1_fun("Futura", "Futura Condensed"), 
+  ggsave(here("output", "figures", "figure_3_1.pdf"), 
+         plot = figure_3_1_fun("Futura", "Futura Condensed"), 
          width = 8, height = 5, units = "in", useDingbats = FALSE)
   
-  extrafont::embed_fonts(here("output", "figures", "figure_4_1.pdf"))
+  extrafont::embed_fonts(here("output", "figures", "figure_3_1.pdf"))
 }
 
 ```
@@ -178,15 +178,15 @@ Figure \@ref(fig:fig-4-1) shows the total number of active listings that were di
 
 ``` {r fig-4-1, include = TRUE, fig.cap = '(ref:fig-4-1)', fig.align = "center"}
 
-figure_4_1_fun()
+figure_3_1_fun()
 
 ```
 
 (ref:fig-4-1) _Active listings displayed on Airbnb during the month of January 2021_
 
-``` {r make_fig_4_2}
+``` {r make_fig_3_2}
 
-figure_4_2_fun <- function(regular = "", condensed = "") {
+figure_3_2_fun <- function(regular = "", condensed = "") {
   
 fig_left <- 
   table %>% 
@@ -235,11 +235,11 @@ fig_left + fig_right +  plot_layout(guides = 'collect') &
 }
 
 if (build_figures) {
-  ggsave(here("output", "figures", "figure_4_2.pdf"), 
-         plot = figure_4_2_fun("Futura", "Futura Condensed"), 
+  ggsave(here("output", "figures", "figure_3_2.pdf"), 
+         plot = figure_3_2_fun("Futura", "Futura Condensed"), 
          width = 8, height = 5, units = "in", useDingbats = FALSE)
   
-  extrafont::embed_fonts(here("output", "figures", "figure_4_1.pdf"))
+  extrafont::embed_fonts(here("output", "figures", "figure_3_1.pdf"))
 }
 
 ```
@@ -248,7 +248,7 @@ Figure \@ref(fig:fig-4-2) shows the repartition of active listings by conformity
 
 ``` {r fig-4-2, include = TRUE, fig.cap = '(ref:fig-4-1)', fig.align = "center"}
 
-figure_4_2_fun()
+figure_3_2_fun()
 
 ```
 
@@ -436,9 +436,9 @@ rm(property, daily, GH)
 
 In order to analyze the evolution of regulatory compliance among currently active listings, we scraped all Toronto listings that were active on the Airbnb website at the beginning of January 2021 and recorded the license number displayed on each listing. We scraped on multiple occasions throughout the month to look at the evolution of registration compliance among active listings.
 
-``` {r make_fig_4_3}
+``` {r make_fig_3_3}
 
-figure_4_3_fun <- function(regular = "", condensed = "") {
+figure_3_3_fun <- function(regular = "", condensed = "") {
   
     fig_left_1 <- 
     license_scrape %>%
@@ -525,11 +525,11 @@ figure_4_3_fun <- function(regular = "", condensed = "") {
 }
 
 if (build_figures) {
-  ggsave(here("output", "figures", "figure_4_3.pdf"), 
-         plot = figure_4_3_fun("Futura", "Futura Condensed"), 
+  ggsave(here("output", "figures", "figure_3_3.pdf"), 
+         plot = figure_3_3_fun("Futura", "Futura Condensed"), 
          width = 8, height = 7, units = "in", useDingbats = FALSE)
   
-  extrafont::embed_fonts(here("output", "figures", "figure_4_3.pdf"))
+  extrafont::embed_fonts(here("output", "figures", "figure_3_3.pdf"))
 }
 
 ```
@@ -538,7 +538,7 @@ Figure \@ref(fig:fig-4-3) shows the `r scraped_number` active listings that disp
 
 ``` {r fig-4-3, include = TRUE, fig.cap = '(ref:fig-4-3)', fig.align = "center"}
 
-figure_4_3_fun()
+figure_3_3_fun()
 
 ```
 
@@ -592,9 +592,9 @@ scar_n_illegal_pct <-
 ```
 
 
-``` {r make_fig_4_4}
+``` {r make_fig_3_4}
 
-figure_4_4_fun <- function(regular = "", condensed = "") {
+figure_3_4_fun <- function(regular = "", condensed = "") {
 
 map_table %>% 
   ggplot() +
@@ -615,11 +615,11 @@ map_table %>%
 }
 
 if (build_figures) {
-  ggsave(here("output", "figures", "figure_4_4.pdf"), 
-         plot = figure_4_4_fun("Futura", "Futura Condensed"), 
+  ggsave(here("output", "figures", "figure_3_4.pdf"), 
+         plot = figure_3_4_fun("Futura", "Futura Condensed"), 
          width = 4, height = 4.4, units = "in", useDingbats = FALSE)
   
-  extrafont::embed_fonts(here("output", "figures", "figure_4_4.pdf"))
+  extrafont::embed_fonts(here("output", "figures", "figure_3_4.pdf"))
 }
 
 ```
@@ -628,7 +628,7 @@ Listing validity throughout Toronto is overall still low, which is understandabl
 
 ``` {r fig-4-4, include = TRUE, fig.cap = '(ref:fig-4-4)', fig.align = "center"}
 
-figure_4_4_fun()
+figure_3_4_fun()
 
 ```
 

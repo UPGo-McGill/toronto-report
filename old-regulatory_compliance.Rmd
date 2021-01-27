@@ -148,7 +148,7 @@ rm(property, daily, GH)
 
 ```
 
-As of the first of January, all STR operators in Toronto are required to have a municipal license. This means that all listings displayed on Airbnb and VRBO (with the exception of properties rented exclusively for 30 days at a time or longer, and hotels and other tourist accommodations which are regulated separately) must have a license. For listings currently operating in Toronto, license numbers are publicly displayed, and below we compare listing activity with license status. Our team scraped the Airbnb website on five occassions during the month of January 2021 to assess the impact of the new STR by-law on active listing and by listing type (entire-home listings, private rooms, FREH and multilistings). We have connected those scrapes with the City's Short-Term License database (available on Open Data), as well as with AirDNA's dataset until the end of 2020.
+As of the first of January, all STR operators in Toronto are required to have a municipal license. This means that all listings displayed on Airbnb (with the exception of properties rented exclusively for 30 days at a time or longer, and hotels and other tourist accommodations which are regulated separately) must have a license. Following the announcement of the coming into effect of the by-law, Airbnb's biggest competitor - VRBO - pulled out of the Toronto market. For listings currently operating in Toronto, license numbers are publicly displayed, and below we compare listing activity with license status. Our team scraped the Airbnb website on five occassions during the month of January 2021 to assess the impact of the new STR by-law on active listing and by listing type (entire-home listings, private rooms, FREH and multilistings). We have connected those scrapes with the City's Short-Term License database (available on Open Data), as well as with AirDNA's dataset until the end of 2020. 
 
 ``` {r make_fig_4_1}
 
@@ -641,11 +641,18 @@ figure_4_4_fun()
 qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 
 eh_license <-
-  license_scrape %>% 
+  january_listings %>% 
   st_drop_geometry() %>% 
-  filter(active >= "2020-09-01") %>% 
+  filter(active >= max(active, na.rm = T) - days(30)) %>% 
   filter(listing_type == "Entire home/apt") %>%
-  select(property_ID, license_status)
+  select(property_ID, registration_analyzed)
+
+pr_license <-
+  january_listings %>% 
+  st_drop_geometry() %>% 
+  filter(active >= max(active, na.rm = T) - days(30)) %>% 
+  filter(listing_type == "Private room") %>%
+  select(property_ID, registration_analyzed)
 
 daily_status <-
   daily %>% 
@@ -672,7 +679,7 @@ revenue_covid <-
          property_ID %in% eh_license$property_ID) %>%
   group_by(property_ID) %>% 
   summarize(revenue = sum(price)) %>% 
-  left_join(st_drop_geometry(select(license_scrape, property_ID, created)), 
+  left_join(st_drop_geometry(select(january_listings, property_ID, created)), 
             by = "property_ID") %>% 
   mutate(created_or_covid = 
            as.Date(if_else(created <= key_date_covid, key_date_covid, created), 
@@ -687,15 +694,15 @@ license_activity <-
 
 revenue_regulations <-
   daily %>% 
-  filter(status == "R", date >= key_date_regulations,
+  filter(status == "R", date >= start_2019,
          property_ID %in% eh_license$property_ID) %>%
   group_by(property_ID) %>% 
   summarize(revenue = sum(price)) %>% 
-  left_join(st_drop_geometry(select(license_scrape, property_ID, created)), 
+  left_join(st_drop_geometry(select(january_listings, property_ID, created)), 
             by = "property_ID") %>% 
   mutate(created_or_regulations = 
-           as.Date(if_else(created <= key_date_regulations, 
-                           key_date_regulations, created), 
+           as.Date(if_else(created <= start_2019, 
+                           start_2019, created), 
                    origin = "1970-01-01")) %>% 
   mutate(revenue = revenue / as.numeric(max(daily$date) - 
                                           created_or_regulations)) %>% 
@@ -706,46 +713,76 @@ license_activity <-
   inner_join(license_activity, revenue_regulations, by = "property_ID") %>% 
   mutate(revenue_reg = if_else(is.na(revenue_reg), 0, revenue_reg))
 
-invalid <- 
-  license_activity %>% 
-  filter(license_status != "Valid", license_status != "Exempt") %>% 
-  summarize(n = n(), across(per_A:revenue_reg, mean)) %>% 
-  mutate(license_status = "Non-conforming")
-
 all_listings <- 
   license_activity %>% 
   summarize(n = n(), across(per_A:revenue_reg, mean)) %>% 
-  mutate(license_status = "All listings")
+  mutate(registration_analyzed = "All listings")
 
 license_activity <-
   all_listings %>% 
   bind_rows(license_activity %>% 
-              group_by(license_status) %>%
+              group_by(registration_analyzed) %>%
+              summarize(n = n(), across(per_A:revenue_reg, mean))) %>% 
+  select(registration_analyzed, everything())
+
+invalid <- 
+  license_activity %>% 
+  filter(registration_analyzed != "Conform", registration_analyzed != "Exempt") %>% 
+  summarize(n = n(), across(per_A:revenue_reg, mean)) %>% 
+  mutate(registration_analyzed = "Non-conforming")
+
+all_listings <- 
+  license_activity %>% 
+  summarize(n = n(), across(per_A:revenue_reg, mean)) %>% 
+  mutate(registration_analyzed = "All listings")
+
+license_activity <-
+  all_listings %>% 
+  bind_rows(license_activity %>% 
+              group_by(registration_analyzed) %>%
               summarize(n = n(), across(per_A:revenue_reg, mean))) %>% 
   bind_rows(invalid) %>% 
-  select(license_status, everything())
+  select(registration_analyzed, everything())
 
 valid_r_pct <- 
   license_activity %>% 
-  filter(license_status == "Valid") %>% 
+  filter(registration_analyzed == "Conform") %>% 
   pull(per_R) %>% 
   scales::percent(0.1)
 
-non_conforming_r_pct <- 
+no_license_r_pct <- 
   license_activity %>% 
-  filter(license_status == "Non-conforming") %>% 
+  filter(registration_analyzed == "No license") %>% 
+  pull(per_R) %>% 
+  scales::percent(0.1)
+
+exempt_r_pct <- 
+  license_activity %>% 
+  filter(registration_analyzed == "Exempt") %>% 
+  pull(per_R) %>% 
+  scales::percent(0.1)
+
+exempt_rev <- 
+  license_activity %>% 
+  filter(registration_analyzed == "Exempt") %>% 
+  pull(revenue) %>% 
+  scales::dollar(1)
+
+fake_r_pct <- 
+  license_activity %>% 
+  filter(registration_analyzed == "Fake License") %>% 
   pull(per_R) %>% 
   scales::percent(0.1)
 
 fake_rev <- 
   license_activity %>% 
-  filter(license_status == "Fake") %>% 
+  filter(registration_analyzed == "Fake License") %>% 
   pull(revenue) %>% 
   scales::dollar(1)
 
 valid_rev <- 
   license_activity %>% 
-  filter(license_status == "Valid") %>% 
+  filter(registration_analyzed == "Conform") %>% 
   pull(revenue) %>% 
   scales::dollar(1)
 
@@ -753,17 +790,18 @@ rm(property, daily, GH)
 
 ```
 
-How does registration conformity impact business in the short-term rental market? We analyzed reservation, availability and revenue patterns of all active entire-home listings to understand the relationship between displaying a valid license number and STR activity. Table \@ref(tab:tab-license) summarizes this information. Entire-home listings with valid licenses have significantly higher reservation rates (`r valid_r_pct`) than listings with non-conforming licenses (`r non_conforming_r_pct`). They have also earned more revenue per night since the 2018 regulations were introduced and since the onset of the Covid-19 pandemic. However, among listings which do not have a valid license number, it is listings with fake license numbers (i.e. numbers which follow the correct YY-#### format but do not correspond to a number actually issued by the City) which have earned the most revenue since the onset of the pandemic, at `r fake_rev` compared to `r valid_rev` for listings with valid licenses. Listings operating without displaying any license at all have earned dramatically less revenue than any other listing category—less than half the average revenue of listings with valid licenses over both time periods.
+How does registration conformity impact business in the short-term rental market? We analyzed reservation, availability and revenue patterns of all active entire-home listings to understand the relationship between displaying a valid license number and STR activity. Table \@ref(tab:tab-license) summarizes this information. Entire-home listings with valid licenses have significantly higher reservation rates (`r valid_r_pct`) than listings with no displayed licenses (`r no_license_r_pct`). Listings that acquired licenses also earned more revenue per night since the start of 2019 and since the onset of the Covid-19 pandemic. Nevertheless, it is the listings that proclaim that they are exempt from the regulation that have earned more during both time periods (with a nightly average revenue of `r exempt_rev` during the pandemic). Among listings which are not conform, it is listings with fake license numbers (i.e. numbers which follow the correct YY-#### format but do not correspond to a number actually issued by the City) which have been reserved the most on average (`r fake_r_pct`), and the second highest earner among all groups (with a nightly revenue of `r fake_rev` during the pandemic). We can thus say that listings that have been more successful - both in terms of revenue and availability - in the past year are the ones most likely to obtain a business license, or to at least display some form of registration information on their listing.
 
 ``` {r tab-license, include = TRUE}
 
 library(kableExtra)
 
 license_activity[c(1, 7, 6, 8, 5, 4, 3, 2),] %>% 
-  mutate(n = prettyNum(n, ",")) %>% 
+  select(-n) %>% 
+  #mutate(n = prettyNum(n, ",")) %>% 
   mutate(across(per_A:per_B, scales::percent, 0.1)) %>% 
   mutate(across(revenue:revenue_reg, scales::dollar, 1)) %>% 
-  set_names(c("License status", "Listings", "Nights available", 
+  set_names(c("License status", "Nights available", 
               "Nights reserved", "Nights blocked", 
               "Revenue per night since Covid-19", 
               "Revenue per night since regulations")) %>% 
@@ -772,6 +810,6 @@ license_activity[c(1, 7, 6, 8, 5, 4, 3, 2),] %>%
 
 ```
 
-The implications of this analysis are: 1) displaying a license number is associated with greater success in the STR market in Vancouver, and 2) it is not important whether the license number is valid. Visitors to Vancouver are not in a position to independently verify the validity of license numbers, but are evidently reluctant to book listings for which no license is displayed.
+The implications of this analysis are: 1) displaying a license number is associated with greater previous success in the STR market in Toronto, and 2) it is not important whether the license number is valid. STR operators which took the initiative to either get a license number, use a valid license number for more than one listing or enter a fake license number are the ones that have had more activity on Airbnb and most likely intend to continue operating on short-term rental platforms.
 
 \newpage

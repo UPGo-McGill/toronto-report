@@ -343,6 +343,67 @@ license_activity <-
   #bind_rows(invalid) %>% 
   select(registration_analyzed, everything())
 
+invalid <- 
+  license_activity %>% 
+  filter(registration_analyzed != "Conform", registration_analyzed != "Exempt") %>% 
+  summarize(n = n(), across(per_A:revenue_reg, mean)) %>% 
+  mutate(registration_analyzed = "Non-conforming")
+
+all_listings <- 
+  license_activity %>% 
+  summarize(n = n(), across(per_A:revenue_reg, mean)) %>% 
+  mutate(registration_analyzed = "All listings")
+
+license_activity <-
+  all_listings %>% 
+  bind_rows(license_activity %>% 
+              group_by(registration_analyzed) %>%
+              summarize(n = n(), across(per_A:revenue_reg, mean))) %>% 
+  bind_rows(invalid) %>% 
+  select(registration_analyzed, everything())
+
+valid_r_pct <- 
+  license_activity %>% 
+  filter(registration_analyzed == "Conform") %>% 
+  pull(per_R) %>% 
+  scales::percent(0.1)
+
+no_license_r_pct <- 
+  license_activity %>% 
+  filter(registration_analyzed == "No license") %>% 
+  pull(per_R) %>% 
+  scales::percent(0.1)
+
+exempt_r_pct <- 
+  license_activity %>% 
+  filter(registration_analyzed == "Exempt") %>% 
+  pull(per_R) %>% 
+  scales::percent(0.1)
+
+exempt_rev <- 
+  license_activity %>% 
+  filter(registration_analyzed == "Exempt") %>% 
+  pull(revenue) %>% 
+  scales::dollar(1)
+
+fake_r_pct <- 
+  license_activity %>% 
+  filter(registration_analyzed == "Fake License") %>% 
+  pull(per_R) %>% 
+  scales::percent(0.1)
+
+fake_rev <- 
+  license_activity %>% 
+  filter(registration_analyzed == "Fake License") %>% 
+  pull(revenue) %>% 
+  scales::dollar(1)
+
+valid_rev <- 
+  license_activity %>% 
+  filter(registration_analyzed == "Conform") %>% 
+  pull(revenue) %>% 
+  scales::dollar(1)
+
 license_activity %>% 
   set_names(c("Conformity status", "Number of listings", "Available", 
               "Reserved", "Blocked", "Revenue per night since COVID-19", 
@@ -355,6 +416,18 @@ license_activity %>%
   fmt_percent(
     columns = 3:5, 
     decimals = 1)
+
+license_activity[c(1, 7, 6, 8, 5, 4, 3, 2),] %>% 
+  select(-n) %>% 
+  #mutate(n = prettyNum(n, ",")) %>% 
+  mutate(across(per_A:per_B, scales::percent, 0.1)) %>% 
+  mutate(across(revenue:revenue_reg, scales::dollar, 1)) %>% 
+  set_names(c("License status", "Nights available", 
+              "Nights reserved", "Nights blocked", 
+              "Revenue per night since Covid-19", 
+              "Revenue per night since regulations")) %>% 
+  kbl(caption = "STR activity by license status", align = "lrrrrrr") %>%
+  kable_styling(latex_options = "scale_down")
 
 
 

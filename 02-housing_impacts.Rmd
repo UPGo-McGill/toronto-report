@@ -40,21 +40,21 @@ FREH <-
 
 FREH_WD <- 
   daily %>% 
-  filter(date %in% as.Date(c("2019-10-31", "2020-10-31"))) %>% 
+  filter(date %in% as.Date(c("2019-12-31", "2020-12-31"))) %>% 
   group_by(ward, date) %>% 
   summarize(FREH = sum(FREH_3)) %>% 
   mutate(date = if_else(date >= start_2020, 2020, 2019))
 
 FREH_DA <- 
   daily %>% 
-  filter(date == "2020-10-01") %>% 
+  filter(date == "2020-12-01") %>% 
   left_join(select(st_drop_geometry(property), property_ID, GeoUID)) %>% 
   group_by(GeoUID) %>% 
   summarize(FREH = sum(FREH_3))
 
 GH_WD <- 
   GH %>% 
-  filter(date %in% as.Date(c("2019-10-31", "2020-10-31"))) %>% 
+  filter(date %in% as.Date(c("2019-12-31", "2020-12-31"))) %>% 
   mutate(geometry = st_centroid(geometry)) %>% 
   st_join(WD) %>% 
   st_drop_geometry() %>% 
@@ -65,7 +65,7 @@ GH_WD <-
 
 GH_DA <- 
   GH %>% 
-  filter(date == "2020-10-31") %>% 
+  filter(date == "2020-12-31") %>% 
   mutate(geometry = st_centroid(geometry)) %>% 
   st_join(DA) %>% 
   st_drop_geometry() %>% 
@@ -138,10 +138,10 @@ qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 # Total housing loss for 2020
 housing_loss_2020 <- 
   {{FREH %>% 
-      filter(date == "2020-10-01") %>% 
+      filter(date == "2020-12-01") %>% 
       pull(FREH_3)} +
       {GH %>% 
-          filter(date == "2020-10-01") %>% 
+          filter(date == "2020-12-01") %>% 
           pull(housing_units) %>% sum()}} %>% 
   round(digit = -1) %>% 
   prettyNum(",")
@@ -149,7 +149,7 @@ housing_loss_2020 <-
 # Total housing loss for 2019
 housing_loss_2019 <- 
   {{FREH %>% 
-      filter(date == "2019-10-01") %>% 
+      filter(date == "2019-12-01") %>% 
       pull(FREH_3)} +
       {GH %>% 
           filter(date == end_2019) %>% 
@@ -159,28 +159,28 @@ housing_loss_2019 <-
 
 # Absolute numbers of change in dedicated STRs from 2019 to 2020
 housing_loss_change_absolute <- 
-  {{{FREH %>% filter(date == as.Date("2019-10-01")) %>% pull(FREH_3)} +
-      {GH %>% filter(date == as.Date("2020-10-01") - years(1)) %>% 
+  {{{FREH %>% filter(date == as.Date("2019-12-01")) %>% pull(FREH_3)} +
+      {GH %>% filter(date == as.Date("2020-12-01") - years(1)) %>% 
           pull(housing_units) %>% sum()}} -
-  {{FREH %>% filter(date == as.Date("2020-10-01")) %>% pull(FREH_3)} +
-      {GH %>% filter(date == as.Date("2020-10-01")) %>% pull(housing_units) %>% sum()}}} %>% 
+  {{FREH %>% filter(date == as.Date("2020-12-01")) %>% pull(FREH_3)} +
+      {GH %>% filter(date == as.Date("2020-12-01")) %>% pull(housing_units) %>% sum()}}} %>% 
   round(digit = -1) %>% 
   prettyNum(",")
 
 # YOY increase in housing loss
 housing_loss_change <- 
-  {{{FREH %>% filter(date == as.Date("2020-10-01")) %>% pull(FREH_3)} +
-      {GH %>% filter(date == as.Date("2020-10-01")) %>% pull(housing_units) %>% sum()}} /
-      {{FREH %>% filter(date == as.Date("2019-10-01")) %>% pull(FREH_3)} +
-          {GH %>% filter(date == as.Date("2020-10-01") - years(1)) %>% 
+  {{{FREH %>% filter(date == as.Date("2020-12-01")) %>% pull(FREH_3)} +
+      {GH %>% filter(date == as.Date("2020-12-01")) %>% pull(housing_units) %>% sum()}} /
+      {{FREH %>% filter(date == as.Date("2019-12-01")) %>% pull(FREH_3)} +
+          {GH %>% filter(date == as.Date("2020-12-01") - years(1)) %>% 
               pull(housing_units) %>% sum()}}} %>% 
   {. - 1} %>% 
   round(3) %>% 
   scales::percent(0.1)
 
 housing_loss_pct_dwelling <- 
-  {{{FREH %>% filter(date == "2020-10-01") %>% pull(FREH_3)} +
-      {GH %>% filter(date == "2020-10-01") %>% pull(housing_units) %>% sum()}} /
+  {{{FREH %>% filter(date == "2020-12-01") %>% pull(FREH_3)} +
+      {GH %>% filter(date == "2020-12-01") %>% pull(housing_units) %>% sum()}} /
       sum(WD$dwellings)} %>% 
   round(3) %>% 
   scales::percent(0.1)
@@ -254,7 +254,7 @@ qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 # FREH in 2020-10
 FREH_2020 <- 
   FREH %>% 
-  filter(date == "2020-10-01") %>% 
+  filter(date == "2020-12-01") %>% 
   pull(FREH_3) %>% 
   round(digit = -1) %>% 
   prettyNum(",")
@@ -262,7 +262,7 @@ FREH_2020 <-
 # GH in 2020-10
 GH_2020 <- 
   GH %>% 
-  filter(date == "2020-10-01") %>% 
+  filter(date == "2020-12-01") %>% 
   pull(housing_units) %>% 
   sum() %>% 
   round(digit = -1) %>% 
@@ -288,10 +288,10 @@ active_yoy_listings <-
 # Total housing loss for 2020
 housing_loss_2020 <- 
   {{FREH %>% 
-      filter(date == "2020-10-01") %>% 
+      filter(date == "2020-12-01") %>% 
       pull(FREH_3)} +
     {GH %>% 
-        filter(date == "2020-10-01") %>% 
+        filter(date == "2020-12-01") %>% 
         pull(housing_units) %>% 
         sum()}} %>% 
   round(digit = -1) %>% 
@@ -372,17 +372,17 @@ housing_loss_summaries <-
   summarize(eh = mean(FREH_3[listing_type == "Entire home/apt"] > 0.5),
             pr = mean(GH[listing_type == "Private room"])) %>% 
   mutate(across(c(eh, pr), slide_dbl, mean, .before = 30)) %>% 
-  filter(date %in% as.Date(c("2016-12-31", "2019-12-31", "2020-10-31")))
+  filter(date %in% as.Date(c("2016-12-31", "2019-12-31", "2020-12-31")))
 
 eh_housing_loss <- 
   housing_loss_summaries %>% 
-  filter(date == "2020-10-31") %>% 
+  filter(date == "2020-12-31") %>% 
   pull(eh) %>% 
   scales::percent(0.1)
 
 pr_housing_loss <- 
   housing_loss_summaries %>% 
-  filter(date == "2020-10-31") %>% 
+  filter(date == "2020-12-31") %>% 
   pull(pr) %>% 
   scales::percent(0.1)
 
@@ -657,10 +657,10 @@ deactivated_2020 <-
     variable = "deactivated",
     value = c({
       FREH_2020 %>% 
-        summarize(total = sum(scraped <= "2020-10-31")) %>% 
+        summarize(total = sum(scraped <= "2020-12-31")) %>% 
         pull(total)}, {
           non_FREH_2020 %>% 
-            summarize(total = sum(scraped <= "2020-10-31")) %>% 
+            summarize(total = sum(scraped <= "2020-12-31")) %>% 
             pull(total)})
   )
 
@@ -671,16 +671,16 @@ deactivated_2019 <-
     variable = "deactivated",
     value = c({
       FREH_2019 %>% 
-        summarize(total = sum(scraped <= "2019-10-31")) %>% 
+        summarize(total = sum(scraped <= "2019-12-31")) %>% 
         pull(total)}, {
           non_FREH_2019 %>% 
-            summarize(total = sum(scraped <= "2019-10-31")) %>% 
+            summarize(total = sum(scraped <= "2019-12-31")) %>% 
             pull(total)})
   )
 
 blocked_PIDs_2020 <- 
   daily %>% 
-  filter(housing, date >= "2020-10-01", date <= "2020-10-31") %>% 
+  filter(housing, date >= "2020-12-01", date <= "2020-12-31") %>% 
   group_by(property_ID) %>% 
   filter(mean(status == "B") == 1) %>% 
   pull(property_ID) %>% 
@@ -688,7 +688,7 @@ blocked_PIDs_2020 <-
 
 blocked_PIDs_2019 <- 
   daily %>% 
-  filter(housing, date >= "2019-10-01", date <= "2019-10-31") %>% 
+  filter(housing, date >= "2019-12-01", date <= "2019-12-31") %>% 
   group_by(property_ID) %>% 
   filter(mean(status == "B") == 1) %>% 
   pull(property_ID) %>% 
@@ -806,7 +806,7 @@ fig_labels <-
     variable == "total listings" ~ paste0(label, " ", variable, "\nin Jan/Feb"),
     variable == "active" ~ paste0(label, " (", 
                                   round(label/sum(label) * 200, 1), "%) ", 
-                                  variable, "\nin September"),
+                                  variable, "\nin December"),
     TRUE ~ paste0(label, " (", round(label/sum(label) * 200, 1), "%) ",
                   variable))) %>% 
   ungroup()
@@ -844,7 +844,7 @@ oct_2020_housing_loss <-
   summarize(FREH = sum(FREH_3)) %>% 
   left_join(GH_total) %>% 
   mutate(housing_loss = FREH + GH_units) %>% 
-  filter(date == "2020-10-01") %>% 
+  filter(date == "2020-12-01") %>% 
   mutate(across(-date, round, -1)) %>% 
   pull(housing_loss) %>% 
   prettyNum(",")
@@ -865,8 +865,8 @@ jan_feb_FREH_deactivated <-
   property %>% 
   st_drop_geometry() %>% 
   filter(property_ID %in% FREH_in_jan_feb) %>% 
-  summarize(total = round(sum(scraped <= "2020-10-31"), -1),
-            pct = round(mean(scraped <= "2020-10-31"), 3)) %>% 
+  summarize(total = round(sum(scraped <= "2020-12-31"), -1),
+            pct = round(mean(scraped <= "2020-12-31"), 3)) %>% 
   pull(total) %>% 
   prettyNum(",")
 
@@ -874,8 +874,8 @@ jan_feb_FREH_deactivated_pct <-
   property %>% 
   st_drop_geometry() %>% 
   filter(property_ID %in% FREH_in_jan_feb) %>% 
-  summarize(total = round(sum(scraped <= "2020-10-31"), -1),
-            pct = round(mean(scraped <= "2020-10-31"), 3)) %>% 
+  summarize(total = round(sum(scraped <= "2020-12-31"), -1),
+            pct = round(mean(scraped <= "2020-12-31"), 3)) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
 
@@ -889,7 +889,7 @@ jan_feb_FREH_deactivated_pct_2019 <-
   property %>% 
   st_drop_geometry() %>% 
   filter(property_ID %in% FREH_in_jan_feb_2019) %>% 
-  summarize(pct = mean(scraped <= "2019-10-31")) %>% 
+  summarize(pct = mean(scraped <= "2019-12-31")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
 
@@ -901,7 +901,7 @@ jan_feb_non_FREH_deactivated_pct <-
              status != "B") %>% 
       pull(property_ID) %>% 
       unique()}, !property_ID %in% FREH_in_jan_feb) %>% 
-  summarize(pct = mean(scraped <= "2020-10-31")) %>% 
+  summarize(pct = mean(scraped <= "2020-12-31")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
 
@@ -913,7 +913,7 @@ jan_feb_non_FREH_deactivated_pct_2019 <-
              status != "B") %>% 
       pull(property_ID) %>% 
       unique()}, !property_ID %in% FREH_in_jan_feb_2019) %>% 
-  summarize(pct = mean(scraped <= "2019-10-31")) %>% 
+  summarize(pct = mean(scraped <= "2019-12-31")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
 
@@ -942,14 +942,14 @@ daily_reservation_trajectories <-
 
 jan_feb_FREH_active <- 
   property %>% 
-  filter(property_ID %in% FREH_in_jan_feb, scraped > "2020-10-31") %>% 
+  filter(property_ID %in% FREH_in_jan_feb, scraped > "2020-12-31") %>% 
   nrow() %>% 
   round(-1) %>% 
   prettyNum(",")
 
 jan_feb_FREH_blocked_all <- 
   daily %>% 
-  filter(housing, date >= "2020-10-01", date <= "2020-10-31") %>% 
+  filter(housing, date >= "2020-12-01", date <= "2020-12-31") %>% 
   group_by(property_ID) %>% 
   filter(mean(status == "B") == 1) %>% 
   pull(property_ID) %>% 
@@ -961,7 +961,7 @@ jan_feb_FREH_blocked_all <-
 
 jan_feb_FREH_blocked_all_pct <- 
   {daily %>% 
-  filter(housing, date >= "2020-10-01", date <= "2020-10-31") %>% 
+  filter(housing, date >= "2020-12-01", date <= "2020-12-31") %>% 
   group_by(property_ID) %>% 
   filter(mean(status == "B") == 1) %>% 
   pull(property_ID) %>% 
@@ -969,13 +969,13 @@ jan_feb_FREH_blocked_all_pct <-
   {filter(property, property_ID %in% ., property_ID %in% FREH_in_jan_feb)} %>% 
   nrow() %>% 
   `/`(property %>% 
-        filter(property_ID %in% FREH_in_jan_feb, scraped > "2020-10-31") %>% 
+        filter(property_ID %in% FREH_in_jan_feb, scraped > "2020-12-31") %>% 
         nrow())} %>% 
   scales::percent(0.1)
 
 jan_feb_FREH_blocked_maj <- 
   daily %>% 
-  filter(housing, date >= "2020-10-01", date <= "2020-10-31") %>% 
+  filter(housing, date >= "2020-12-01", date <= "2020-12-31") %>% 
   group_by(property_ID) %>% 
   filter(mean(status == "B") > 0.5) %>% 
   pull(property_ID) %>% 
@@ -987,7 +987,7 @@ jan_feb_FREH_blocked_maj <-
 
 jan_feb_FREH_blocked_maj_pct <- 
   {daily %>% 
-    filter(housing, date >= "2020-10-01", date <= "2020-10-31") %>% 
+    filter(housing, date >= "2020-12-01", date <= "2020-12-31") %>% 
     group_by(property_ID) %>% 
     filter(mean(status == "B") > 0.5) %>% 
     pull(property_ID) %>% 
@@ -995,13 +995,13 @@ jan_feb_FREH_blocked_maj_pct <-
     {filter(property, property_ID %in% ., property_ID %in% FREH_in_jan_feb)} %>% 
     nrow() %>% 
     `/`(property %>% 
-          filter(property_ID %in% FREH_in_jan_feb, scraped > "2020-10-31") %>% 
+          filter(property_ID %in% FREH_in_jan_feb, scraped > "2020-12-31") %>% 
           nrow())} %>% 
   scales::percent(0.1)
 
 jan_feb_FREH_blocked_all_pct_2019 <- 
   {daily %>% 
-    filter(housing, date >= "2019-10-01", date <= "2019-10-31") %>% 
+    filter(housing, date >= "2019-12-01", date <= "2019-12-31") %>% 
     group_by(property_ID) %>% 
     filter(mean(status == "B") == 1) %>% 
     pull(property_ID) %>% 
@@ -1011,13 +1011,13 @@ jan_feb_FREH_blocked_all_pct_2019 <-
     nrow() %>% 
     `/`(property %>% 
           filter(property_ID %in% FREH_in_jan_feb_2019, 
-                 scraped > "2019-10-31") %>% 
+                 scraped > "2019-12-31") %>% 
           nrow())} %>% 
   scales::percent(0.1)
 
 jan_feb_FREH_blocked_maj_pct_2019 <- 
   {daily %>% 
-    filter(housing, date >= "2019-10-01", date <= "2019-10-31") %>% 
+    filter(housing, date >= "2019-12-01", date <= "2019-12-31") %>% 
     group_by(property_ID) %>% 
     filter(mean(status == "B") > 0.5) %>% 
     pull(property_ID) %>% 
@@ -1027,7 +1027,7 @@ jan_feb_FREH_blocked_maj_pct_2019 <-
     nrow() %>% 
     `/`(property %>% 
           filter(property_ID %in% FREH_in_jan_feb_2019, 
-                 scraped > "2019-10-31") %>% 
+                 scraped > "2019-12-31") %>% 
           nrow())} %>% 
   scales::percent(0.1)
 
@@ -1042,7 +1042,7 @@ rm(property, daily, GH)
 
 ```
 
-According to the FREH model, the number of housing units in Toronto lost due to commercial STRs reached its all-time peak (`r peak_housing_loss`) at the beginning of 2020. Most of these (`r peak_FREH`) were FREH listings, with the remainder (`r peak_GH`) being ghost hostels—clusters of private-room listings operated out of a single housing unit. As of October 2020, the number of FREH listings had dropped to its lowest amount since we began tracking it in 2016, with just `r oct_2020_housing_loss` listings displaying availability and reservations consistent with historical patterns of full-time STR activity in Vancouver.
+According to the FREH model, the number of housing units in Toronto lost due to commercial STRs reached its all-time peak (`r peak_housing_loss`) at the beginning of 2020. Most of these (`r peak_FREH`) were FREH listings, with the remainder (`r peak_GH`) being ghost hostels—clusters of private-room listings operated out of a single housing unit. As of December 2020, the number of FREH listings had dropped to its lowest amount since we began tracking it in 2016, with just `r oct_2020_housing_loss` listings displaying availability and reservations consistent with historical patterns of full-time STR activity in Vancouver.
 
 One possibility is that these formerly FREH listings are no longer operating as STRs, either permanently (the listings were deactivated) or temporarily (the listings were blocked from receiving reservations). Under this possibility the listings may have been returned to the longer-term rental market. Another possibility is that the listings have remained open for business as short-term rentals, but the dramatically decreased demand for tourist accommodations means that the listings have not received the level of reservations which our model expects in order to classify the listings as frequently rented.
 
@@ -1081,7 +1081,7 @@ if (build_figures) {
 
 ```
 
-We adjudicate between these possibilities by comparing the activity of listings which had FREH status in January or February 2020—the months before the pandemic arrived—and listings which did not have this status. There were `r jan_feb_FREH_total` listings which we consider likely to have been FREH in either or both of January and February 2020. Of these listings, `r jan_feb_FREH_deactivated` were no longer listed on Airbnb or VRBO as of October 31, 2020. This is `r jan_feb_FREH_deactivated_pct` of these listings—almost twice as high as the `r jan_feb_FREH_deactivated_pct_2019` of listings which were FREH in either January or February 2019 and were no longer listed on the STR platforms by the end of August 2019. In total, `r jan_feb_non_FREH_deactivated_pct` of non-FREH listings active in January or February 2020 were deactivated by the end of October 2020, while the corresponding figure last year was `r jan_feb_non_FREH_deactivated_pct_2019`. This means that non-FREH listings have been deactivated at a higher rate this year than last year, but FREH listings have been deactivated at a substantially higher rate this year than last year (Figure \@ref(fig:fig-2-4)).
+We adjudicate between these possibilities by comparing the activity of listings which had FREH status in January or February 2020—the months before the pandemic arrived—and listings which did not have this status. There were `r jan_feb_FREH_total` listings which we consider likely to have been FREH in either or both of January and February 2020. Of these listings, `r jan_feb_FREH_deactivated` were no longer listed on Airbnb or VRBO as of December 31, 2020. This is `r jan_feb_FREH_deactivated_pct` of these listings—almost twice as high as the `r jan_feb_FREH_deactivated_pct_2019` of listings which were FREH in either January or February 2019 and were no longer listed on the STR platforms by the end of August 2019. In total, `r jan_feb_non_FREH_deactivated_pct` of non-FREH listings active in January or February 2020 were deactivated by the end of December 2020, while the corresponding figure last year was `r jan_feb_non_FREH_deactivated_pct_2019`. This means that non-FREH listings have been deactivated at a higher rate this year than last year, but FREH listings have been deactivated at a substantially higher rate this year than last year (Figure \@ref(fig:fig-2-4)).
 
 ``` {r fig-2-4, include = TRUE, fig.cap = '(ref:fig-2-4)', fig.align = "center"}
 
@@ -1091,7 +1091,7 @@ figure_2_4_fun()
 
 (ref:fig-2-4) _Activity trajectories of FREH and non-FREH listings in 2019 and 2020_
 
-Of the `r jan_feb_FREH_active` FREH listings which remained listed throughout March - October, `r jan_feb_FREH_blocked_all` (`r jan_feb_FREH_blocked_all_pct`) were blocked (i.e. not available for reservations) for all of the month of October, and `r jan_feb_FREH_blocked_maj` (`r jan_feb_FREH_blocked_maj_pct`) were blocked for a majority of the month. This is extremely rare behaviour for a dedicated STR listing, since early fall is usually one of the busiest months for tourist accommodations in Toronto. In 2019, only `r jan_feb_FREH_blocked_all_pct_2019` of listings which were FREH in January or February were blocked for all of September, and only `r jan_feb_FREH_blocked_maj_pct_2019` were blocked for a majority of the month.
+Of the `r jan_feb_FREH_active` FREH listings which remained listed throughout March - December, `r jan_feb_FREH_blocked_all` (`r jan_feb_FREH_blocked_all_pct`) were blocked (i.e. not available for reservations) for all of the month of December, and `r jan_feb_FREH_blocked_maj` (`r jan_feb_FREH_blocked_maj_pct`) were blocked for a majority of the month. This is extremely rare behaviour for a dedicated STR listing, since it is usually one of the busiest months for tourist accommodations in Toronto. In 2019, only `r jan_feb_FREH_blocked_all_pct_2019` of listings which were FREH in January or February were blocked for all of December, and only `r jan_feb_FREH_blocked_maj_pct_2019` were blocked for a majority of the month.
 
 ``` {r make_fig_2_5}
 

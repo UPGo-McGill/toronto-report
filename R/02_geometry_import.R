@@ -60,6 +60,11 @@ DA <-
 
 # Toronto neighbourhoods --------------------------------------------------
 
+WD_raw <- read_sf("data/wards/City Wards Data.shp") %>% 
+  select(FIELD_11, FIELD_13) %>% 
+  rename(ward_number = FIELD_11, ward = FIELD_13) %>% 
+  st_drop_geometry()
+
 WD <-
   read_sf("data/wards/City Wards Data.shp") %>%
   select(ward = FIELD_13) %>%
@@ -106,49 +111,180 @@ WD <-
 
 # Business licenses ------------------------------------------------------
 
-# BL <-
-#   read_sf("data/shapefiles/business-licences.shp") %>%
-#   st_drop_geometry() %>%
-#   mutate(issued = as.Date(substr(issueddate, 1, 10))) %>%
-#   filter(businesstyp == "Short-Term Rental") %>%
-#   transmute(registration = licencenumb,
-#             issued,
-#             expired = expireddate,
-#             status,
-#             fee_paid = feepaid,
-#             area = localarea) %>%
-#   mutate(
-#     # Change issued date to Jan 1 if Nov/Dec to avoid double counting
-#     issued = if_else(
-#       str_extract(issued, "^\\d{4}") < str_extract(expired, "^\\d{4}"),
-#       str_glue("{expired_year}-01-01",
-#                expired_year = {str_extract(expired, "^\\d{4}")}),
-#       substr(issued, 1, 10)),
-#     issued = as.Date(issued)) %>%
-#   arrange(desc(issued)) %>%
-#   distinct(registration, .keep_all = T)
-#
-# BL_expanded <- copy(BL)
-#
-# data.table::setDT(BL_expanded)
-#
-# BL_expanded <- BL_expanded[!is.na(issued) & !is.na(expired)]
-#
-# # Add new date field
-# BL_expanded[, date := list(list(issued:expired)),
-#             by = seq_len(nrow(BL_expanded))]
-#
-# # Unnest
-# BL_expanded <-
-#   BL_expanded[, lapply(.SD, unlist), by = seq_len(nrow(BL_expanded))]
-#
-# BL_expanded[, date := as.Date(date, origin = "1970-01-01")]
-#
-# BL_expanded <-
-#   BL_expanded %>%
-#   as_tibble() %>%
-#   select(-seq_len) %>%
-#   relocate(date, .after = registration)
+qload("output/reg_1.qs", nthreads = availableCores())
+reg_1 <- data.frame(property_ID, date, registration)  %>% 
+  as_tibble() %>% 
+  filter(registration != "NO LISTING" | is.na(registration)) 
+
+qload("output/reg_2.qs", nthreads = availableCores())
+reg_2 <- data.frame(property_ID, date, registration) %>% 
+  filter(registration != "NO LISTING" | is.na(registration)) %>% 
+  as_tibble()
+
+qload("output/reg_3.qs", nthreads = availableCores())
+reg_3 <- data.frame(property_ID, date, registration) %>% 
+  filter(registration != "NO LISTING" | is.na(registration)) %>% 
+  as_tibble() 
+
+qload("output/reg_4.qs", nthreads = availableCores())
+reg_4 <- data.frame(property_ID, date, registration) %>% 
+  filter(registration != "NO LISTING" | is.na(registration)) %>% 
+  as_tibble() 
+
+rm(date, registration, property_ID)
+
+# Upload open data's STR file
+str_reg <- read.csv("data/str.csv") %>% 
+  rename(registration = operator_registration_number,
+         id=X_id) %>% 
+  left_join(., WD_raw, by = "ward_number") %>% 
+  select(-ward_number)
+
+# Make sure there are no duplicates in this file
+(lengths(str_reg))-(str_reg %>% 
+                      distinct(registration, .keep_all = TRUE) %>% 
+                      lengths())
+
+
+# Join open data's scrape with Airbnb scrape
+reg_1 <- left_join(reg_1, str_reg, by = "registration")
+reg_2 <- left_join(reg_2, str_reg, by = "registration")
+reg_3 <- left_join(reg_3, str_reg, by = "registration")
+reg_4 <- left_join(reg_4, str_reg, by = "registration")
+
+# Select property_IDs that are using duplicate registration numbers
+duplicates_1 <- 
+  reg_1 %>% 
+  count(registration) %>% 
+  filter(n>=2, n<=274) %>% 
+  pull(registration)
+
+duplicates_2 <- 
+  reg_2 %>% 
+  count(registration) %>% 
+  filter(n>=2, n<=274) %>% 
+  pull(registration)
+
+duplicates_3 <- 
+  reg_3 %>% 
+  count(registration) %>% 
+  filter(n>=2, n<=274) %>% 
+  pull(registration)
+
+duplicates_4 <- 
+  reg_4 %>% 
+  count(registration) %>% 
+  filter(n>=2, n<=274) %>% 
+  pull(registration)
+
+# Categorize registration licences by type
+# First, change the formatting
+reg_1 <- 
+  reg_1 %>% 
+  mutate(registration = toupper(registration),
+         registration = case_when(
+           is.na(registration) ~ NA_character_,
+           registration == "NO LISTING" ~ "NO LISTING",
+           registration == "EXEMPT" ~ "EXEMPT",
+           str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
+           TRUE ~ "INVALID")
+  ) 
+
+reg_2 <- 
+  reg_2 %>% 
+  mutate(registration = toupper(registration),
+         registration = case_when(
+           is.na(registration) ~ NA_character_,
+           registration == "NO LISTING" ~ "NO LISTING",
+           registration == "EXEMPT" ~ "EXEMPT",
+           str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
+           TRUE ~ "INVALID")
+  ) 
+
+reg_3 <- 
+  reg_3 %>% 
+  mutate(registration = toupper(registration),
+         registration = case_when(
+           is.na(registration) ~ NA_character_,
+           registration == "NO LISTING" ~ "NO LISTING",
+           registration == "EXEMPT" ~ "EXEMPT",
+           str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
+           TRUE ~ "INVALID")
+  )
+
+reg_4 <- 
+  reg_4 %>% 
+  mutate(registration = toupper(registration),
+         registration = case_when(
+           is.na(registration) ~ NA_character_,
+           registration == "NO LISTING" ~ "NO LISTING",
+           registration == "EXEMPT" ~ "EXEMPT",
+           str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
+           TRUE ~ "INVALID")
+  ) 
+
+# Make sure that duplicates are entered
+reg_1$registration_analyzed <- ifelse(reg_1$registration %in% duplicates_1, "Duplicates", reg_1$registration)
+reg_2$registration_analyzed <- ifelse(reg_2$registration %in% duplicates_2, "Duplicates", reg_2$registration)
+reg_3$registration_analyzed <- ifelse(reg_3$registration %in% duplicates_3, "Duplicates", reg_3$registration)
+reg_4$registration_analyzed <- ifelse(reg_4$registration %in% duplicates_4, "Duplicates", reg_4$registration)
+
+# Categorize the rest
+reg_1 <- 
+  reg_1 %>% 
+  mutate(registration_analyzed = ifelse(registration == "NO LISTING", "Inactive listing", registration_analyzed),
+         registration_analyzed = ifelse(registration == "EXEMPT", "Exempt", registration_analyzed),
+         registration_analyzed = ifelse(registration == "INVALID", "Invalid", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration, "STR-\\d{4}-\\w{6}") & is.na(id), 
+                                        "Fake License", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
+                                        "Conform", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
+  ) %>% 
+  filter(registration_analyzed != "Invalid") %>% 
+  as_tibble()
+
+reg_2 <- 
+  reg_2 %>% 
+  mutate(registration_analyzed = ifelse(registration == "NO LISTING", "Inactive listing", registration_analyzed),
+         registration_analyzed = ifelse(registration == "EXEMPT", "Exempt", registration_analyzed),
+         registration_analyzed = ifelse(registration == "INVALID", "Invalid", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration, "STR-\\d{4}-\\w{6}") & is.na(id), 
+                                        "Fake License", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
+                                        "Conform", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
+  ) %>% 
+  filter(registration_analyzed != "Invalid") %>% 
+  as_tibble()
+
+reg_3 <- 
+  reg_3 %>% 
+  mutate(registration_analyzed = ifelse(registration == "NO LISTING", "Inactive listing", registration_analyzed),
+         registration_analyzed = ifelse(registration == "EXEMPT", "Exempt", registration_analyzed),
+         registration_analyzed = ifelse(registration == "INVALID", "Invalid", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration, "STR-\\d{4}-\\w{6}") & is.na(id), 
+                                        "Fake License", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
+                                        "Conform", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
+  ) %>% 
+  filter(registration_analyzed != "Invalid") %>% 
+  as_tibble()
+
+reg_4 <- 
+  reg_4 %>% 
+  mutate(registration_analyzed = ifelse(registration == "NO LISTING", "Inactive listing", registration_analyzed),
+         registration_analyzed = ifelse(registration == "EXEMPT", "Exempt", registration_analyzed),
+         registration_analyzed = ifelse(registration == "INVALID", "Invalid", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration, "STR-\\d{4}-\\w{6}") & is.na(id), 
+                                        "Fake License", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
+                                        "Conform", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
+  ) %>% 
+  filter(registration_analyzed != "Invalid") %>% 
+  as_tibble()
 
 
 # Save output -------------------------------------------------------------
@@ -156,3 +292,6 @@ WD <-
 qsavem(province, CMA, DA, city, WD,
        #streets, BL, BL_expanded, skytrain,
        file = "output/geometry.qsm", nthreads = availableCores())
+
+qsavem(reg_1, reg_2, reg_3, reg_4,
+       file = "output/regulation.qsm", nthreads = availableCores())

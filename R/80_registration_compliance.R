@@ -23,216 +23,42 @@ qload("output/str_processed.qsm", nthreads = availableCores())
 qload("output/geometry.qsm", nthreads = availableCores())
 #qload("output/FREH_model.qsm", nthreads = availableCores())
 
-qload("output/reg_1.qs", nthreads = availableCores())
-reg_1 <- data.frame(property_ID, date, registration)  %>% 
-  as_tibble() %>% 
-  filter(registration != "NO LISTING" | is.na(registration)) 
 
-qload("output/reg_2.qs", nthreads = availableCores())
-reg_2 <- data.frame(property_ID, date, registration) %>% 
-  filter(registration != "NO LISTING" | is.na(registration)) %>% 
-  as_tibble()
-
-qload("output/reg_3.qs", nthreads = availableCores())
-reg_3 <- data.frame(property_ID, date, registration) %>% 
-  filter(registration != "NO LISTING" | is.na(registration)) %>% 
-  as_tibble() 
-
-qload("output/reg_4.qs", nthreads = availableCores())
-reg_4 <- data.frame(property_ID, date, registration) %>% 
-  filter(registration != "NO LISTING" | is.na(registration)) %>% 
-  as_tibble() 
-
-rm(date, registration, property_ID)
-
-# Prepare new objects -----------------------------------------------------
-
-# Upload raw ward data
-WD_raw <- read_sf("data/wards/City Wards Data.shp") %>% 
-  select(FIELD_11, FIELD_13) %>% 
-  rename(ward_number = FIELD_11, ward = FIELD_13) %>% 
-  st_drop_geometry()
-
-# Upload open data's STR file
-str_reg <- read.csv("data/str.csv") %>% 
-  rename(registration = operator_registration_number,
-         id=X_id) %>% 
-  left_join(., WD_raw, by = "ward_number") %>% 
-  select(-ward_number)
-
-# Make sure there are no duplicates in this file
-(lengths(str_reg))-(str_reg %>% 
-                      distinct(registration, .keep_all = TRUE) %>% 
-                      lengths())
-
-
-# Join open data's scrape with Airbnb scrape
-reg_1 <- left_join(reg_1, str_reg, by = "registration")
-reg_2 <- left_join(reg_2, str_reg, by = "registration")
-reg_3 <- left_join(reg_3, str_reg, by = "registration")
-reg_4 <- left_join(reg_4, str_reg, by = "registration")
-
-# Select property_IDs that are using duplicate registration numbers
-duplicates_1 <- 
-  reg_1 %>% 
-  count(registration) %>% 
-  filter(n>=2, n<=274) %>% 
-  pull(registration)
-
-duplicates_2 <- 
-  reg_2 %>% 
-  count(registration) %>% 
-  filter(n>=2, n<=274) %>% 
-  pull(registration)
-
-duplicates_3 <- 
-  reg_3 %>% 
-  count(registration) %>% 
-  filter(n>=2, n<=274) %>% 
-  pull(registration)
-
-duplicates_4 <- 
-  reg_4 %>% 
-  count(registration) %>% 
-  filter(n>=2, n<=274) %>% 
-  pull(registration)
-
-# Categorize registration licences by type
-# First, change the formatting
-reg_1 <- 
-  reg_1 %>% 
-  mutate(registration = toupper(registration),
-         registration = case_when(
-           is.na(registration) ~ NA_character_,
-           registration == "NO LISTING" ~ "NO LISTING",
-           registration == "EXEMPT" ~ "EXEMPT",
-           str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
-           TRUE ~ "INVALID")
-  ) 
-
-reg_2 <- 
-  reg_2 %>% 
-  mutate(registration = toupper(registration),
-         registration = case_when(
-           is.na(registration) ~ NA_character_,
-           registration == "NO LISTING" ~ "NO LISTING",
-           registration == "EXEMPT" ~ "EXEMPT",
-           str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
-           TRUE ~ "INVALID")
-  ) 
-
-reg_3 <- 
-  reg_3 %>% 
-  mutate(registration = toupper(registration),
-         registration = case_when(
-           is.na(registration) ~ NA_character_,
-           registration == "NO LISTING" ~ "NO LISTING",
-           registration == "EXEMPT" ~ "EXEMPT",
-           str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
-           TRUE ~ "INVALID")
-  )
-
-reg_4 <- 
-  reg_4 %>% 
-  mutate(registration = toupper(registration),
-         registration = case_when(
-           is.na(registration) ~ NA_character_,
-           registration == "NO LISTING" ~ "NO LISTING",
-           registration == "EXEMPT" ~ "EXEMPT",
-           str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
-           TRUE ~ "INVALID")
-  ) 
-
-# Make sure that duplicates are entered
-reg_1$registration_analyzed <- ifelse(reg_1$registration %in% duplicates_1, "Duplicates", reg_1$registration)
-reg_2$registration_analyzed <- ifelse(reg_2$registration %in% duplicates_2, "Duplicates", reg_2$registration)
-reg_3$registration_analyzed <- ifelse(reg_3$registration %in% duplicates_3, "Duplicates", reg_3$registration)
-reg_4$registration_analyzed <- ifelse(reg_4$registration %in% duplicates_4, "Duplicates", reg_4$registration)
-
-# Categorize the rest
-reg_1 <- 
-  reg_1 %>% 
-  mutate(registration_analyzed = ifelse(registration == "NO LISTING", "Inactive listing", registration_analyzed),
-         registration_analyzed = ifelse(registration == "EXEMPT", "Exempt", registration_analyzed),
-         registration_analyzed = ifelse(registration == "INVALID", "Invalid", registration_analyzed),
-         registration_analyzed = ifelse(str_detect(registration, "STR-\\d{4}-\\w{6}") & is.na(id), 
-                                        "Fake License", registration_analyzed),
-         registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
-                                        "Conform", registration_analyzed),
-         registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
-  ) %>% 
-  as_tibble()
-
-reg_2 <- 
-  reg_2 %>% 
-  mutate(registration_analyzed = ifelse(registration == "NO LISTING", "Inactive listing", registration_analyzed),
-         registration_analyzed = ifelse(registration == "EXEMPT", "Exempt", registration_analyzed),
-         registration_analyzed = ifelse(registration == "INVALID", "Invalid", registration_analyzed),
-         registration_analyzed = ifelse(str_detect(registration, "STR-\\d{4}-\\w{6}") & is.na(id), 
-                                        "Fake License", registration_analyzed),
-         registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
-                                        "Conform", registration_analyzed),
-         registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
-  ) %>% 
-  as_tibble()
-
-reg_3 <- 
-  reg_3 %>% 
-  mutate(registration_analyzed = ifelse(registration == "NO LISTING", "Inactive listing", registration_analyzed),
-         registration_analyzed = ifelse(registration == "EXEMPT", "Exempt", registration_analyzed),
-         registration_analyzed = ifelse(registration == "INVALID", "Invalid", registration_analyzed),
-         registration_analyzed = ifelse(str_detect(registration, "STR-\\d{4}-\\w{6}") & is.na(id), 
-                                        "Fake License", registration_analyzed),
-         registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
-                                        "Conform", registration_analyzed),
-         registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
-  ) %>% 
-  as_tibble()
-
-reg_4 <- 
-  reg_4 %>% 
-  mutate(registration_analyzed = ifelse(registration == "NO LISTING", "Inactive listing", registration_analyzed),
-         registration_analyzed = ifelse(registration == "EXEMPT", "Exempt", registration_analyzed),
-         registration_analyzed = ifelse(registration == "INVALID", "Invalid", registration_analyzed),
-         registration_analyzed = ifelse(str_detect(registration, "STR-\\d{4}-\\w{6}") & is.na(id), 
-                                        "Fake License", registration_analyzed),
-         registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
-                                        "Conform", registration_analyzed),
-         registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
-  ) %>% 
-  as_tibble()
 
 # Count of registration compliance for displayed listings
 table_1 <- 
   reg_1 %>% 
   group_by(registration_analyzed) %>% 
-  summarize(n=n(), percentage = n()/nrow(reg_2)*100) %>% 
-  mutate(date = as.Date("2020-01-07"))
+  summarize(n=n(), percentage = n()/nrow(reg_2)) %>% 
+  mutate(date = as.Date("2021-01-07"))
 
 table_2 <- 
   reg_2 %>% 
   group_by(registration_analyzed) %>% 
-  summarize(n=n(), percentage = n()/nrow(reg_2)*100) %>% 
-  mutate(date = as.Date("2020-01-10"))
+  summarize(n=n(), percentage = n()/nrow(reg_2)) %>% 
+  mutate(date = as.Date("2021-01-10"))
 
 table_3 <- 
   reg_3 %>% 
   group_by(registration_analyzed) %>% 
-  summarize(n=n(), percentage = n()/nrow(reg_3)*100) %>% 
-  mutate(date = as.Date("2020-01-15"))
+  summarize(n=n(), percentage = n()/nrow(reg_3)) %>% 
+  mutate(date = as.Date("2021-01-15"))
 
 table_4 <- 
   reg_4 %>% 
   group_by(registration_analyzed) %>% 
-  summarize(n=n(), percentage = n()/nrow(reg_4)*100) %>% 
-  mutate(date = as.Date("2020-01-26"))
+  summarize(n=n(), percentage = n()/nrow(reg_4)) %>% 
+  mutate(date = as.Date("2021-01-26"))
 
 table <- rbind(table_1, table_2, table_3, table_4)
 
 # total number of active listings per scrape date in jan 2021
-table %>%
+table_total <- 
+  table %>%
   group_by(date) %>% 
-  summarize(n=sum(n)) %>% 
+  summarize(n=sum(n))
+
+table_total %>% 
   ggplot()+
   geom_line(aes(x=date, y= n), color=col_palette[5]) + 
   scale_x_date(name=NULL)+
@@ -240,31 +66,75 @@ table %>%
   theme_minimal()
 
 # active listings by conformity status in jan 2021
-table %>%
-  #filter(registration_analyzed != "No license") %>% 
-  filter(registration_analyzed != "Invalid") %>% 
+fig_left <- 
+  table %>% 
   ggplot()+
   geom_line(aes(x=date, y= percentage, color=registration_analyzed)) +
   scale_colour_manual(name = "Conformity Status", values = col_palette[c(1,2,4,5,6)])+
   scale_x_date(name=NULL)+
-  scale_y_continuous(name="Percentage of active listings", label = scales::comma)+
+  scale_y_continuous(name="Percentage of active listings", label = scales::percent)+
   theme_minimal()
 
+# Number of listings removed between jan 10 and jan 15
+listings_removed_jan_15 <- 
+  (table_2 %>% filter(registration_analyzed == "No license") %>% pull(n)-
+  table_3 %>% filter(registration_analyzed == "No license") %>% pull(n)) %>% 
+  round(digit = -1) %>% 
+  prettyNum(",")
 
-# Add property information of listings scraped in january
-january_listings <- 
-  reg_4 %>% 
-  select(property_ID, registration, registration_analyzed, postal_code) %>% 
-  left_join(., property, by = "property_ID") %>% 
-  st_as_sf()
+active_listings_jan_07 <- 
+  table_total %>%
+  group_by(date) %>% 
+  summarize(n=sum(n)) %>% 
+  filter(date == "2021-01-07") %>% 
+  pull(n) %>% 
+  round(digit = -1) %>% 
+  prettyNum(",")
 
-# Percentage of inactive listings 
-january_listings %>% 
-  st_drop_geometry() %>% 
-  group_by(active = active >= max(active, na.rm = T) - days(30)) %>% 
-  summarize(percentage_active = n()/nrow(january_listings)) %>% 
-  mutate(percentage_active = str_glue("{round(percentage_active, digits = 3)*100}%"))
+active_listings_jan_26 <- 
+  table_total %>%
+  group_by(date) %>% 
+  summarize(n=sum(n)) %>% 
+  filter(date == "2021-01-26") %>% 
+  pull(n) %>% 
+  round(digit = -1) %>% 
+  prettyNum(",")
 
+# Percentage listings with valid licenses
+conform_listings_jan_7 <- 
+  table %>% 
+  filter(date == "2021-01-07", registration_analyzed == "Conform") %>% 
+  pull(n) %>%
+  round(digit = -1) %>% 
+  prettyNum(",")
+
+conform_listings_jan_7_perc <- 
+  table %>% 
+  filter(date == "2021-01-07", registration_analyzed == "Conform") %>% 
+  pull(percentage) %>%
+  round(3) %>% 
+  scales::percent(0.1)
+
+conform_listings_jan_26 <- 
+  table %>% 
+  filter(date == "2021-01-26", registration_analyzed == "Conform") %>% 
+  pull(n) %>%
+  round(digit = -1) %>% 
+  prettyNum(",")
+
+conform_listings_jan_26_perc <- 
+  table %>% 
+  filter(date == "2021-01-26", registration_analyzed == "Conform") %>% 
+  pull(percentage) %>%
+  round(3) %>% 
+  scales::percent(0.1)
+
+increase_conform_listings <- 
+  ((table %>% filter(date == "2021-01-26", registration_analyzed == "Conform") %>% pull(n))-
+  (table %>% filter(date == "2021-01-07", registration_analyzed == "Conform") %>% pull(n))) %>% 
+  round(digit = -1) %>% 
+  prettyNum(",")
+  
 
 ### Class by conformity --------------------------------------------------------
 
@@ -279,27 +149,27 @@ january_listings %>%
 
 ## Unsure if relevant
 # Graphing the conformity status of displayed listings
-january_listings %>%
-   filter(registration_analyzed != "Invalid") %>%
-   ggplot()+
-   geom_histogram(stat = "count", aes(registration_analyzed, fill = registration_analyzed))+
-   xlab("")+
-   ylab("Number of listings")+
-   guides(x = guide_axis(angle = 10))+
-   scale_fill_manual(name = "Registration conformity", values = col_palette[c(4, 6, 2, 3, 1)])+
-   theme_minimal()
+#january_listings %>%
+#   filter(registration_analyzed != "Invalid") %>%
+#   ggplot()+
+#   geom_histogram(stat = "count", aes(registration_analyzed, fill = registration_analyzed))+
+#   xlab("")+
+#   ylab("Number of listings")+
+#   guides(x = guide_axis(angle = 10))+
+#   scale_fill_manual(name = "Registration conformity", values = col_palette[c(4, 6, 2, 3, 1)])+
+#   theme_minimal()
 
 # Graphing the conformity status of active listings
-january_listings %>%
-   filter(registration_analyzed != "Invalid",
-          active >= max(active, na.rm = T) - days(30)) %>%
-   ggplot()+
-   geom_histogram(stat = "count", aes(registration_analyzed, fill = registration_analyzed))+
-   xlab("")+
-   ylab("Number of listings")+
-   guides(x = guide_axis(angle = 10))+
-   scale_fill_manual(name = "Registration conformity", values = col_palette[c(4, 6, 2, 3, 1)])+
-   theme_minimal()
+#january_listings %>%
+#   filter(registration_analyzed != "Invalid",
+#          active >= max(active, na.rm = T) - days(30)) %>%
+#   ggplot()+
+#   geom_histogram(stat = "count", aes(registration_analyzed, fill = registration_analyzed))+
+#   xlab("")+
+#   ylab("Number of listings")+
+#   guides(x = guide_axis(angle = 10))+
+#   scale_fill_manual(name = "Registration conformity", values = col_palette[c(4, 6, 2, 3, 1)])+
+#   theme_minimal()
 # 
 # 
 # # percentage of all conformity status category for displayed listings
@@ -329,6 +199,22 @@ WD %>%
   guides(fill = guide_colourbar(title = "Non-conforming listings")) + 
   theme_void() +
   theme(legend.position = "bottom")
+
+########### HERE!! ###########
+
+# Add property information of listings scraped in january
+january_listings <- 
+  reg_4 %>% 
+  select(property_ID, registration, registration_analyzed, postal_code) %>% 
+  left_join(., property, by = "property_ID") %>% 
+  st_as_sf()
+
+# Percentage of inactive listings 
+january_listings %>% 
+  st_drop_geometry() %>% 
+  group_by(active = active >= max(active, na.rm = T) - days(30)) %>% 
+  summarize(percentage_active = n()/nrow(january_listings)) %>% 
+  mutate(percentage_active = str_glue("{round(percentage_active, digits = 3)*100}%"))
 
 
 ### Non-conformity lucrativity table ------------------------------------------
@@ -441,13 +327,13 @@ license_activity %>%
 
 ### Compliance by commercial type and license conformity ---------------------------------
 
-FREH_09 <-
+FREH_10 <-
   daily %>% 
   filter(property_ID %in% january_listings$property_ID) %>% 
-  filter(date >= "2020-09-01", FREH_3 >= 0.5) %>%
+  filter(date >= "2020-10-01", FREH_3 >= 0.5) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
-  mutate(FREH_09 = TRUE) %>% 
-  select(property_ID, FREH_09)
+  mutate(FREH_10 = TRUE) %>% 
+  select(property_ID, FREH_10)
 
 FREH_01 <-
   daily %>% 
@@ -457,13 +343,13 @@ FREH_01 <-
   mutate(FREH_01 = TRUE) %>% 
   select(property_ID, FREH_01)
 
-multi_09 <- 
+multi_10 <- 
   daily %>% 
   filter(property_ID %in% january_listings$property_ID) %>% 
-  filter(date >= "2020-09-01", multi) %>%
+  filter(date >= "2020-10-01", multi) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
-  mutate(multi_09 = TRUE) %>% 
-  select(property_ID, multi_09)
+  mutate(multi_10 = TRUE) %>% 
+  select(property_ID, multi_10)
 
 multi_01 <- 
   daily %>% 
@@ -475,29 +361,29 @@ multi_01 <-
 
 license_scrape <- 
   january_listings %>% 
-  left_join(FREH_09) %>% 
+  left_join(FREH_10) %>% 
   left_join(FREH_01) %>% 
-  left_join(multi_09) %>% 
+  left_join(multi_10) %>% 
   left_join(multi_01) %>% 
   mutate(
-    status_09 = case_when(
-      active < "2020-09-01" ~ "Inactive",
-      FREH_09 ~ "FREH",
-      multi_09 ~ "Multilisting",
+    status_10 = case_when(
+      active < "2020-10-01" ~ "Inactive",
+      FREH_10 ~ "FREH",
+      multi_10 ~ "Multilisting",
       TRUE ~ "Non-commercial"),
     status_01 = case_when(
       active < "2020-01-01" ~ "Inactive",
       FREH_01 ~ "FREH",
       multi_01 ~ "Multilisting",
       TRUE ~ "Non-commercial")) %>% 
-  select(-c(FREH_09:multi_01)) %>% 
-  mutate(status_09 = factor(status_09, levels = c("Inactive", "Non-commercial",
+  select(-c(FREH_10:multi_01)) %>% 
+  mutate(status_10 = factor(status_10, levels = c("Inactive", "Non-commercial",
                                                   "Multilisting", "FREH")),
          status_01 = factor(status_01, levels = c("Inactive", "Non-commercial",
                                                   "Multilisting", "FREH")),
          license_status = factor(registration_analyzed, 
                                  levels = c("No license", "Fake License", "Invalid", 
-                                            "Duplicates", "Exempt", "Conform", "Inactive listing")))
+                                            "Duplicates", "Exempt", "Conform")))
 
 scraped_number <- 
   nrow(license_scrape) %>% 
@@ -506,7 +392,7 @@ scraped_number <-
 valid_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  summarize(pct = mean(license_status == "Valid")) %>% 
+  summarize(pct = mean(license_status == "Conform")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
 
@@ -517,12 +403,13 @@ exempt_pct <-
   pull(pct) %>% 
   scales::percent(0.1)
 
-expired_pct <- 
+duplicates_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  summarize(pct = mean(license_status == "Expired")) %>% 
+  summarize(pct = mean(license_status == "Duplicates")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
+
 
 problem_pct <- 
   license_scrape %>% 
@@ -535,40 +422,50 @@ problem_pct <-
 freh_valid_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(status_09 == "FREH") %>% 
-  summarize(pct = mean(license_status == "Valid")) %>% 
+  filter(status_10 == "FREH") %>% 
+  summarize(pct = mean(license_status == "Conform")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
 
 freh_no_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(status_09 == "FREH") %>% 
+  filter(status_10 == "FREH") %>% 
   summarize(pct = mean(license_status == "No license")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
+ml_duplicate_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(status_10 == "Multilisting") %>% 
+  summarize(pct = mean(license_status == "Duplicates")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
 
 min_no_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(status_09 != "FREH") %>% 
+  filter(status_10 != "FREH") %>% 
   summarize(pct = mean(license_status == "No license")) %>% 
-  pull(pct) %>% 
-  scales::percent(0.1)
-
-inactive_expired_pct <- 
-  license_scrape %>% 
-  st_drop_geometry() %>% 
-  filter(status_09 == "Inactive") %>% 
-  summarize(pct = mean(license_status == "Expired")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
 
 eh_multiple_license <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Valid", active >= "2020-09-01") %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
   filter(listing_type == "Entire home/apt") %>% 
+  count(registration, sort = TRUE) %>% 
+  filter(n > 1) %>%
+  pull(n) %>% 
+  sum()
+
+pr_multiple_license <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
+  filter(listing_type == "Private room") %>% 
   count(registration, sort = TRUE) %>% 
   filter(n > 1) %>%
   pull(n) %>% 
@@ -577,8 +474,17 @@ eh_multiple_license <-
 eh_multiple_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Valid", active >= "2020-09-01") %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
   filter(listing_type == "Entire home/apt") %>% 
+  nrow() %>% 
+  {eh_multiple_license / .} %>% 
+  scales::percent(0.1)
+
+pr_multiple_license_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
+  filter(listing_type == "Private room") %>% 
   nrow() %>% 
   {eh_multiple_license / .} %>% 
   scales::percent(0.1)
@@ -588,7 +494,7 @@ fig_left_1 <-
   license_scrape %>%
   ggplot() +
   geom_histogram(aes(reorder(license_status, desc(license_status)), 
-                     fill = status_09), stat = "count") + 
+                     fill = status_10), stat = "count") + 
   xlab(NULL) +
   scale_fill_manual(name = "Listing status", 
                     values = col_palette[c(6, 2, 1, 4)]) +
@@ -605,7 +511,7 @@ fig_right_1 <-
   license_scrape %>% 
   ggplot() +
   geom_bar(aes(reorder(license_status, desc(license_status)), 
-               fill = status_09), position = "fill", stat = "count") +
+               fill = status_10), position = "fill", stat = "count") +
   xlab(NULL) +
   scale_fill_manual(name = "Listing status", 
                     values = col_palette[c(6, 2, 1, 4)]) +
@@ -621,7 +527,7 @@ fig_right_1 <-
 fig_left_2 <- 
   license_scrape %>% 
   ggplot() +
-  geom_histogram(aes(reorder(status_09, desc(status_09)), 
+  geom_histogram(aes(reorder(status_10, desc(status_10)), 
                      fill = license_status), stat = "count") + 
   xlab(NULL) +
   scale_fill_manual(name = "License status", 
@@ -638,7 +544,7 @@ fig_left_2 <-
 fig_right_2 <- 
   license_scrape %>% 
   ggplot() +
-  geom_bar(aes(reorder(status_09, desc(status_09)), fill = license_status), 
+  geom_bar(aes(reorder(status_10, desc(status_10)), fill = license_status), 
            position = "fill", stat = "count") +
   xlab(NULL) +
   scale_fill_manual(name = "License status", 

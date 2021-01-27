@@ -687,12 +687,12 @@ revenue_covid <-
   mutate(revenue = revenue / as.numeric(max(daily$date) - created_or_covid)) %>% 
   filter(revenue != Inf) %>% 
   select(property_ID, revenue)
-  
+
 license_activity <- 
   inner_join(license_activity, revenue_covid, by = "property_ID") %>% 
   mutate(revenue = if_else(is.na(revenue), 0, revenue))
 
-revenue_regulations <-
+revenue_start_2019 <-
   daily %>% 
   filter(status == "R", date >= start_2019,
          property_ID %in% eh_license$property_ID) %>%
@@ -710,7 +710,7 @@ revenue_regulations <-
   select(property_ID, revenue_reg = revenue)
 
 license_activity <- 
-  inner_join(license_activity, revenue_regulations, by = "property_ID") %>% 
+  inner_join(license_activity, revenue_start_2019, by = "property_ID") %>% 
   mutate(revenue_reg = if_else(is.na(revenue_reg), 0, revenue_reg))
 
 all_listings <- 
@@ -723,25 +723,6 @@ license_activity <-
   bind_rows(license_activity %>% 
               group_by(registration_analyzed) %>%
               summarize(n = n(), across(per_A:revenue_reg, mean))) %>% 
-  select(registration_analyzed, everything())
-
-invalid <- 
-  license_activity %>% 
-  filter(registration_analyzed != "Conform", registration_analyzed != "Exempt") %>% 
-  summarize(n = n(), across(per_A:revenue_reg, mean)) %>% 
-  mutate(registration_analyzed = "Non-conforming")
-
-all_listings <- 
-  license_activity %>% 
-  summarize(n = n(), across(per_A:revenue_reg, mean)) %>% 
-  mutate(registration_analyzed = "All listings")
-
-license_activity <-
-  all_listings %>% 
-  bind_rows(license_activity %>% 
-              group_by(registration_analyzed) %>%
-              summarize(n = n(), across(per_A:revenue_reg, mean))) %>% 
-  bind_rows(invalid) %>% 
   select(registration_analyzed, everything())
 
 valid_r_pct <- 
@@ -796,15 +777,14 @@ How does registration conformity impact business in the short-term rental market
 
 library(kableExtra)
 
-license_activity[c(1, 7, 6, 8, 5, 4, 3, 2),] %>% 
-  select(-n) %>% 
-  #mutate(n = prettyNum(n, ",")) %>% 
+license_activity[c(1, 2, 4, 3, 5, 6),] %>% 
+  mutate(n = prettyNum(n, ",")) %>% 
   mutate(across(per_A:per_B, scales::percent, 0.1)) %>% 
   mutate(across(revenue:revenue_reg, scales::dollar, 1)) %>% 
-  set_names(c("License status", "Nights available", 
+  set_names(c("License status","Number of entire-home listings", "Nights available", 
               "Nights reserved", "Nights blocked", 
               "Revenue per night since Covid-19", 
-              "Revenue per night since regulations")) %>% 
+              "Revenue per night since the start of 2019")) %>% 
   kbl(caption = "STR activity by license status", align = "lrrrrrr") %>%
   kable_styling(latex_options = "scale_down")
 

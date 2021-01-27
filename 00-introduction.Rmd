@@ -3,8 +3,8 @@
 In January 2020, the Urban Politics and Governance research group (UPGo) at McGill University was commissioned by the City of Toronto to conduct market research and analysis on the impact of the City’s January 2021 regulations on short-term rentals as well as the impact of the COVID-19 pandemic on the short-term rental market in the City of Toronto. The group also investigated the possibility that short-term rentals are returning to the long-term market because of the pandemic. This report will shed light on the following topics: 
 
 - A general market overview of short-term rentals (STRs) in Toronto, including the volume, revenue, type, size and distribution of units, the presence of dedicated commercial operations, and the impact of COVID-19 on short-term rentals.
-- The impact of STRs on Toronto’s housing market, in particular the number of housing units taken off the long-term market as well as their impact on housing supply, rental vacancy rates, and rents. This analysis is also complemented by the impacts of the COVID-19.
-- The impact of the City of Toronto’s STR registration system on the operation of short-term rentals in the City.
+- The impact of STRs on Toronto’s housing market, in particular the number of housing units taken off the long-term market. This analysis is also complemented by the impacts of the COVID-19 on STR listings that are operated on a full-time basis in Toronto.
+- The impact of the City of Toronto’s new STR registration system on the operations of short-term rentals in the City.
 - Information about STRs returning to the LTR market, including the number of listings that have returned; their spatial distribution, size and asking rents; the extent to which they are commercial operations or casual home sharing operations; and whether they are likely to return to the STR market when conditions improve.
 
 Data and methodology are discussed in the Appendix, and all the code used to generate the analysis in the report is available online at https://github.com/UPGo-McGill/toronto-report.

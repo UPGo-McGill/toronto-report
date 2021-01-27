@@ -728,7 +728,7 @@ asking_rent_mar <-
 
 asking_rent_dec <- 
   asking_rents %>% 
-  filter(geography == "City of Toronto", created >= "2020-10-25", 
+  filter(geography == "City of Toronto", created >= "2020-12-25", 
          created <= "2020-12-31", status == "All listings") %>% 
   summarize(avg = mean(avg_price)) %>% 
   pull(avg) %>% 
@@ -1366,8 +1366,8 @@ matches_present_table <-
   filter(scraped >= "2020-01-01") %>% 
   summarize(total = n(),
             total_pct = total / nrow(filter(property, !is.na(ltr_ID))),
-            n_scraped = sum(scraped >= "2020-10-31"),
-            pct_scraped = mean(scraped >= "2020-10-31"),
+            n_scraped = sum(scraped >= max(scraped)-months(1)),
+            pct_scraped = mean(scraped >= max(scraped)-months(1)),
             not_scraped = total - n_scraped,
             pct_not_scraped = 1 - pct_scraped,
             n_gone = pct_not_scraped * nrow(filter(property, !is.na(ltr_ID))),
@@ -1406,7 +1406,7 @@ furnished_matches_pct <-
   property %>% 
   st_drop_geometry() %>% 
   filter(!is.na(ltr_ID)) %>% 
-  filter(scraped >= "2020-01-01", scraped < "2020-10-31") %>% 
+  filter(scraped >= "2020-01-01", scraped < max(scraped)-months(1)) %>% 
   left_join(select(ltr_unique_property_ID, property_ID, furnished)) %>% 
   filter(!is.na(furnished)) %>% 
   summarize(furnished = scales::percent(mean(furnished), 0.1)) %>% 
@@ -1415,7 +1415,7 @@ furnished_matches_pct <-
 matches_active_jan_and_oct <- 
   property %>% 
   st_drop_geometry() %>% 
-  filter(!is.na(ltr_ID), scraped >= "2020-10-31") %>% 
+  filter(!is.na(ltr_ID), scraped >= max(scraped)-months(1)) %>% 
   summarize(total = n(),
             n_inactive = total - sum(active >= "2020-10-01", na.rm = TRUE) +
               sum(is.na(active)),
@@ -1425,9 +1425,9 @@ matches_active_jan_and_oct <-
 matches_active_jan_and_oct_blocked <- 
   property %>% 
   st_drop_geometry() %>% 
-  filter(!is.na(ltr_ID), scraped >= "2020-10-31") %>% 
+  filter(!is.na(ltr_ID), scraped >= max(scraped)-months(1)) %>% 
   summarize(total = n(),
-            n_inactive = total - sum(active >= "2020-10-01", na.rm = TRUE) +
+            n_inactive = total - sum(active >= max(active)-months(1), na.rm = TRUE) +
               sum(is.na(active)),
             pct_inactive = n_inactive / total) %>% 
   pull(n_inactive)
@@ -1435,9 +1435,9 @@ matches_active_jan_and_oct_blocked <-
 matches_active_jan_and_oct_blocked_pct <- 
   property %>% 
   st_drop_geometry() %>% 
-  filter(!is.na(ltr_ID), scraped >= "2020-10-31") %>% 
+  filter(!is.na(ltr_ID), scraped >= max(scraped)-months(1)) %>% 
   summarize(total = n(),
-            n_inactive = total - sum(active >= "2020-10-01", na.rm = TRUE) +
+            n_inactive = total - sum(active >= max(active)-months(1), na.rm = TRUE) +
               sum(is.na(active)),
             pct_inactive = n_inactive / total) %>% 
   pull(pct_inactive) %>% 
@@ -1448,7 +1448,7 @@ deactivated_pct <-
   st_drop_geometry() %>% 
   filter(!is.na(ltr_ID)) %>% 
   filter(scraped >= "2020-01-01") %>% 
-  summarize(pct_not_scraped = 1 - mean(scraped >= "2020-10-01")) %>% 
+  summarize(pct_not_scraped = 1 - mean(scraped >= max(scraped)-months(1))) %>% 
   pull(pct_not_scraped)
 
 blocked_pct <-
@@ -1456,7 +1456,7 @@ blocked_pct <-
   st_drop_geometry() %>% 
   filter(!is.na(ltr_ID)) %>% 
   filter(scraped >= "2020-01-01") %>% 
-  summarize(pct_blocked = (sum(active < "2020-10-01" & scraped >= "2020-10-01", 
+  summarize(pct_blocked = (sum(active < max(active)-months(1) & scraped >= max(scraped)-months(1), 
                                na.rm = TRUE) + sum(is.na(active) & scraped >= 
                                                      "2020-10-01")) / n()) %>% 
   pull(pct_blocked)

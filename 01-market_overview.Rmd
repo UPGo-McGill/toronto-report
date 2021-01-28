@@ -1812,6 +1812,7 @@ figure_1_7_fun <- function(regular = "", condensed = "") {
              y = -Inf, yend = Inf, alpha = 0.3) +
     annotate("segment", x = key_date_regulations, xend = key_date_regulations,
              y = -Inf, yend = Inf, alpha = 0.3) +
+    scale_x_date(name = NULL) +
     scale_y_continuous(name = NULL, 
                        label = scales::percent_format(accuracy = 1)) +
     scale_colour_manual(values = col_palette[c(5, 1)]) +

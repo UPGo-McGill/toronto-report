@@ -61,13 +61,13 @@ table_3 <-
   reg_3 %>% 
   group_by(registration_analyzed) %>% 
   summarize(n=n(), percentage = n()/nrow(reg_3)) %>% 
-  mutate(date = as.Date("2020-01-15"))
+  mutate(date = as.Date("2021-01-15"))
 
 table_4 <- 
   reg_4 %>% 
   group_by(registration_analyzed) %>% 
   summarize(n=n(), percentage = n()/nrow(reg_4)) %>% 
-  mutate(date = as.Date("2020-01-26"))
+  mutate(date = as.Date("2021-01-26"))
 
 table <- rbind(table_1, table_2, table_3, table_4)
 
@@ -273,7 +273,7 @@ january_listings <-
 FREH_10 <-
   daily %>% 
   filter(property_ID %in% january_listings$property_ID) %>% 
-  filter(date >= max(date, na.rm = T) - months(1), FREH_3 >= 0.5) %>%
+  filter(date >= max(date, na.rm = T) - days(31), FREH_3 >= 0.5) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
   mutate(FREH_10 = TRUE) %>% 
   select(property_ID, FREH_10)
@@ -281,7 +281,7 @@ FREH_10 <-
 FREH_01 <-
   daily %>% 
   filter(property_ID %in% january_listings$property_ID) %>% 
-  filter(date >= max(date, na.rm = T) - months(1), FREH_3 >= 0.5) %>%
+  filter(date >= "2020-01-01", FREH_3 >= 0.5) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
   mutate(FREH_01 = TRUE) %>% 
   select(property_ID, FREH_01)
@@ -289,7 +289,7 @@ FREH_01 <-
 multi_10 <- 
   daily %>% 
   filter(property_ID %in% january_listings$property_ID) %>% 
-  filter(date >= max(date, na.rm = T) - months(1), multi) %>%
+  filter(date >= max(date, na.rm = T) - days(31), multi) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
   mutate(multi_10 = TRUE) %>% 
   select(property_ID, multi_10)
@@ -310,7 +310,7 @@ license_scrape <-
   left_join(multi_01) %>% 
   mutate(
     status_10 = case_when(
-      active < max(active, na.rm = T) - months(1) ~ "Inactive",
+      active < max(active, na.rm = T) - days(31) ~ "Inactive",
       FREH_10 ~ "FREH",
       multi_10 ~ "Multilisting",
       TRUE ~ "Non-commercial"),
@@ -396,7 +396,7 @@ min_no_license_pct <-
 eh_multiple_license <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - months(1)) %>% 
+  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - days(31)) %>% 
   filter(listing_type == "Entire home/apt") %>% 
   count(registration, sort = TRUE) %>% 
   filter(n > 1) %>%
@@ -406,7 +406,7 @@ eh_multiple_license <-
 pr_multiple_license <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - months(1)) %>% 
+  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - days(31)) %>% 
   filter(listing_type == "Private room") %>% 
   count(registration, sort = TRUE) %>% 
   filter(n > 1) %>%
@@ -416,7 +416,7 @@ pr_multiple_license <-
 eh_multiple_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - months(1)) %>% 
+  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - days(31)) %>% 
   filter(listing_type == "Entire home/apt") %>% 
   nrow() %>% 
   {eh_multiple_license / .} %>% 
@@ -425,7 +425,7 @@ eh_multiple_license_pct <-
 pr_multiple_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - months(1)) %>% 
+  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - days(31)) %>% 
   filter(listing_type == "Private room") %>% 
   nrow() %>% 
   {eh_multiple_license / .} %>% 
@@ -544,7 +544,7 @@ figure_3_3_fun()
 
 ```
 
-(ref:fig-3-3) _License status and listing status (in October 2020) for listings displayed on Airbnb in end of January 2021_
+(ref:fig-3-3) _License status and listing status (in December 2020) for listings displayed on Airbnb in end of January 2021_
 
 The bottom row (B) of Figure \@ref(fig:fig-3-3) organizes listings by their activity status on Airbnb in the month of October 2020. It demonstrates that FREH listings are the only category of listing where a significant proportion (`r freh_valid_pct`) had valid licenses. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's regulation, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings and `r pr_multiple_license` (`r pr_multiple_license_pct`) of active private room listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. 
 

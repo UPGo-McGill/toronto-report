@@ -9,7 +9,9 @@
 <br>
 
 ```{r setup, include = FALSE, echo = FALSE}
-
+###### for max to be able to knit
+if(memory.limit()< 20000) {memory.limit(size = 48000)}
+####
 library(here)
 source(here("R", "01_startup.R"))
 
@@ -22,7 +24,7 @@ knitr::opts_chunk$set(warning = FALSE)
 mtime <- function(files) lapply(Sys.glob(files), function(x) file.info(x)$mtime)
 
 # Set this to TRUE to output PDF figures
-build_figures <- TRUE
+build_figures <- FALSE
 
 ```
 
@@ -244,7 +246,7 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-4-2) shows the repartition of active listings by conformity status (the left figure filters out the listings without license for increased visibility). Throughout the month of January, there has been a decline in the percentage of listings displaying no license information, accompanied by an increase of listings displaying license information. On January 7th, `r conform_listings_jan_7` listings were conform to the regulation (an increase of `r conform_listings_jan_7_perc` listings). As soon as January 26th, `r lconform_listings_jan_26_perc` of all active listings were conforming to the STR regulation (an increase of `r increase_conform_listings`). The number of active listings using conform licenses but for multiple listings increased by the same rate.
+Figure \@ref(fig:fig-4-2) shows the repartition of active listings by conformity status (the left figure filters out the listings without license for increased visibility). Throughout the month of January, there has been a decline in the percentage of listings displaying no license information, accompanied by an increase of listings displaying license information. On January 7th, `r conform_listings_jan_7` listings were conform to the regulation (an increase of `r conform_listings_jan_7_perc` listings). As soon as January 26th, `r conform_listings_jan_26_perc` of all active listings were conforming to the STR regulation (an increase of `r increase_conform_listings`). The number of active listings using conform licenses but for multiple listings increased by the same rate.
 
 ``` {r fig-4-2, include = TRUE, fig.cap = '(ref:fig-4-1)', fig.align = "center"}
 
@@ -271,7 +273,7 @@ january_listings <-
 FREH_10 <-
   daily %>% 
   filter(property_ID %in% january_listings$property_ID) %>% 
-  filter(date >= "2020-10-01", FREH_3 >= 0.5) %>%
+  filter(date >= max(date, na.rm = T) - months(1), FREH_3 >= 0.5) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
   mutate(FREH_10 = TRUE) %>% 
   select(property_ID, FREH_10)
@@ -279,7 +281,7 @@ FREH_10 <-
 FREH_01 <-
   daily %>% 
   filter(property_ID %in% january_listings$property_ID) %>% 
-  filter(date >= "2020-01-01", FREH_3 >= 0.5) %>%
+  filter(date >= max(date, na.rm = T) - months(1), FREH_3 >= 0.5) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
   mutate(FREH_01 = TRUE) %>% 
   select(property_ID, FREH_01)
@@ -287,7 +289,7 @@ FREH_01 <-
 multi_10 <- 
   daily %>% 
   filter(property_ID %in% january_listings$property_ID) %>% 
-  filter(date >= "2020-10-01", multi) %>%
+  filter(date >= max(date, na.rm = T) - months(1), multi) %>%
   distinct(property_ID, .keep_all = TRUE) %>% 
   mutate(multi_10 = TRUE) %>% 
   select(property_ID, multi_10)
@@ -308,7 +310,7 @@ license_scrape <-
   left_join(multi_01) %>% 
   mutate(
     status_10 = case_when(
-      active < "2020-10-01" ~ "Inactive",
+      active < max(active, na.rm = T) - months(1) ~ "Inactive",
       FREH_10 ~ "FREH",
       multi_10 ~ "Multilisting",
       TRUE ~ "Non-commercial"),
@@ -394,7 +396,7 @@ min_no_license_pct <-
 eh_multiple_license <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
+  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - months(1)) %>% 
   filter(listing_type == "Entire home/apt") %>% 
   count(registration, sort = TRUE) %>% 
   filter(n > 1) %>%
@@ -404,7 +406,7 @@ eh_multiple_license <-
 pr_multiple_license <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
+  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - months(1)) %>% 
   filter(listing_type == "Private room") %>% 
   count(registration, sort = TRUE) %>% 
   filter(n > 1) %>%
@@ -414,7 +416,7 @@ pr_multiple_license <-
 eh_multiple_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
+  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - months(1)) %>% 
   filter(listing_type == "Entire home/apt") %>% 
   nrow() %>% 
   {eh_multiple_license / .} %>% 
@@ -423,7 +425,7 @@ eh_multiple_license_pct <-
 pr_multiple_license_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  filter(license_status == "Duplicates", active >= "2020-10-01") %>% 
+  filter(license_status == "Duplicates", active >= max(active, na.rm = T) - months(1)) %>% 
   filter(listing_type == "Private room") %>% 
   nrow() %>% 
   {eh_multiple_license / .} %>% 
@@ -574,6 +576,12 @@ university_illegal_num <-
 spadina_illegal_pct <- 
   map_table %>% 
   filter(ward == "Spadina-Fort York") %>% 
+  pull(invalid_pct) %>% 
+  scales::percent(0.1)
+
+university_illegal_pct <- 
+  map_table %>% 
+  filter(ward == "University-Rosedale") %>% 
   pull(invalid_pct) %>% 
   scales::percent(0.1)
 

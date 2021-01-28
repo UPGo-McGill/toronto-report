@@ -176,15 +176,15 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-4-1) shows the total number of active listings that were displayed on the Airbnb platform during the month of January. Between January 10th and 15th, there were `r listings_removed_jan_15` listings displaying no license that were removed, being most likely a mass removal from Airbnb. Since the beginning of January 2021, the number of active listings have been declining, going from `r active_listings_jan_07` on January 7th to `r active_listings_jan_26` on January 26th. 
+Figure \@ref(fig:fig-3-1) shows the total number of active listings that were displayed on the Airbnb platform during the month of January. Between January 10th and 15th, there were `r listings_removed_jan_15` listings displaying no license that were removed, being most likely a mass removal from Airbnb. Since the beginning of January 2021, the number of active listings have been declining, going from `r active_listings_jan_07` on January 7th to `r active_listings_jan_26` on January 26th. 
 
-``` {r fig-4-1, include = TRUE, fig.cap = '(ref:fig-4-1)', fig.align = "center"}
+``` {r fig-3-1, include = TRUE, fig.cap = '(ref:fig-3-1)', fig.align = "center"}
 
 figure_3_1_fun()
 
 ```
 
-(ref:fig-4-1) _Active listings displayed on Airbnb during the month of January 2021_
+(ref:fig-3-1) _Active listings displayed on Airbnb during the month of January 2021_
 
 ``` {r make_fig_3_2}
 
@@ -246,15 +246,15 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-4-2) shows the repartition of active listings by conformity status (the left figure filters out the listings without license for increased visibility). Throughout the month of January, there has been a decline in the percentage of listings displaying no license information, accompanied by an increase of listings displaying license information. On January 7th, `r conform_listings_jan_7` listings were conform to the regulation (an increase of `r conform_listings_jan_7_perc` listings). As soon as January 26th, `r conform_listings_jan_26_perc` of all active listings were conforming to the STR regulation (an increase of `r increase_conform_listings`). The number of active listings using conform licenses but for multiple listings increased by the same rate.
+Figure \@ref(fig:fig-3-2) shows the repartition of active listings by conformity status (the left figure filters out the listings without license for increased visibility). Throughout the month of January, there has been a decline in the percentage of listings displaying no license information, accompanied by an increase of listings displaying license information. On January 7th, `r conform_listings_jan_7` listings were conform to the regulation. As soon as January 26th, `r conform_listings_jan_26_perc` of all active listings were conforming to the STR regulation (an increase of `r increase_conform_listings`). The number of active listings using conform licenses but for multiple listings increased by the same rate.
 
-``` {r fig-4-2, include = TRUE, fig.cap = '(ref:fig-4-1)', fig.align = "center"}
+``` {r fig-3-2, include = TRUE, fig.cap = '(ref:fig-3-1)', fig.align = "center"}
 
 figure_3_2_fun()
 
 ```
 
-(ref:fig-4-2) _Total active listings in January by conformity status (left) and active listings displaying license information by conformity status (right) on Airbnb_
+(ref:fig-3-2) _Total active listings in January by conformity status (left) and active listings displaying license information by conformity status (right) on Airbnb_
 
 ## Listing regulatory compliance
 
@@ -536,17 +536,17 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-4-3) shows the `r scraped_number` active listings that displayed on January 26th when we performed our fourth scrape of license numbers. The top row (A) organizes listings by their license status. Out of the total `r scraped_number` listings, `r valid_pct` had a valid license, which is a 3-point percentage increase since our first scrape on January 7th. A further `r exempt_pct` claimed to be exempt, and `r duplicates_pct` had a city-issued license, but used this license for multiple listings at the same time. This leaves `r problem_pct` of listings which either had a fake license number (an entry which was in the proper format but which did not correspond to an actual license number issued by the City) or no license number at all. FREH listings (either FREH listings or multilistings) are over-represented among listings which have valid licenses and listings using a fake license; multilistings were the ones where there were the most duplicates licenses used; while listings that are neither FREH or multilistings and listings that were displayed on Airbnb but did not receive any activity since October were disproportionately likely to be listings without any license information.
+Figure \@ref(fig:fig-3-3) shows the `r scraped_number` active listings that displayed on January 26th when we performed our fourth scrape of license numbers. The top row (A) organizes listings by their license status. Out of the total `r scraped_number` listings, `r valid_pct` had a valid license, which is a 3-point percentage increase since our first scrape on January 7th. A further `r exempt_pct` claimed to be exempt, and `r duplicates_pct` had a city-issued license, but used this license for multiple listings at the same time. This leaves `r problem_pct` of listings which either had a fake license number (an entry which was in the proper format but which did not correspond to an actual license number issued by the City) or no license number at all. FREH listings (either FREH listings or multilistings) are over-represented among listings which have valid licenses and listings using a fake license; multilistings were the ones where there were the most duplicates licenses used; while listings that are neither FREH or multilistings and listings that were displayed on Airbnb but did not receive any activity since October were disproportionately likely to be listings without any license information.
 
-``` {r fig-4-3, include = TRUE, fig.cap = '(ref:fig-4-3)', fig.align = "center"}
+``` {r fig-3-3, include = TRUE, fig.cap = '(ref:fig-3-3)', fig.align = "center"}
 
 figure_3_3_fun()
 
 ```
 
-(ref:fig-4-3) _License status and listing status (in October 2020) for listings displayed on Airbnb in end of January 2021_
+(ref:fig-3-3) _License status and listing status (in October 2020) for listings displayed on Airbnb in end of January 2021_
 
-The bottom row (B) of Figure \@ref(fig:fig-4-3) organizes listings by their activity status on Airbnb in the month of October 2020. It demonstrates that FREH listings are the only category of listing where a significant proportion (`r freh_valid_pct`) had valid licenses. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's regulation, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings and `r pr_multiple_license` (`r pr_multiple_license_pct`) of active private room listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. 
+The bottom row (B) of Figure \@ref(fig:fig-3-3) organizes listings by their activity status on Airbnb in the month of October 2020. It demonstrates that FREH listings are the only category of listing where a significant proportion (`r freh_valid_pct`) had valid licenses. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's regulation, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings and `r pr_multiple_license` (`r pr_multiple_license_pct`) of active private room listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. 
 
 ## Geographic distribution of non-conforming listings
 
@@ -632,15 +632,15 @@ if (build_figures) {
 
 ```
 
-Listing validity throughout Toronto is overall still low, which is understandable since the new registration has come into effect less than a month ago. Additionally, business uncertainty among STR operators is still extremely high amidst the Covid-19 pandemic and its effects on the STR markets. Still, it is interesting to observe the concentration of non-conforming listings, both in number and percentage, in all of Toronto's wards. The wards with the most non-conforming listings (i.e. listings with fake, invalid, duplicates, or missing license numbers) in absolute terms are Spadina-Fort York with `r spadina_illegal_num` listings (`r spadina_illegal_pct`) and University-Rosedale with `r university_illegal_pct` listings (`r university_illegal_num`). In relative numbers, the wards with highest percentage of non-conforming listings are Willowdale (`r willowdale_illegal_pct`) and Scarborough North (`r scar_n_illegal_pct`) (Figure \@ref(fig:fig-4-4)).
+Listing validity throughout Toronto is overall still low, which is understandable since the new registration has come into effect less than a month ago. Additionally, business uncertainty among STR operators is still extremely high amidst the Covid-19 pandemic and its effects on the STR markets. Still, it is interesting to observe the concentration of non-conforming listings, both in number and percentage, in all of Toronto's wards. The wards with the most non-conforming listings (i.e. listings with fake, invalid, duplicates, or missing license numbers) in absolute terms are Spadina-Fort York with `r spadina_illegal_num` listings (`r spadina_illegal_pct`) and University-Rosedale with `r university_illegal_pct` listings (`r university_illegal_num`). In relative numbers, the wards with highest percentage of non-conforming listings are Willowdale (`r willowdale_illegal_pct`) and Scarborough North (`r scar_n_illegal_pct`) (Figure \@ref(fig:fig-3-4)).
 
-``` {r fig-4-4, include = TRUE, fig.cap = '(ref:fig-4-4)', fig.align = "center"}
+``` {r fig-3-4, include = TRUE, fig.cap = '(ref:fig-3-4)', fig.align = "center"}
 
 figure_3_4_fun()
 
 ```
 
-(ref:fig-4-4) _Geographical distribution of non-conforming listings._
+(ref:fig-3-4) _Geographical distribution of non-conforming listings._
 
 ## Daily activity of entire-home listings by regulatory compliance
 

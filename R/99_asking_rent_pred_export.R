@@ -24,7 +24,7 @@ ltr_unique_price <-
 # Monthly revenue in 2019
 revenue_2019 <-
 daily %>%
-  filter(date >= "2019-01-01", date <= "2019-12-31",
+  filter(date >= start_2019, date <= end_2019,
          status == c("A", "R")) %>%
   group_by(property_ID) %>%
   filter(n() >= (365/12)) %>%
@@ -39,7 +39,7 @@ daily %>%
 # Monthly revenue in 2020
 revenue_2020 <-
   daily %>% 
-  filter(date >= "2020-01-01", date <= "2020-12-31",
+  filter(date >= start_2020, date <= end_2020,
          status == c("A", "R")) %>% 
   group_by(property_ID) %>% 
   filter(n() >= (365/12)) %>% 
@@ -135,8 +135,8 @@ listings_pred <-
 listings_pred <- 
 listings_pred %>% 
   left_join(select(st_drop_geometry(property), property_ID, scraped, active), by = "property_ID") %>% 
-  mutate(still_listed = if_else(scraped >= "2020-11-01", TRUE, FALSE),
-         still_active = if_else(active >= "2020-10-01", TRUE, FALSE)) %>% 
+  mutate(still_listed = if_else(scraped >= max(scraped) - days(30), TRUE, FALSE),
+         still_active = if_else(active >= max(active, na.rm = T) - days(30), TRUE, FALSE)) %>% 
   select(-scraped, -active)
 
 # Adding registration number, if any

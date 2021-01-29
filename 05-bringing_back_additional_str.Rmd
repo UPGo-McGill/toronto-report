@@ -91,7 +91,7 @@ property_status <-
   st_drop_geometry() %>% 
   filter(!is.na(ltr_ID)) %>%
   filter(scraped >= "2020-01-01") %>% 
-  mutate(status = case_when(scraped <= max(scraped)-months(2) ~ "Taken down", # TKTK date maybe to update, depends on the last scraped date
+  mutate(status = case_when(scraped <= max(scraped)-days(30) ~ "Taken down", # TKTK date maybe to update, depends on the last scraped date
                             active < "2020-12-01" ~ "Blocked", # Not active during all october
                             TRUE ~ "Continued")) # what if active = NA ?
   

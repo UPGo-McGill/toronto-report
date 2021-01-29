@@ -26,7 +26,7 @@ build_figures <- FALSE
 
 ```
 
-```{r new_objects, cache=TRUE, cache.extra=, cache.lazy=FALSE}
+```{r new_objects, cache=TRUE, cache.lazy=FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
 qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 qload(here("output", "geometry.qsm"), nthreads = availableCores())
@@ -729,7 +729,7 @@ max_per_cap <-
 figure_1_2_fun <- function(regular = "", condensed = "") {
   
   left_map <- 
-    active_ward %>% 
+    active_WD %>% 
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = percentage), colour = "white") +
@@ -1195,10 +1195,10 @@ reservations <-
   model(x11 = feasts:::X11(n, type = "additive")) %>% 
   components()
 
-# Get March-Nov seasonal
-mar_nov_seasonal <- 
+# Get March-Dec seasonal
+mar_dec_seasonal <- 
   reservations %>% 
-  slice(39:47) %>% 
+  slice(39:49) %>% 
   pull(seasonal)
 
 # Get Feb trend
@@ -1207,17 +1207,17 @@ feb_trend <-
   slice(50) %>% 
   pull(trend)
 
-# Apply March-Oct seasonal component to Feb trend
+# Apply March-Dec seasonal component to Feb trend
 trends <-
   tibble(
     date = as.Date(c("2020-03-16", "2020-04-16", "2020-05-16", "2020-06-16",
                      "2020-07-16", "2020-08-16", "2020-09-16", "2020-10-16",
-                     "2020-10-31")),
-    trend = (feb_trend + mar_nov_seasonal) / 
-      c(31, 30, 31, 30, 31, 31, 30, 31, 30))
+                     "2020-11-16", "2020-12-16", "2020-12-31")),
+    trend = (feb_trend + mar_dec_seasonal) / 
+      c(31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 31))
 
-# Set Oct 31 value to average of October and November
-trends[9,]$trend <- mean(trends[8:9,]$trend)
+# Set Dec 31 value to average of November and December
+trends[11,]$trend <- mean(trends[10:11,]$trend)
 
 reservations <- 
   active_by_status %>% 
@@ -1241,7 +1241,7 @@ reservations <-
 # Reservation comparisons
 res_table <- 
   reservations %>% 
-  filter(date == "2020-10-31") %>% 
+  filter(date == "2020-12-31") %>% 
   mutate(dif = trend - n, pct_change = 1 - n / trend)
 
 res_2020 <- 
@@ -1254,7 +1254,7 @@ res_2020_pct <-
   scales::percent(1 - res_table$n / res_table$trend, 0.1)
 
 res_2020_dif <- 
-    prettyNum(round(res_table$trend - res_table$n, -1), ",")
+  prettyNum(round(res_table$trend - res_table$n, -1), ",")
 
 pandemic_reservations <- 
   reservations %>% 
@@ -1263,8 +1263,8 @@ pandemic_reservations <-
   mutate(dif = trend - n, pct = n / trend)
 
 res_total_pandemic_dif <- 
-    prettyNum(round(pandemic_reservations$trend - pandemic_reservations$n, -2), 
-              ",")
+  prettyNum(round(pandemic_reservations$trend - pandemic_reservations$n, -2), 
+            ",")
 
 res_total_pandemic <- 
   prettyNum(round(pandemic_reservations$n, -2), ",")
@@ -1273,63 +1273,62 @@ res_total_pandemic_pct <-
   scales::percent(pandemic_reservations$n / pandemic_reservations$trend, 0.1)
 
 res_total_pandemic_trend <- 
-    prettyNum(round(pandemic_reservations$trend, -2), ",")
-
+  prettyNum(round(pandemic_reservations$trend, -2), ",")
+ 
 rm(property, daily, GH)
 
 ```
 
 ``` {r make_fig_1_5}
 
-figure_1_5_fun <- function(regular = "", condensed = "") {
-  
-  reservations %>% 
-    pivot_longer(-date) %>% 
-    filter(!is.na(value)) %>%
-    ggplot() +
-    geom_ribbon(aes(x = date, ymin = n, ymax = trend, group = 1),
-                data = reservations, fill = col_palette[3], 
-                alpha = 0.3) +
-    geom_line(aes(date, value, color = name), lwd = 1) +
-    geom_text(aes(x = as.Date("2020-09-30"), 
-                  y = mean(value[date == as.Date("2020-09-30")]),
-                  label = paste(
-                    prettyNum(round(abs(diff(
-                      value[date == as.Date("2020-09-30")])), -1), ","),
-                    "fewer", "reservations", "than", "expected", sep = "\n")), 
-              inherit.aes = FALSE, hjust = 1, family = condensed, 
-              nudge_x = -4) +
-    geom_segment(aes(x = as.Date("2020-09-30"), xend = as.Date("2020-09-30"),
-                     y = min(value[date == as.Date("2020-09-30")]),
-                     yend = max(value[date == as.Date("2020-09-30")])),
-                 colour = col_palette[1],
-                 arrow = arrow(length = unit(0.1, "cm"), ends = "both",
-                               type = "open")) +
-    scale_x_date(name = NULL) +
-    scale_y_continuous(name = NULL, limits = c(0, NA), label = scales::comma) +
-    scale_color_manual(name = NULL, labels = c("Actual reservations", 
-                                               "Expected reservations"), 
-                       values = col_palette[c(4, 2)]) +
-    theme_minimal() +
-    theme(legend.position = "bottom", 
-          panel.grid.minor.x = element_blank(),
-          text = element_text(face = "plain", family = regular),
-          legend.text = element_text( size = 10, family = regular))
-
-}
-
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_1_5.pdf"), 
-         plot = figure_1_5_fun("Futura", "Futura Condensed"), 
-         width = 8, height = 5, units = "in", useDingbats = FALSE)
-  
-  extrafont::embed_fonts(here("output", "figures", "figure_1_5.pdf"))
-}
+ figure_1_5_fun <- function(regular = "", condensed = "") {
+   
+   reservations %>% 
+     pivot_longer(-date) %>% 
+     filter(!is.na(value)) %>%
+     ggplot() +
+     geom_ribbon(aes(x = date, ymin = n, ymax = trend, group = 1),
+                 data = reservations, fill = col_palette[3], 
+                 alpha = 0.3) +
+     geom_line(aes(date, value, color = name), lwd = 1) +
+     geom_text(aes(x = as.Date("2020-09-30"), 
+                   y = mean(value[date == as.Date("2020-09-30")]),
+                   label = paste(
+                     prettyNum(round(abs(diff(
+                       value[date == as.Date("2020-09-30")])), -1), ","),
+                     "fewer", "reservations", "than", "expected", sep = "\n")), 
+               inherit.aes = FALSE, hjust = 1, family = condensed, 
+               nudge_x = -4) +
+     geom_segment(aes(x = as.Date("2020-09-30"), xend = as.Date("2020-09-30"),
+                      y = min(value[date == as.Date("2020-09-30")]),
+                      yend = max(value[date == as.Date("2020-09-30")])),
+                  colour = col_palette[1],
+                  arrow = arrow(length = unit(0.1, "cm"), ends = "both",
+                                type = "open")) +
+     scale_x_date(name = NULL) +
+     scale_y_continuous(name = NULL, limits = c(0, NA), label = scales::comma) +
+     scale_color_manual(name = NULL, labels = c("Actual reservations", 
+                                                "Expected reservations"), 
+                        values = col_palette[c(4, 2)]) +
+     theme_minimal() +
+     theme(legend.position = "bottom", 
+           panel.grid.minor.x = element_blank(),
+           text = element_text(face = "plain", family = regular),
+           legend.text = element_text( size = 10, family = regular))
+ 
+ }
+ 
+ if (build_figures) {
+   ggsave(here("output", "figures", "figure_1_5.pdf"), 
+          plot = figure_1_5_fun("Futura", "Futura Condensed"), 
+          width = 8, height = 5, units = "in", useDingbats = FALSE)
+   
+   extrafont::embed_fonts(here("output", "figures", "figure_1_5.pdf"))
+ }
 
 ```
 
-
-Figure \@ref(fig:fig-1-5) provides a closer look at daily reservations since 2019, comparing the actual trajectory of reservations during the pandemic with what the trajectory of reservations would have been expected to be in the absence of the pandemic and previous growth in Toronto's STR market. (To do this, we use seasonal decomposition to identify the regular seasonal fluctuations in STR activity and separate them from the underlying patterns of growth or decline.) In total, from March through October 2020, we estimate that there have been `r res_total_pandemic_dif` fewer STR nights reserved than would normally have been expected to occur. The `r res_total_pandemic` total nights reserved in this time period is only `r res_total_pandemic_pct` of the `r res_total_pandemic_trend` nights total that would represent the previous growth trend.
+Figure \@ref(fig:fig-1-5) provides a closer look at daily reservations since 2019, comparing the actual trajectory of reservations during the pandemic with what the trajectory of reservations would have been expected to be in the absence of the pandemic and previous growth in Toronto's STR market. (To do this, we use seasonal decomposition to identify the regular seasonal fluctuations in STR activity and separate them from the underlying patterns of growth or decline.) In total, from March through December 2020, we estimate that there have been `r res_total_pandemic_dif` fewer STR nights reserved than would normally have been expected to occur. The `r res_total_pandemic` total nights reserved in this time period is only `r res_total_pandemic_pct` of the `r res_total_pandemic_trend` nights total that would represent the previous growth trend.
 
 ``` {r fig-1-5, include = TRUE, fig.cap = '(ref:fig-1-5)', fig.align = "center"}
 
@@ -1342,89 +1341,88 @@ figure_1_5_fun()
 ```{r prices, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
 qload(here("output", "str_processed.qsm"), nthreads = availableCores())
-
-# Get average nightly prices
-average_prices <- 
-  daily %>% 
-  filter(housing, status == "R", date >= "2016-01-01",
-         listing_type == "Entire home/apt") %>% 
-  group_by(date) %>% 
-  summarize(price = mean(price))
-
-# Create monthly price time series
-monthly_prices <- 
-  average_prices %>% 
-  tsibble::as_tsibble() %>% 
-  tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
-  summarize(price = mean(price))
-
-# Get March-November seasonal
-mar_nov_price_seasonal <- 
-  monthly_prices %>% 
-  filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
-  model(x11 = feasts:::X11(price, type = "additive")) %>% 
-  components() %>%
-  slice(39:47) %>% 
-  pull(seasonal)
-
-# Get Feb trend
-feb_price_trend <- 
-  monthly_prices %>% 
-  filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
-  model(x11 = feasts:::X11(price, type = "additive")) %>% 
-  components() %>% 
-  slice(50) %>% 
-  pull(trend)
-
-# Apply March-Sep seasonal component to Feb trend
-mar_nov_price_trend <- 
-  tibble(
-    date = as.Date(c("2020-03-16", "2020-04-16", "2020-05-16", "2020-06-16",
-                     "2020-07-16", "2020-08-16", "2020-09-16", "2020-10-16",
-                     "2020-10-31")),
-    trend = (feb_price_trend + mar_nov_price_seasonal))
-
-# Set Oct 31 value to average of October and November
-mar_nov_price_trend[9,]$trend <- mean(mar_nov_price_trend[8:9,]$trend)
-
-# Apply to daily averages to get trend
-average_prices <- 
-  average_prices %>% 
-  mutate(yearmon = tsibble::yearmonth(date)) %>% 
-  inner_join(mar_nov_price_trend) %>% 
-  group_by(yearmon) %>% 
-  mutate(trend = price * trend / mean(price)) %>% 
-  ungroup() %>% 
-  select(date, trend) %>% 
-  left_join(average_prices, .)
-
-nightly_price_dif <- 
-  average_prices %>% 
-  filter(date >= "2020-03-01") %>% 
-  summarize(dif = 1 - sum(price) / sum(trend)) %>% 
-  pull(dif) %>% 
-  scales::percent(0.1)
-
-total_price_dif <- 
-  average_prices %>%
-  rename(price_trend = trend) %>% 
-  filter(date >= "2020-03-01") %>% 
-  left_join(reservations) %>% 
-  mutate(rev_dif = n * (price_trend - price)) %>% 
-  tally(rev_dif) %>% 
-  pull(n) %>% 
-  scales::dollar(0.1, 1 / 1000000, suffix = " million")
-
-total_revenue_lost <- 
-  average_prices %>%
-  rename(price_trend = trend) %>% 
-  filter(date >= "2020-03-01") %>% 
-  left_join(reservations) %>% 
-  mutate(total_rev_dif = n * (price_trend - price) + 
-           (trend - n) * price_trend) %>% 
-  tally(total_rev_dif) %>% 
-  pull(n) %>% 
-  scales::dollar(0.1, 1 / 1000000, suffix = " million")
+ 
+ # Get average nightly prices
+ average_prices <- 
+   daily %>% 
+   filter(housing, status == "R", date >= "2016-01-01",
+          listing_type == "Entire home/apt") %>% 
+   group_by(date) %>% 
+   summarize(price = mean(price))
+ 
+ # Create monthly price time series
+ monthly_prices <- 
+   average_prices %>% 
+   tsibble::as_tsibble() %>% 
+   tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
+   summarize(price = mean(price))
+ 
+ # Get March-December seasonal
+ mar_dec_price_seasonal <- 
+   monthly_prices %>% 
+   filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
+   model(x11 = feasts:::X11(price, type = "additive")) %>% 
+   components() %>%
+   slice(39:48) %>% 
+   pull(seasonal)
+ 
+ # Get Feb trend
+ feb_price_trend <- 
+   monthly_prices %>% 
+   filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
+   model(x11 = feasts:::X11(price, type = "additive")) %>% 
+   components() %>% 
+   slice(50) %>% 
+   pull(trend)
+ 
+ # Apply March-Sep seasonal component to Feb trend
+ mar_nov_price_trend <- 
+   tibble(
+     date = as.Date(c("2020-03-16", "2020-04-16", "2020-05-16", "2020-06-16",
+                      "2020-07-16", "2020-08-16", "2020-09-16", "2020-10-16",
+                      "2020-11-16", "2020-12-16")),
+     trend = (feb_price_trend + mar_dec_price_seasonal))
+  # Set Oct 31 value to average of October and November
+# mar_nov_price_trend[9,]$trend <- mean(mar_nov_price_trend[8:9,]$trend)
+ 
+ # Apply to daily averages to get trend
+ average_prices <- 
+   average_prices %>% 
+   mutate(yearmon = tsibble::yearmonth(date)) %>% 
+   inner_join(mar_nov_price_trend) %>% 
+   group_by(yearmon) %>% 
+   mutate(trend = price * trend / mean(price)) %>% 
+   ungroup() %>% 
+   select(date, trend) %>% 
+   left_join(average_prices, .)
+ 
+ nightly_price_dif <- 
+   average_prices %>% 
+   filter(date >= "2020-03-01") %>% 
+   summarize(dif = 1 - sum(price) / sum(trend)) %>% 
+   pull(dif) %>% 
+   scales::percent(0.1)
+ 
+ total_price_dif <- 
+   average_prices %>%
+   rename(price_trend = trend) %>% 
+   filter(date >= "2020-03-01") %>% 
+   left_join(reservations) %>% 
+   mutate(rev_dif = n * (price_trend - price)) %>% 
+   tally(rev_dif) %>% 
+   pull(n) %>% 
+   scales::dollar(0.1, 1 / 1000000, suffix = " million")
+ 
+ total_revenue_lost <- 
+   average_prices %>%
+   rename(price_trend = trend) %>% 
+   filter(date >= "2020-03-01") %>% 
+   left_join(reservations) %>% 
+   mutate(total_rev_dif = n * (price_trend - price) + 
+            (trend - n) * price_trend) %>% 
+   tally(total_rev_dif) %>% 
+   pull(n) %>% 
+   scales::dollar(0.1, 1 / 1000000, suffix = " million")
 
 rm(property, daily, GH)
 
@@ -1699,22 +1697,6 @@ host_rev %>%
   kbl(caption = "Toronto STR host revenue", align = "lr") %>% 
   kable_styling()
 
-host_rev20 %>% 
-  pull(rev) %>% 
-  quantile() %>% 
-  as.list() %>% 
-  as_tibble() %>% 
-  select(-`0%`) %>% 
-  set_names(c("25th percentile", "Median", "75th percentile", 
-              "100th percentile")) %>% 
-  mutate(across(1:3, scales::dollar, accuracy = 1000, big.mark = ",")) %>% 
-  mutate(`100th percentile` = scales::dollar(`100th percentile`, 0.1, 
-                                             scale = 1 / 1000000, 
-                                             suffix = " million")) %>% 
-  pivot_longer(everything(), names_to = "Host percentile", 
-               values_to = "Annual revenue") %>% 
-  kbl(caption = "Toronto STR host revenue", align = "lr") %>% 
-  kable_styling()
 
 ```
 
@@ -1730,63 +1712,63 @@ figure_1_6_fun()
 
 ## Toronto in comparison with other major Canadian cities
 
-``` {r para_6, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "national_comparison.qs"))}
+``` {r para_9_1, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "national_comparison.qs"))}
 
-national_comparison <- qread(here("output", "national_comparison.qs"),
-                             nthreads = availableCores())
-
-van_active_per_1000 <- 
-  national_comparison %>% 
-  filter(city == "Vancouver") %>% 
-  pull(listings_per_1000) %>% 
-  round(1) %>% 
-  prettyNum(",")
-
-to_active_per_1000 <- 
-  national_comparison %>% 
-  filter(city == "Toronto") %>% 
-  pull(listings_per_1000) %>% 
-  round(1) %>% 
-  prettyNum(",")
-
-van_rev_per_listing <- 
-  national_comparison %>% 
-  filter(city == "Vancouver") %>% 
-  pull(revenue_per_listing) %>% 
-  round(-2) %>% 
-  scales::dollar()
-
-to_rev_per_listing <- 
-  national_comparison %>% 
-  filter(city == "Toronto") %>% 
-  pull(revenue_per_listing) %>% 
-  round(-2) %>% 
-  scales::dollar()
+# national_comparison <- qread(here("output", "national_comparison.qs"),
+#                              nthreads = availableCores())
+# 
+# van_active_per_1000 <- 
+#   national_comparison %>% 
+#   filter(city == "Vancouver") %>% 
+#   pull(listings_per_1000) %>% 
+#   round(1) %>% 
+#   prettyNum(",")
+# 
+# to_active_per_1000 <- 
+#   national_comparison %>% 
+#   filter(city == "Toronto") %>% 
+#   pull(listings_per_1000) %>% 
+#   round(1) %>% 
+#   prettyNum(",")
+# 
+# van_rev_per_listing <- 
+#   national_comparison %>% 
+#   filter(city == "Vancouver") %>% 
+#   pull(revenue_per_listing) %>% 
+#   round(-2) %>% 
+#   scales::dollar()
+# 
+# to_rev_per_listing <- 
+#   national_comparison %>% 
+#   filter(city == "Toronto") %>% 
+#   pull(revenue_per_listing) %>% 
+#   round(-2) %>% 
+#   scales::dollar()
 
 ```
 
-In 2020, Toronto had the largest STR market in the country by both active listing numbers (`r avg_listings_active`) and host revenue (`r annual_rev`), followed in both cases by Montreal and Vancouver (Table \@ref(tab:tab-1-3)). However, in relative terms, Vancouver stands considerably ahead of both Toronto and Montreal. Vancouver had the most active listings per 1000 households (`r van_active_per_1000` compared to `r to_active_per_1000` in Toronto) and the most revenue per listing (`r van_rev_per_listing` compared to `r to_rev_per_listing` in Toronto).
+In 2020, Toronto had the largest STR market in the country by both active listing numbers (`r avg_listings_active`) and host revenue (`r annual_rev`), followed in both cases by Montreal and Vancouver (Table \@ref(tab:tab-1-3)). However, in relative terms, Vancouver stands considerably ahead of both Toronto and Montreal. Vancouver had the most active listings per 1000 households (r van_active_per_1000 compared to r to_active_per_1000 in Toronto) and the most revenue per listing (r van_rev_per_listing compared to r to_rev_per_listing in Toronto).
 
 ``` {r tab-1-3, include = TRUE}
 
-library(kableExtra)
-
-national_comparison <- qread(here("output", "national_comparison.qs"),
-                             nthreads = availableCores())
-
-national_comparison %>% 
-  transmute(
-    city, 
-    active_daily_listings = prettyNum(round(active_daily_listings, -1), ","),
-    listings_per_1000 = round(listings_per_1000, 1),
-    revenue = scales::dollar(revenue, 0.1, 1/1000000),
-    revenue_per_listing = scales::dollar(revenue_per_listing, 100)) %>% 
-  set_names(c("City", "Active listings", "Listings per 1000 households",
-              "Annual revenue (million)", "Revenue per listing")) %>% 
-  kbl(caption = "2019 STR activity in the largest ten Canadian municipalities",
-      align = "lrrrr") %>%
-  kable_styling(latex_options="scale_down") %>%
-  row_spec(9, background = paste0(col_palette[2], "50"))
+# library(kableExtra)
+# 
+# national_comparison <- qread(here("output", "national_comparison.qs"),
+#                              nthreads = availableCores())
+# 
+# national_comparison %>% 
+#   transmute(
+#     city, 
+#     active_daily_listings = prettyNum(round(active_daily_listings, -1), ","),
+#     listings_per_1000 = round(listings_per_1000, 1),
+#     revenue = scales::dollar(revenue, 0.1, 1/1000000),
+#     revenue_per_listing = scales::dollar(revenue_per_listing, 100)) %>% 
+#   set_names(c("City", "Active listings", "Listings per 1000 households",
+#               "Annual revenue (million)", "Revenue per listing")) %>% 
+#   kbl(caption = "2019 STR activity in the largest ten Canadian municipalities",
+#       align = "lrrrr") %>%
+#   kable_styling(latex_options="scale_down") %>%
+#   row_spec(9, background = paste0(col_palette[2], "50"))
   
 ```
 
@@ -1830,6 +1812,7 @@ figure_1_7_fun <- function(regular = "", condensed = "") {
              y = -Inf, yend = Inf, alpha = 0.3) +
     annotate("segment", x = key_date_regulations, xend = key_date_regulations,
              y = -Inf, yend = Inf, alpha = 0.3) +
+    scale_x_date(name = NULL) +
     scale_y_continuous(name = NULL, 
                        label = scales::percent_format(accuracy = 1)) +
     scale_colour_manual(values = col_palette[c(5, 1)]) +

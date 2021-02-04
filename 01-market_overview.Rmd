@@ -1021,7 +1021,7 @@ rm(property, daily, GH)
 
 ```
 
-Overall, the year-over-year change in average active listings from 2016 to 2017 (12 months) was `r listing_growth_2017`, the year-over-year change from 2017 to 2018 was `r listing_growth_2018`, and the year-over-year change from 2018 to 2019 was `r listing_growth_2019`. In 2020, active listings fell thanks to the Covid-19 pandemic. The year-over-year change in active daily listings for 2020 so far (January to `r end_month`) is `r listing_growth_2020`.
+Overall, the year-over-year change in average active listings from 2016 to 2017 (12 months) was `r listing_growth_2017`, the year-over-year change from 2017 to 2018 was `r listing_growth_2018`, and the year-over-year change from 2018 to 2019 was `r listing_growth_2019`. In 2020, active listings fell thanks to the Covid-19 pandemic: the year-over-year change in active daily listings for 2020 is `r listing_growth_2020`.
 
 ``` {r para_7, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
@@ -1428,7 +1428,7 @@ rm(property, daily, GH)
 
 ```
 
-In terms of revenue, 2020 revenue decreased by a staggering `r active_yoy_revenue` compared to 2019. To offer some perspective, from 2018 to 2019, STR revenue increased by `r active_yoy_revenue`. Based on previous growth trends, it is possible to estimate the total loss in revenue incurred by STR hosts, combining the loss of revenue of reservations that never occurred and the lower nightly price of reservations that did occur. Throughout the May-October period of 2020, nightly prices have been an average of `r nightly_price_dif` lower than expected. Spread across the `r res_total_pandemic` nights reserved during this period, this means that STR operators collectively earned `r total_price_dif` less than they would have on their bookings in the absence of the pandemic. When the lower prices on reservations which did occur is combined with the reservations which did not occur, our estimate is that Toronto’s STR hosts lost a total of `r total_revenue_lost` million in revenue between March and October 2020 because of the Covid-19 pandemic.
+In terms of revenue, 2020 revenue decreased by a staggering `r active_yoy_revenue` compared to 2019. To offer some perspective, from 2018 to 2019, STR revenue increased by `r active_yoy_revenue19`. Based on previous growth trends, it is possible to estimate the total loss in revenue incurred by STR hosts, combining the loss of revenue of reservations that never occurred and the lower nightly price of reservations that did occur. Throughout the May-December period of 2020, nightly prices have been an average of `r nightly_price_dif` lower than expected. Spread across the `r res_total_pandemic` nights reserved during this period, this means that STR operators collectively earned `r total_price_dif` less than they would have on their bookings in the absence of the pandemic. When the lower prices on reservations which did occur is combined with the reservations which did not occur, our estimate is that Toronto’s STR hosts lost a total of `r total_revenue_lost` million in revenue between March and December 2020 because of the Covid-19 pandemic.
 
 <br>
 

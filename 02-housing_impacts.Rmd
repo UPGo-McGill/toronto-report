@@ -392,13 +392,13 @@ pr_housing_loss <-
 
 eh_housing_loss_2019 <- 
   housing_loss_summaries %>% 
-  filter(date == "2020-12-31") %>% 
+  filter(date == "2019-12-31") %>% 
   pull(eh) %>% 
   scales::percent(0.1)
 
 pr_housing_loss_2019 <- 
   housing_loss_summaries %>% 
-  filter(date == "2020-12-31") %>% 
+  filter(date == "2019-12-31") %>% 
   pull(pr) %>% 
   scales::percent(0.1)
 
@@ -466,7 +466,7 @@ if (build_figures) {
 
 ```
 
-Combined with the falling numbers of listings contributing to housing loss is the decreasing proportion of STRs out of all active listings which are either FREH or ghosts hostels in 2020. At the end of 2020 only a quarter (`r eh_housing_loss`) of entire-home listings and less than half of (`r pr_housing_loss`) private-room listings were taking housing off the market in Toronto (Figure \@ref(fig:fig-2-2)). In 2019, two thirds of entire-home listings (`r eh_housing_loss_2019`) and half (`r pr_housing_loss_2019`) of the private-room listings contributed to housing loss. It is interesting to note that the proportion of entire-home listings contributing to housing loss has decreased to even lower levels than that of 2016 (`r eh_housing_loss_2019`) thanks to the pandemic.
+Combined with the falling numbers of listings contributing to housing loss is the decreasing proportion of STRs out of all active listings which are either FREH or ghosts hostels in 2020. At the end of 2020 only a quarter (`r eh_housing_loss`) of entire-home listings and less than half of (`r pr_housing_loss`) private-room listings were taking housing off the market in Toronto (Figure \@ref(fig:fig-2-2)). In 2019, two thirds of entire-home listings (`r eh_housing_loss_2019`) and half (`r pr_housing_loss_2019`) of the private-room listings contributed to housing loss. It is interesting to note that the proportion of entire-home listings contributing to housing loss has decreased to even lower levels than that of 2016 (`r eh_housing_loss_2016`) thanks to the pandemic.
 
 ``` {r fig-2-2, include = TRUE, fig.cap = '(ref:fig-2-2)', fig.align = "center"}
 
@@ -588,7 +588,7 @@ if (build_figures) {
 
 ```
 
-The `r housing_loss_2020` housing units taken off of Toronto’s housing market in 2020 are `r housing_loss_pct_dwelling` of the total amount of housing in the city, and this housing loss has been concentrated in small parts of the city. This is more or less the same in relative to the total housing stock: Figure \@ref(fig:fig-2-3) shows the proportion of each ward or dissemination area’s housing stock which was operated as a dedicated short-term rental as of the end of 2020. The maps show a tale of two cities: in most of Toronto, there are relatively few dedicated STRs, while in the center of the city as well as a few transit corridors, they are ubiquitous. In the Spadina-Fort York ward, `r housing_loss_pct_spadina` of all housing units have been converted to dedicated STRs. The figure is `r housing_loss_pct_university` for University-Rosedale and `r housing_loss_pct_centre` for Toronto Centre. In the Downtown CMHC zone, the rental vacancy rate was `r downtown_spadina` in 2019, while the number of STRs contributing to housing loss in the Spadina-Fort York in 2019 was `r housing_loss_pct_spadina_2019`. This means that there were slightly more dedicated STRs in this neighbourhood than there were vacant apartments for rent. (2020 rental vacancy rates numbers were not yet available at the time of analysis.)
+The `r housing_loss_2020` housing units taken off of Toronto’s housing market in 2020 are `r housing_loss_pct_dwelling` of the total amount of housing in the city, and this housing loss has been concentrated in small parts of the city. Figure \@ref(fig:fig-2-3) shows the proportion of each ward or dissemination area’s housing stock which was operated as a dedicated short-term rental as of the end of 2020. The maps show a tale of two cities: in most of Toronto, there are relatively few dedicated STRs, while in the center of the city as well as a few transit corridors, they are ubiquitous. In the Spadina-Fort York ward, `r housing_loss_pct_spadina` of all housing units have been converted to dedicated STRs. The figure is `r housing_loss_pct_university` for University-Rosedale and `r housing_loss_pct_centre` for Toronto Centre. In the Downtown CMHC zone, the rental vacancy rate was `r downtown_spadina` in 2019, while the number of STRs contributing to housing loss in the Spadina-Fort York in 2019 was `r housing_loss_pct_spadina_2019`. This means that there were slightly more dedicated STRs in this neighbourhood than there were vacant apartments for rent. (2020 rental vacancy rates numbers were not yet available at the time of analysis.)
 
 ``` {r fig-2-3, include = TRUE, fig.cap = '(ref:fig-2-3)', fig.align = "center"}
 
@@ -829,7 +829,7 @@ housing_loss_summary <-
   summarize(FREH = sum(FREH_3)) %>% 
   left_join(GH_total) %>% 
   mutate(housing_loss = FREH + GH_units) %>% 
-  filter(date >= key_date_regulations) %>% 
+  filter(date >= start_2019) %>% 
   filter(housing_loss == max(housing_loss, na.rm = TRUE)) %>% 
   mutate(across(-date, round, -1))
 
@@ -848,7 +848,7 @@ oct_2020_housing_loss <-
   summarize(FREH = sum(FREH_3)) %>% 
   left_join(GH_total) %>% 
   mutate(housing_loss = FREH + GH_units) %>% 
-  filter(date == "2020-12-01") %>% 
+  filter(date == "2020-10-01") %>% 
   mutate(across(-date, round, -1)) %>% 
   pull(housing_loss) %>% 
   prettyNum(",")
@@ -1046,7 +1046,7 @@ rm(property, daily, GH)
 
 ```
 
-According to the FREH model, the number of housing units in Toronto lost due to commercial STRs reached its all-time peak (`r peak_housing_loss`) at the beginning of 2020. Most of these (`r peak_FREH`) were FREH listings, with the remainder (`r peak_GH`) being ghost hostels—clusters of private-room listings operated out of a single housing unit. As of December 2020, the number of FREH listings had dropped to its lowest amount since we began tracking it in 2016, with just `r oct_2020_housing_loss` listings displaying availability and reservations consistent with historical patterns of full-time STR activity in Vancouver.
+According to the FREH model, the number of housing units in Toronto lost due to commercial STRs reached its all-time peak (`r peak_housing_loss`) at the end of 2019. Most of these (`r peak_FREH`) were FREH listings, with the remainder (`r peak_GH`) being ghost hostels—clusters of private-room listings operated out of a single housing unit. During the fall of 2020, the number of FREH listings had dropped to its lowest amount since we began tracking it in 2016, with just `r oct_2020_housing_loss` listings in October displaying availability and reservations consistent with historical patterns of full-time STR activity in Toronto.
 
 One possibility is that these formerly FREH listings are no longer operating as STRs, either permanently (the listings were deactivated) or temporarily (the listings were blocked from receiving reservations). Under this possibility the listings may have been returned to the longer-term rental market. Another possibility is that the listings have remained open for business as short-term rentals, but the dramatically decreased demand for tourist accommodations means that the listings have not received the level of reservations which our model expects in order to classify the listings as frequently rented.
 
@@ -1410,7 +1410,7 @@ figure_2_7_fun <- function(regular = "", condensed = "") {
   # geom_sf(data = streets, size = 0.2, colour = "white") +
   geom_sf(aes(fill = vacancy), colour = "white", alpha = 0.7) +
   geom_sf_label(aes(label = label), size = 2, family = regular) +
-  scale_fill_gradientn(colors = col_palette[c(1, 3, 2)], 
+  scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
                        na.value = "grey80",
                        labels = scales::percent)  +
   guides(fill = guide_colourbar(title = "% housing\nlost to STR",

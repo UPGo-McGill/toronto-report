@@ -179,6 +179,7 @@ housing_loss_change <-
           {GH %>% filter(date == as.Date("2020-12-01") - years(1)) %>% 
               pull(housing_units) %>% sum()}}} %>% 
   {. - 1} %>% 
+  {. * -1} %>% 
   round(3) %>% 
   scales::percent(0.1)
 

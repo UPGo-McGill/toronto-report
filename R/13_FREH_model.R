@@ -206,7 +206,7 @@ daily <- daily %>% select(-year, -month)
 # probabilities_3 <- model_3_test %>% predict(test_data_3, type = "response")
 # predicted_classes_3 <- ifelse(probabilities_3 > 0.5, "TRUE", "FALSE")
 # mean(predicted_classes_3 == test_data_3$FREH)
-# # Outcome: 0.859
+# # Outcome: 0.860
 
 
 # Save output -------------------------------------------------------------

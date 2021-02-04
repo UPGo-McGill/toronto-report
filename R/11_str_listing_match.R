@@ -45,25 +45,27 @@ rm(dl_location, matches)
 
 # Convert to list of pairs
 pair_list <- pmap(ab_matches, c)
-pair_list <- map(pair_list, list)
 
-# Helper functions to merge lists
-can_merge <- function(x, y) length(intersect(x, y)) > 0
-merge_fun <- function(x, y) sort(union(x, y))
-reduce_fun <- function(pairs) {
-  Reduce(function(acc, curr) {
-    curr_vec <- curr[[1]]
-    to_merge_id_x <- Position(f = function(x) can_merge(x, curr_vec), acc)
-    if (is.na(to_merge_id_x)) acc[[length(acc) + 1]] <- curr_vec else {
-      acc[[to_merge_id_x]] <- merge_fun(acc[[to_merge_id_x]], curr_vec)
-    }
-    return(acc)
-  }, pairs)
+reduce <- function(x) {
+
+  Reduce(function(a, b) {
+    merge_index <- lapply(a, intersect, b)
+
+    if (sum(lengths(merge_index)) > 0) {
+      merge_index <- which(lengths(merge_index) > 0)
+      merged <- a[merge_index]
+      merged <- unlist(merged)
+      merged <- union(merged, b)
+      merged <- list(sort(merged))
+      not_merged <- a[-merge_index]
+      out <- c(merged, not_merged)
+    } else out <- c(a, list(b))
+  }, x, init = list())
+
 }
 
 # Merge lists
-groupings <- reduce_fun(pair_list)
-
+groupings <- reduce(pair_list)
 rm(ab_matches, pair_list)
 
 
@@ -78,11 +80,7 @@ host_IDs <-
       unique()
   })
 
-# Need to repeat this several times for it to be stable
-host_IDs <- host_IDs %>% map(list) %>% reduce_fun()
-host_IDs <- host_IDs %>% map(list) %>% reduce_fun()
-host_IDs <- host_IDs %>% map(list) %>% reduce_fun()
-
+host_IDs <- reduce(host_IDs)
 host_IDs <- map(host_IDs, sort)
 host_IDs <- host_IDs[lengths(host_IDs) > 0]
 
@@ -103,7 +101,7 @@ daily <-
          host_ID = if_else(is.na(new_host), host_ID, new_host)) %>%
   select(-new_host)
 
-rm(host_change_table, host_IDs, can_merge, merge_fun, reduce_fun)
+rm(host_change_table, host_IDs, reduce)
 
 
 # Get matches -------------------------------------------------------------

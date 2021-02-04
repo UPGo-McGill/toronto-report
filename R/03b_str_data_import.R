@@ -20,6 +20,7 @@ source("R/01_startup.R")
 # Load previous data ------------------------------------------------------
 
 qload("output/geometry.qsm", nthreads = availableCores())
+qload("output/str_dec.qsm", nthreads = availableCores())
 
 
 # Get data ----------------------------------------------------------------
@@ -54,15 +55,35 @@ host <-
 upgo_disconnect()
 
 
+# Merge with December data ------------------------------------------------
+
+prop_new <-
+  property %>%
+  st_drop_geometry() %>%
+  select(property_ID, created, scraped) %>%
+  left_join(prop_dec, ., by = "property_ID")
+
+prop_new <-
+  prop_new %>%
+  mutate(
+    created = pmin(created.x, created.y, na.rm = TRUE),
+    scraped = pmax(scraped.x, scraped.y, na.rm = TRUE),
+  ) %>%
+  relocate(created, scraped, .before = first_active) %>%
+  select(-created.x, -scraped.x, -created.y, -scraped.y)
+
+property <- prop_new
+daily <- bind_rows(daily, daily_dec)
+daily_inactive <- bind_rows(daily_inactive, daily_inactive_dec)
+property <- strr_as_sf(property, 32617) %>% st_filter(city)
+
+rm(prop_new, prop_dec, daily_dec, daily_inactive_dec)
+
+
 # Clip to city boundaries -------------------------------------------------
 
-daily <-
-  daily %>%
-  filter(property_ID %in% property$property_ID)
-
-host <-
-  host %>%
-  filter(host_ID %in% property$host_ID)
+daily <- daily %>% filter(property_ID %in% property$property_ID)
+host <- host %>% filter(host_ID %in% property$host_ID)
 
 
 # Manually fix wonky created dates ----------------------------------------

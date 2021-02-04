@@ -35,7 +35,12 @@ kj <-
 # Get geometry from KJ listings -------------------------------------------
 
 # Find previously geocoded addresses
-upgo_connect(geolocation = TRUE)
+# upgo_connect(geolocation = TRUE)
+
+# Temp workaround
+geolocation_remote <-
+  read_csv("data/geo.csv") %>%
+  set_names(c("entity", "lon", "lat"))
 
 processed_addresses <-
   geolocation_remote %>%
@@ -54,6 +59,7 @@ kj_new_geography <-
 
 if (nrow(kj_new_geography) > 0) {
 
+  library(ggmap)
   to_geocode <- kj_new_geography$location %>% unique()
   output <- ggmap::geocode(to_geocode)
   output <- tibble(location = to_geocode, lon = output$lon, lat = output$lat)
@@ -79,6 +85,13 @@ RPostgres::dbWriteTable(upgo:::.upgo_env$con, "geolocation", locations_new,
                         append = TRUE)
 
 upgo_disconnect()
+
+# TEMP WORKAROUND
+geolocation_remote <-
+  geolocation_remote %>%
+  bind_rows(locations_new)
+
+write_csv(geolocation_remote, "data/geo.csv")
 
 # Rbind results
 kj <- bind_rows(kj_old_geography, kj_new_geography)

@@ -618,7 +618,7 @@ active_yoy_change19 <-
 
 active_yoy_listings19 <- 
   active_yoy_change19$active_listings %>% 
-  {. * -1} %>% 
+  {. * 1} %>% 
   scales::percent(accuracy = 0.1)
 
 active_yoy_revenue19 <- 
@@ -649,7 +649,7 @@ rm(property, daily, GH)
 
 ```
 
-Active daily listings peaked in `r highest_activity_date` at `r highest_activity_amount`, and have since declined. Due to the Covid-19 pandemic, there were `r active_yoy_listings` less active listings on average in 2020 than in 2019, and `r active_yoy_revenue` less revenue. Prior to 2020, Toronto's STR market was growing at a great rate. Compared to 2018, active listings and revenue respectively increased by `r active_yoy_listings19` and `r active_yoy_revenue19` in 2019.
+Active daily listings peaked in `r highest_activity_date` at `r highest_activity_amount`, and have since declined. Due to the Covid-19 pandemic, there were `r active_yoy_listings` less active listings on average in 2020 than in 2019, and `r active_yoy_revenue` less revenue. Prior to 2020, Toronto's STR market was growing at a great rate. For example, compared to 2018, active listings and revenue respectively increased by `r active_yoy_listings19` and `r active_yoy_revenue19` in 2019.
 
 In general, the number of STR listings available in the City of Toronto peaks during late summer and winter holidays and falling in between these periods (Figure \@ref(fig:fig-1-1)). There is one major exception the March to December 2020 period, where activity has been sharply below the seasonal trend because of the Covid-19 pandemic.
   
@@ -698,19 +698,19 @@ centre_rev_pct <-
 spadina_per_cap <- 
   WD_breakdown %>% 
   filter(ward == "Spadina-Fort York") %>% 
-  pull(listings_pct) %>% 
+  pull(listings_pct_dwellings) %>% 
   scales::percent(0.1)
 
 university_per_cap <- 
   WD_breakdown %>% 
   filter(ward == "University-Rosedale") %>% 
-  pull(listings_pct) %>% 
+  pull(listings_pct_dwellings) %>% 
   scales::percent(0.1)
 
 min_per_cap <- 
   WD_breakdown %>% 
   filter(active_listings > 100) %>% 
-  pull(listings_pct) %>% 
+  pull(listings_pct_dwellings) %>% 
   min() %>% 
   scales::percent(0.1)
 
@@ -718,7 +718,7 @@ max_per_cap <-
   WD_breakdown %>% 
   filter(active_listings > 100, 
          !active_listings %in% c("Spadina-Fort York", "Toronto Centre")) %>% 
-  pull(listings_pct) %>% 
+  pull(listings_pct_dwellings) %>% 
   max() %>% 
   scales::percent(0.1)
 

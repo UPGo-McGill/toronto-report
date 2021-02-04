@@ -1710,6 +1710,81 @@ figure_1_6_fun()
 
 <br>
 
+## The commercialization of Toronto’s STR market
+
+Some hosts operate multiple STR units, which can be an indication of a commercial operator rather than a casual home sharer. To take the simplest case, for example, a host with two or more entire-home listings on the same day cannot be operating both listings out of their principal residence, regardless of the frequency they are rented throughout the year. This means that these operators are not respecting the by-law, which prevents a person from operating a STR outside their principal residence.
+
+We consider entire-homes to be "multilistings" if they are operated by hosts who are simultaneously operating other entire-home listings. We define private-room multilistings as cases where a host has three or more private-room listings operating on the same day. Since `r eh_3_bedroom` of entire-home listings have three or fewer bedrooms, there will be extremely few cases where a host operating three private-room STR listings in a dwelling unit has not converted the entire unit into a dedicated STR. 
+
+``` {r para_10, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+
+# ML table for figure
+ML <- 
+  daily %>% 
+  filter(status != "B") %>% 
+  group_by(date) %>% 
+  summarize(Listings = mean(multi),
+            Revenue = sum(price[status == "R" & multi], na.rm = TRUE) / 
+              sum(price[status == "R"], na.rm = TRUE)) %>% 
+  mutate(across(where(is.numeric), slide_dbl, mean, .before = 13)) %>% 
+  pivot_longer(c(Listings, Revenue), names_to = "Multilisting percentage",
+               values_to = "value")
+
+rm(property, daily, GH)
+
+```
+
+``` {r make_fig_1_7}
+
+figure_1_7_fun <- function(regular = "", condensed = "") {
+  
+  ML %>% 
+    filter(date >= "2017-01-01") %>% 
+    ggplot() +
+    geom_line(aes(date, value, colour = `Multilisting percentage`), lwd = 1) +
+    annotate("segment", x = key_date_covid, xend = key_date_covid,
+             y = -Inf, yend = Inf, alpha = 0.3) +
+    annotate("segment", x = key_date_regulations, xend = key_date_regulations,
+             y = -Inf, yend = Inf, alpha = 0.3) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = NULL, 
+                       label = scales::percent_format(accuracy = 1)) +
+    scale_colour_manual(values = col_palette[c(5, 1)]) +
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          panel.grid.minor.x = element_blank(),
+          text = element_text(family = regular, face = "plain"),
+          legend.title = element_text(family = regular, face = "bold"),
+          legend.text = element_text(family = regular))
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_1_7.pdf"), 
+         plot = figure_1_7_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_1_7.pdf"))
+}
+
+```
+
+In 2020, `r ml_listings` of active listings in Toronto were multilistings, earning `r ml_revenue` of total host revenue. Multilistings had been growing steadily since 2017, both in terms of listings and revenue percentage, until the Covid-19 pandemic, where there was first a drop of revenue percentage, later followed by a drop in multilistings percentage (Figure \@ref(fig:fig-1-7)). The share of multilistings in both listings share and revenue caught up during the summer of 2020. Figure \@ref(fig:fig-1-7) also highlights that, amidst generally declining STR activity during the COVID-19 pandemic, multilistings have remained strong, and through the fall of 2020 were earning a bit more than 4 out of every 10 dollars on STR platforms in Toronto. 
+
+``` {r fig-1-7, include = TRUE, fig.cap = '(ref:fig-1-7)', fig.align = "center"}
+
+figure_1_7_fun()
+
+```
+
+(ref:fig-1-7) _The percentage of active listings and revenue accounted for by multilistings in Toronto (14-day average)_
+
+These figures should be taken as highly conservative estimates. Many commercial operators will use different Airbnb or VRBO accounts to manage their listings. If multiple listings share the same photographs then our image recognition software will be able to connect them together, but it is otherwise difficult to determine whether two accounts belong to the same person. Moreover, many STR commercial operators only operate a single listing, but operate it on a full-time basis. A house owner with a secondary suite, or the owner of an investment condo who operates a STR in it, are clearly commercial operators running listings which are not their principal residences, but they would not be counted by this method.
+
+<br>
+
 ## Toronto in comparison with other major Canadian cities
 
 ``` {r para_9_1, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "national_comparison.qs"))}
@@ -1786,80 +1861,5 @@ national_comparison %>%
    row_spec(9, background = paste0(col_palette[2], "50"))
   
 ```
-
-<br>
-
-## The commercialization of Toronto’s STR market
-
-Some hosts operate multiple STR units, which can be an indication of a commercial operator rather than a casual home sharer. To take the simplest case, for example, a host with two or more entire-home listings on the same day cannot be operating both listings out of their principal residence, regardless of the frequency they are rented throughout the year. This means that these operators are not respecting the by-law, which prevents a person from operating a STR outside their principal residence.
-
-We consider entire-homes to be "multilistings" if they are operated by hosts who are simultaneously operating other entire-home listings. We define private-room multilistings as cases where a host has three or more private-room listings operating on the same day. Since `r eh_3_bedroom` of entire-home listings have three or fewer bedrooms, there will be extremely few cases where a host operating three private-room STR listings in a dwelling unit has not converted the entire unit into a dedicated STR. 
-
-``` {r para_10, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
-
-qload(here("output", "str_processed.qsm"), nthreads = availableCores())
-
-# ML table for figure
-ML <- 
-  daily %>% 
-  filter(status != "B") %>% 
-  group_by(date) %>% 
-  summarize(Listings = mean(multi),
-            Revenue = sum(price[status == "R" & multi], na.rm = TRUE) / 
-              sum(price[status == "R"], na.rm = TRUE)) %>% 
-  mutate(across(where(is.numeric), slide_dbl, mean, .before = 13)) %>% 
-  pivot_longer(c(Listings, Revenue), names_to = "Multilisting percentage",
-               values_to = "value")
-
-rm(property, daily, GH)
-
-```
-
-``` {r make_fig_1_7}
-
-figure_1_7_fun <- function(regular = "", condensed = "") {
-  
-  ML %>% 
-    filter(date >= "2017-01-01") %>% 
-    ggplot() +
-    geom_line(aes(date, value, colour = `Multilisting percentage`), lwd = 1) +
-    annotate("segment", x = key_date_covid, xend = key_date_covid,
-             y = -Inf, yend = Inf, alpha = 0.3) +
-    annotate("segment", x = key_date_regulations, xend = key_date_regulations,
-             y = -Inf, yend = Inf, alpha = 0.3) +
-    scale_x_date(name = NULL) +
-    scale_y_continuous(name = NULL, 
-                       label = scales::percent_format(accuracy = 1)) +
-    scale_colour_manual(values = col_palette[c(5, 1)]) +
-    theme_minimal() +
-    theme(legend.position = "bottom",
-          panel.grid.minor.x = element_blank(),
-          text = element_text(family = regular, face = "plain"),
-          legend.title = element_text(family = regular, face = "bold"),
-          legend.text = element_text(family = regular))
-
-}
-
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_1_7.pdf"), 
-         plot = figure_1_7_fun("Futura", "Futura Condensed"), 
-         width = 8, height = 5, units = "in", useDingbats = FALSE)
-  
-  extrafont::embed_fonts(here("output", "figures", "figure_1_7.pdf"))
-}
-
-```
-
-In 2020, `r ml_listings` of active listings in Toronto were multilistings, earning `r ml_revenue` of total host revenue. Multilistings had been growing steadily since 2017, both in terms of listings and revenue percentage, until the Covid-19 pandemic, where there was first a drop of revenue percentage, later followed by a drop in multilistings percentage (Figure \@ref(fig:fig-1-7)). The share of multilistings in both listings share and revenue caught up during the summer of 2020. Figure \@ref(fig:fig-1-7) also highlights that, amidst generally declining STR activity during the COVID-19 pandemic, multilistings have remained strong, and through the fall of 2020 were earning a bit more than 4 out of every 10 dollars on STR platforms in Toronto. 
-
-``` {r fig-1-7, include = TRUE, fig.cap = '(ref:fig-1-7)', fig.align = "center"}
-
-figure_1_7_fun()
-
-```
-
-(ref:fig-1-7) _The percentage of active listings and revenue accounted for by multilistings in Toronto (14-day average)_
-
-These figures should be taken as highly conservative estimates. Many commercial operators will use different Airbnb or VRBO accounts to manage their listings. If multiple listings share the same photographs then our image recognition software will be able to connect them together, but it is otherwise difficult to determine whether two accounts belong to the same person. Moreover, many STR commercial operators only operate a single listing, but operate it on a full-time basis. A house owner with a secondary suite, or the owner of an investment condo who operates a STR in it, are clearly commercial operators running listings which are not their principal residences, but they would not be counted by this method.
 
 \newpage

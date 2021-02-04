@@ -1625,7 +1625,7 @@ rm(property, daily, GH)
 
 ```
 
-We identified one network of hosts which has operated `r top_host_listings` listings in Toronto over the last several years, and which earned approximately `r top_host_rev` in 2020. An investigation into a sample of the host accounts which make up this network suggests links between numerous property management companies and third party operators. Through time, several individual host accounts seem to have merged into a cluster of larger hosts. The image-matching algorithm also merged hosts that use both Airbnb and VRBO, allowing for more accurate revenue calculations. Without interviewing actors associated with this host network, it is impossible to describe the level of connection and coordination between the various host accounts, but an operation of this scale would not be unprecedented. Reports from Chicago, USA and London, UK have identified similar host networks behind which were property management companies and realty groups (Conti, 2019). 
+We identified one network of hosts which has operated `r top_host_listings` listings in Toronto over the last several years, and which earned approximately `r top_host_rev` in 2020. An investigation into a sample of the host accounts which make up this network suggests links between numerous property management companies and third party operators. The image-matching algorithm also merged hosts that use both Airbnb and VRBO, allowing for more accurate revenue calculations. Without interviewing actors associated with this host network, it is impossible to describe the level of connection and coordination between the various host accounts, but an operation of this scale would not be unprecedented. Reports from Chicago, USA and London, UK have identified similar host networks behind which were property management companies and realty groups (Conti, 2019). 
 
 ``` {r make_fig_1_6}
 
@@ -1674,7 +1674,7 @@ if (build_figures) {
 
 ```
 
-Among all the STR hosts who earned revenue in the City of Toronto in 2020, the median revenue was `r median_host_rev` (Table \@ref(tab:tab-host-rev)). Throughout the City of Toronto, there were `r n_hosts_over_250` hosts that earned more than $250,000 in 2020, which is `r diff_host_250` less hosts than in 2019. Figure \@ref(fig:fig-1-6) shows the percentage of the total `r annual_rev` in STR revenue which accrued to each decile of hosts. The figure shows that revenue is disproportionately concentrated among a small number of hosts; the top 10% earned `r host_rev_top_10`: the top 5% earned `r host_rev_top_5` of revenue, while the top 1% of hosts earned `r host_rev_top_1` of all revenue. The pandemic has thus not impacted greatly the sharp difference in revenue distribution among STR hosts. To put this revenue distribution in context, Montreal’s top 10% of STR hosts earned 68.8% of all revenue in 2019. One the other hand, Vancouver's top 10% hosts only earned 43.2% of all revenue in 2019. This indicates that Toronto's STR market is dominated by commercial operators compared to its Western peer, but to a lesser extent than Montreal.
+Among all the STR hosts who earned revenue in the City of Toronto in 2020, the median revenue was `r median_host_rev` (Table \@ref(tab:tab-host-rev)). Throughout the City of Toronto, there were `r n_hosts_over_250` hosts that earned more than $250,000 in 2020, which is `r diff_host_250` less hosts than in 2019. Figure \@ref(fig:fig-1-6) shows the percentage of the total `r annual_rev` in STR revenue which accrued to each decile of hosts. The figure shows that revenue is disproportionately concentrated among a small number of hosts; the top 10% earned `r host_rev_top_10`: the top 5% earned `r host_rev_top_5` of revenue, while the top 1% of hosts earned `r host_rev_top_1` of all revenue. The pandemic has thus not impacted greatly the sharp difference in revenue distribution among STR hosts. To put this revenue distribution in context, Montreal’s top 10% of STR hosts earned 68.8% of all revenue in 2019. On the other hand, Vancouver's top 10% hosts only earned 43.2% of all revenue in 2019. This indicates that Toronto's STR market is dominated by commercial operators compared to its Western peer, but still to a lesser extent than Montreal.
 
 ``` {r tab-host-rev, include = TRUE}
 
@@ -1714,61 +1714,76 @@ figure_1_6_fun()
 
 ``` {r para_9_1, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "national_comparison.qs"))}
 
-# national_comparison <- qread(here("output", "national_comparison.qs"),
-#                              nthreads = availableCores())
-# 
-# van_active_per_1000 <- 
-#   national_comparison %>% 
-#   filter(city == "Vancouver") %>% 
-#   pull(listings_per_1000) %>% 
-#   round(1) %>% 
-#   prettyNum(",")
-# 
-# to_active_per_1000 <- 
-#   national_comparison %>% 
-#   filter(city == "Toronto") %>% 
-#   pull(listings_per_1000) %>% 
-#   round(1) %>% 
-#   prettyNum(",")
-# 
-# van_rev_per_listing <- 
-#   national_comparison %>% 
-#   filter(city == "Vancouver") %>% 
-#   pull(revenue_per_listing) %>% 
-#   round(-2) %>% 
-#   scales::dollar()
-# 
-# to_rev_per_listing <- 
-#   national_comparison %>% 
-#   filter(city == "Toronto") %>% 
-#   pull(revenue_per_listing) %>% 
-#   round(-2) %>% 
-#   scales::dollar()
+ national_comparison <- qread(here("output", "national_comparison.qs"),
+                              nthreads = availableCores())
+ 
+ van_active_per_1000 <- 
+   national_comparison %>% 
+   filter(city == "Vancouver") %>% 
+   pull(listings_per_1000) %>% 
+   round(1) %>% 
+   prettyNum(",")
+ 
+ to_active_per_1000 <- 
+   national_comparison %>% 
+   filter(city == "Toronto") %>% 
+   pull(listings_per_1000) %>% 
+   round(1) %>% 
+   prettyNum(",")
+ 
+ van_rev_per_listing <- 
+   national_comparison %>% 
+   filter(city == "Vancouver") %>% 
+   pull(revenue_per_listing) %>% 
+   round(-2) %>% 
+   scales::dollar()
+ 
+ to_rev_per_listing <- 
+   national_comparison %>% 
+   filter(city == "Toronto") %>% 
+   pull(revenue_per_listing) %>% 
+   round(-2) %>% 
+   scales::dollar()
+ 
+van_rev_yoy <- 
+  national_comparison %>% 
+  filter(city == "Vancouver") %>% 
+  pull(YOY_revenue) %>% 
+  scales::percent(0.1)
+
+mtl_rev_yoy <- 
+  national_comparison %>% 
+  filter(city == "Montreal") %>% 
+  pull(YOY_revenue) %>% 
+  scales::percent(0.1)
 
 ```
 
-In 2020, Toronto had the largest STR market in the country by both active listing numbers (`r avg_listings_active`) and host revenue (`r annual_rev`), followed in both cases by Montreal and Vancouver (Table \@ref(tab:tab-1-3)). However, in relative terms, Vancouver stands considerably ahead of both Toronto and Montreal. Vancouver had the most active listings per 1000 households (r van_active_per_1000 compared to r to_active_per_1000 in Toronto) and the most revenue per listing (r van_rev_per_listing compared to r to_rev_per_listing in Toronto).
+In 2020, Toronto had the largest STR market in the country by both active listing numbers (`r avg_listings_active`) and host revenue (`r annual_rev`), followed in both cases by Montreal and Vancouver (Table \@ref(tab:tab-1-3)). However, in relative terms, Vancouver stands considerably ahead of both Toronto and Montreal. Vancouver had the most active listings per 1000 households (`r van_active_per_1000` compared to `r to_active_per_1000` in Toronto) and the most revenue per listing (`r van_rev_per_listing` compared to `r to_rev_per_listing` in Toronto). The pandemic has hit the STR markets of the ten largest Canadian metropolises differently. Small markets such as Brampton and Hamilton have seen their daily active listings and yearly revenue decrease less than bigger markets. On the other hand, both Montreal and Vancouver have experienced drastic drops in revenue, by `r mtl_rev_yoy` and `r van_rev_yoy` respectively.
 
 ``` {r tab-1-3, include = TRUE}
 
-# library(kableExtra)
-# 
-# national_comparison <- qread(here("output", "national_comparison.qs"),
-#                              nthreads = availableCores())
-# 
-# national_comparison %>% 
-#   transmute(
-#     city, 
-#     active_daily_listings = prettyNum(round(active_daily_listings, -1), ","),
-#     listings_per_1000 = round(listings_per_1000, 1),
-#     revenue = scales::dollar(revenue, 0.1, 1/1000000),
-#     revenue_per_listing = scales::dollar(revenue_per_listing, 100)) %>% 
-#   set_names(c("City", "Active listings", "Listings per 1000 households",
-#               "Annual revenue (million)", "Revenue per listing")) %>% 
-#   kbl(caption = "2019 STR activity in the largest ten Canadian municipalities",
-#       align = "lrrrr") %>%
-#   kable_styling(latex_options="scale_down") %>%
-#   row_spec(9, background = paste0(col_palette[2], "50"))
+ library(kableExtra)
+ 
+ national_comparison <- qread(here("output", "national_comparison.qs"),
+                              nthreads = availableCores())
+
+national_comparison %>% 
+     transmute(
+       city, 
+       active_daily_listings = prettyNum(round(active_daily_listings, -1), ","),
+       listings_per_1000 = round(listings_per_1000, 1),
+       revenue = scales::dollar(revenue, 0.1, 1/1000000),
+       revenue_per_listing = scales::dollar(revenue_per_listing, 100),
+       YOY_active_listings = scales::percent(YOY_active_listings, , accuracy = 0.1),
+       YOY_revenue = scales::percent(YOY_revenue, accuracy = 0.1)) %>% 
+     set_names(c("City", "Active listings", "Listings per 1000 households",
+               "Annual revenue (million)", "Revenue per listing", 
+               "YOY change in active listings", "YOY change in revenue")) %>% 
+   kbl(caption = "2020 STR activity in the largest ten Canadian municipalities",
+       align = "lrrrr") %>%
+   kable_styling(latex_options="scale_down") %>%
+   row_spec(9, background = paste0(col_palette[2], "50"))
   
 ```
 

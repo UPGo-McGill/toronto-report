@@ -17,7 +17,15 @@ source("R/01_startup.R")
 # Load data ---------------------------------------------------------------
 
 qload("output/str_processed.qsm", nthreads = availableCores())
+load("output/national_comparison.Rdata")
 
+national_comparison_2019 <- 
+  national_comparison %>% 
+  rename(active_daily_listings_2019=active_daily_listings,
+         revenue_2019=revenue) %>% 
+  select(-listings_per_1000, -revenue_per_listing)
+
+rm(national_comparison)
 
 # Get geometries for 10 biggest cities ------------------------------------
 
@@ -98,6 +106,13 @@ national_comparison <-
 national_comparison <-
   national_comparison %>%
   mutate(revenue_per_listing = revenue / active_daily_listings)
+
+national_comparison <- 
+  national_comparison %>% 
+  left_join(., national_comparison_2019, by = "city") %>% 
+  mutate(YOY_active_listings = (active_daily_listings-active_daily_listings_2019)/active_daily_listings_2019,
+         YOY_revenue = (revenue-revenue_2019)/revenue_2019) %>% 
+  select(-revenue_2019, -active_daily_listings_2019)
 
 
 # Save output -------------------------------------------------------------

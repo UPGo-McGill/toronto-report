@@ -11,7 +11,7 @@
 ```{r setup, include = FALSE, echo = FALSE}
 
 ###### for max to be able to knit
-if(memory.limit()< 20000) {memory.limit(size = 48000)}
+if (memory.limit() < 20000) {memory.limit(size = 48000)}
 ####
 
 library(here)
@@ -238,7 +238,7 @@ rm(property, daily, GH)
 
 ```
 
-**Short-term rentals removed `r housing_loss_2020` housing units from Toronto’s long-term market in 2020 — a decrease of `r housing_loss_change` from 2019. The Covid-19 pandemic has reduced the number of dedicated STRs in Toronto by `r housing_loss_change_absolute` units compared to the year before. Almost two thirds of all entire-home listings and four in ten private-room listings are dedicated STRs. In the Spadina-Fort York area, `r housing_loss_pct_spadina` of all housing has been converted to dedicated STRs, while the figure is `r housing_loss_pct_university` in University-Rosedale and `r housing_loss_pct_centre` in Toronto Centre. Between 2015 and 2019, STRs have been responsible for a 2.1% increase in average monthly rent, and the average renter household in Toronto has paid an additional $1,390 in rent because of the impact of STRs.**
+**Prior to the Covid-19 pandemic, there were TKTK housing units operating as dedicated STRs in Toronto. Almost two thirds of all entire-home listings and four in ten private-room listings were dedicated STRs. Because of the general collapse of STR activity in 2020, the number of dedicated STRs has fallen by `r housing_loss_change` to `r housing_loss_2020`. In the Spadina-Fort York area, `r housing_loss_pct_spadina` of all housing was operating as dedicated STRs at the end of 2020, despite the pandemic, while the figure was `r housing_loss_pct_university` in University-Rosedale and `r housing_loss_pct_centre` in Toronto Centre.**
 
 <br>
 
@@ -306,7 +306,6 @@ rm(property, daily, GH)
 
 ```
 
-
 ``` {r make_fig_2_1}
 
 figure_2_1_fun <- function(regular = "", condensed = "") {
@@ -353,7 +352,7 @@ if (build_figures) {
 
 ```
 
-At the end of 2020, there were `r FREH_2020` FREH listings in the City of Toronto, and `r GH_2020` more housing units which were operating as ghost hostels. In total, therefore, short-term rentals removed `r housing_loss_2020` housing units from Toronto’s long-term market last year (Figure \@ref(fig:fig-2-1)). Notably, while the number of active daily listings declined by `r active_yoy_listings` over 2020, the number of housing units which STRs took off of Toronto’s housing market decreased at a much sharper rate. There were `r housing_loss_change` fewer dedicated STRs in 2020 compared to 2019, from `r housing_loss_2019` to `r housing_loss_2020`. This high decline rate in commercially-operated STRs reflects that the pandemic has disproportionately affected commercial operators in the City.
+At the end of 2020, there were `r FREH_2020` FREH listings in the City of Toronto, and `r GH_2020` more housing units which were operating as ghost hostels. In total, therefore, short-term rentals were taking `r housing_loss_2020` housing units off of Toronto’s long-term market at the end of the year (Figure \@ref(fig:fig-2-1)). Notably, while the number of active daily listings declined by `r active_yoy_listings` over 2020, the number of housing units which STRs took off of Toronto’s housing market decreased at a much sharper rate. There were `r housing_loss_change` fewer dedicated STRs in 2020 compared to 2019, from `r housing_loss_2019` to `r housing_loss_2020`. This high decline in commercially-operated STRs reflects that the pandemic has disproportionately affected commercial operators in the City.
 
 
 ``` {r fig-2-1, include = TRUE, fig.cap = '(ref:fig-2-1)', fig.align = "center"}
@@ -467,7 +466,8 @@ if (build_figures) {
 
 ```
 
-Combined with the falling numbers of listings contributing to housing loss is the decreasing proportion of STRs out of all active listings which are either FREH or ghosts hostels in 2020. At the end of 2020 only a quarter (`r eh_housing_loss`) of entire-home listings and less than half of (`r pr_housing_loss`) private-room listings were taking housing off the market in Toronto (Figure \@ref(fig:fig-2-2)). In 2019, two thirds of entire-home listings (`r eh_housing_loss_2019`) and half (`r pr_housing_loss_2019`) of the private-room listings contributed to housing loss. It is interesting to note that the proportion of entire-home listings contributing to housing loss has decreased to even lower levels than that of 2016 (`r eh_housing_loss_2016`) thanks to the pandemic.
+In 2019, two thirds of entire-home listings (`r eh_housing_loss_2019`) and half (`r pr_housing_loss_2019`) of the private-room listings were taking housing off the long-term market. At the end of 2020 only a quarter (`r eh_housing_loss`) of entire-home listings and less than half of (`r pr_housing_loss`) private-room listings were being operated in a full-time or close-to-full-time fashion (Figure \@ref(fig:fig-2-2)). This does not mean that these listings are no longer dedicated STRs—a possibility we explore below—since they could still be operating full-time but simply not receiving many reservations due to Covid travel restrictions. Table \@ref(tab:tab-2-1) summarizes STR-induced housing loss patterns by neighbourhood. It demonstrates that the City-wide trend of shrinking dedicated STRs due to the pandemic holds in all neighbourhoods. The year-over-year decline in STR-induced housing loss has been evenly distributed between virtually all wards, with an average of -59.3%. The following section takes a closer look at the impact of Covid-19 on frequently rented entire-home listings.
+
 
 ``` {r fig-2-2, include = TRUE, fig.cap = '(ref:fig-2-2)', fig.align = "center"}
 
@@ -476,8 +476,6 @@ figure_2_2_fun()
 ```
 
 (ref:fig-2-2) _The percentage of active STR listings contributing to housing loss each day in Toronto (14-day average)_
-
-Table \@ref(tab:tab-2-1) summarizes STR-induced housing loss patterns by neighbourhood. It demonstrates that the City-wide trend of shrinking housing loss due to the pandemic holds in all neighbourhoods. Also, year-over-year decline of housing loss has been evenly distributed between virtually all wards, with an average of -59.3%. The following section takes a closer look at the impact of Covid-19 on frequently rented entire-home listings.
 
 ``` {r tab-2-1, include = TRUE}
 
@@ -589,7 +587,7 @@ if (build_figures) {
 
 ```
 
-The `r housing_loss_2020` housing units taken off of Toronto’s housing market in 2020 are `r housing_loss_pct_dwelling` of the total amount of housing in the city, and this housing loss has been concentrated in small parts of the city. Figure \@ref(fig:fig-2-3) shows the proportion of each ward or dissemination area’s housing stock which was operated as a dedicated short-term rental as of the end of 2020. The maps show a tale of two cities: in most of Toronto, there are relatively few dedicated STRs, while in the center of the city as well as a few transit corridors, they are ubiquitous. In the Spadina-Fort York ward, `r housing_loss_pct_spadina` of all housing units have been converted to dedicated STRs. The figure is `r housing_loss_pct_university` for University-Rosedale and `r housing_loss_pct_centre` for Toronto Centre. In the Downtown CMHC zone, the rental vacancy rate was `r downtown_spadina` in 2019, while the number of STRs contributing to housing loss in the Spadina-Fort York in 2019 was `r housing_loss_pct_spadina_2019`. This means that there were slightly more dedicated STRs in this neighbourhood than there were vacant apartments for rent. (2020 rental vacancy rates numbers were not yet available at the time of analysis.)
+The `r housing_loss_2020` housing units taken off of Toronto’s housing market in 2020 are `r housing_loss_pct_dwelling` of the total amount of housing in the city, and this housing loss has been concentrated in small parts of the city. Figure \@ref(fig:fig-2-3) shows the proportion of each ward or dissemination area’s housing stock which was operated as a dedicated short-term rental as of the end of 2020. The maps show a tale of two cities: in most of Toronto, there are relatively few dedicated STRs, while in the center of the city as well as a few transit corridors, they are ubiquitous. In the Spadina-Fort York ward, `r housing_loss_pct_spadina` of all housing units were operating as dedicated STRs at the end of 2020, even in the face of Covid-19. The figure is `r housing_loss_pct_university` for University-Rosedale and `r housing_loss_pct_centre` for Toronto Centre. In the Downtown CMHC zone, the rental vacancy rate was `r downtown_spadina` in 2019, while the number of STRs contributing to housing loss in the Spadina-Fort York in 2019 was `r housing_loss_pct_spadina_2019`. This means that there were slightly more dedicated STRs in this neighbourhood than there were vacant apartments for rent. (2020 rental vacancy rates numbers were not yet available at the time of analysis.)
 
 ``` {r fig-2-3, include = TRUE, fig.cap = '(ref:fig-2-3)', fig.align = "center"}
 
@@ -1047,9 +1045,9 @@ rm(property, daily, GH)
 
 ```
 
-According to the FREH model, the number of housing units in Toronto lost due to commercial STRs reached its all-time peak (`r peak_housing_loss`) at the end of 2019. Most of these (`r peak_FREH`) were FREH listings, with the remainder (`r peak_GH`) being ghost hostels—clusters of private-room listings operated out of a single housing unit. During the fall of 2020, the number of FREH listings had dropped to its lowest amount since we began tracking it in 2016, with just `r oct_2020_housing_loss` listings in October displaying availability and reservations consistent with historical patterns of full-time STR activity in Toronto.
+The number of housing units in Toronto lost due to commercial STRs reached its all-time peak (`r peak_housing_loss`) at the end of 2019. Most of these (`r peak_FREH`) were FREH listings, with the remainder (`r peak_GH`) being ghost hostels—clusters of private-room listings operated out of a single housing unit. During the fall of 2020, the number of FREH listings had dropped to its lowest amount since we began tracking it in 2016, with just `r oct_2020_housing_loss` listings in October displaying availability and reservations consistent with historical patterns of full-time STR activity in Toronto.
 
-One possibility is that these formerly FREH listings are no longer operating as STRs, either permanently (the listings were deactivated) or temporarily (the listings were blocked from receiving reservations). Under this possibility the listings may have been returned to the longer-term rental market. Another possibility is that the listings have remained open for business as short-term rentals, but the dramatically decreased demand for tourist accommodations means that the listings have not received the level of reservations which our model expects in order to classify the listings as frequently rented.
+One possibility is that these formerly FREH listings are no longer operating as STRs, either permanently (the listings were deactivated) or temporarily (the listings were blocked from receiving reservations). Under this possibility the listings may have been returned to the longer-term rental market. Another possibility is that the listings have remained open for business as short-term rentals, but the dramatically decreased demand for tourist accommodations means that the listings have not received the level of reservations which our statistical model expects in order to classify the listings as frequently rented.
 
 ``` {r make_fig_2_4}
 
@@ -1096,7 +1094,7 @@ figure_2_4_fun()
 
 (ref:fig-2-4) _Activity trajectories of FREH and non-FREH listings in 2019 and 2020_
 
-Of the `r jan_feb_FREH_active` FREH listings which remained listed throughout March - December, `r jan_feb_FREH_blocked_all` (`r jan_feb_FREH_blocked_all_pct`) were blocked (i.e. not available for reservations) for all of the month of December, and `r jan_feb_FREH_blocked_maj` (`r jan_feb_FREH_blocked_maj_pct`) were blocked for a majority of the month. This is extremely rare behaviour for a dedicated STR listing, since it is usually one of the busiest months for tourist accommodations in Toronto. In 2019, only `r jan_feb_FREH_blocked_all_pct_2019` of listings which were FREH in January or February were blocked for all of December, and only `r jan_feb_FREH_blocked_maj_pct_2019` were blocked for a majority of the month.
+Of the `r jan_feb_FREH_active` FREH listings which remained listed throughout March - December, `r jan_feb_FREH_blocked_all` (`r jan_feb_FREH_blocked_all_pct`) were blocked (i.e. not available for reservations) for all of the month of December, and `r jan_feb_FREH_blocked_maj` (`r jan_feb_FREH_blocked_maj_pct`) were blocked for a majority of the month. This is extremely rare behaviour for a dedicated STR listing, since December is usually one of the busiest months for tourist accommodations in Toronto. In 2019, only `r jan_feb_FREH_blocked_all_pct_2019` of listings which were FREH in January or February were blocked for all of December, and only `r jan_feb_FREH_blocked_maj_pct_2019` were blocked for a majority of the month.
 
 ``` {r make_fig_2_5}
 
@@ -1168,289 +1166,5 @@ figure_2_5_fun()
 (ref:fig-2-5) _The total number of reservations per day (L) and the average reservations per listing per month (R), for listings which had FREH status in January or February 2020 and listings which did not (14-day average)_
 
 The conclusion is that, while the entire STR market in Toronto has suffered an unprecedented collapse during the Covid-19 pandemic, this collapse has been disproportionately concentrated among dedicated STRs which have been responsible for thousands of units of rental housing lost in the city over the past several years. This raises the possibility that some of these units many have returned to the long-term rental market—a possibility that has been noted anecdotally in cities across Canada (McSheffrey 2020). We explore this possibility systematically in the next chapter.
-
-## The impact of STRs on rental housing supply and vacancy rates
-
-```{r para_4, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
-
-qload(here("output", "str_processed.qsm"), nthreads = availableCores())
-qload(here("output", "cmhc.qsm"), nthreads = availableCores())
-
-# 2019 city vacancy
-city_vacancy_2019 <- 
-  city_vacancy %>% 
-  filter(bedroom == "Total", date == 2019) %>% 
-  pull(vacancy) %>% 
-  scales::percent(0.1)
-
-# Highest zone vacancy
-highest_vacancy_zone <- 
-  annual_vacancy %>% 
-  filter(date == 2019, dwelling_type == "Total", bedroom == "Total", 
-         quality == "a") %>% 
-  filter(vacancy == max(vacancy)) %>% 
-  pull(zone_name)
-
-# Highest zone vacancy rate
-highest_vacancy_zone_rate <- 
-  annual_vacancy %>% 
-  filter(date == 2019, dwelling_type == "Total", bedroom == "Total", 
-         quality == "a") %>% 
-  filter(vacancy == max(vacancy)) %>% 
-  pull(vacancy) %>% 
-  scales::percent(0.1)
-
-# Highest zone vacancy rental units
-highest_vacancy_zone_apts <- 
-  annual_units %>% 
-  filter(zone_name == highest_vacancy_zone, 
-         date == 2019, dwelling_type == "Total", 
-         bedroom == "Total") %>% 
-  pull(units) %>%
-  round(-2) %>% 
-  prettyNum(",")
-
-# Highest zone vacancy vacant rental units
-highest_vacancy_zone_vac_apts <- 
-  annual_units %>% 
-  filter(zone_name == highest_vacancy_zone, 
-         date == 2019, dwelling_type == "Total", 
-         bedroom == "Total") %>% 
-  pull(units) %>%
-  {. * parse_number(highest_vacancy_zone_rate) / 100} %>% 
-  round(-2) %>% 
-  prettyNum(",")
-
-# 3+ bedroom vacancy rate Toronto central
-toronto_central_vac_3_bed <- 
-  annual_vacancy %>% 
-  filter(zone_name == "Toronto (Central)", date == 2019, dwelling_type == "Total",
-         bedroom == "3 Bedroom +") %>% 
-  pull(vacancy) %>% 
-  scales::percent(0.1)
-
-# Toronto West renter %
-toronto_west_renters_pct <- 
-  cmhc %>% 
-  as_tibble() %>% 
-  select(-geometry) %>% 
-  mutate(p_renter = renter_households / total_households) %>% 
-  select(zone_name, p_renter) %>% 
-  filter(zone_name == "Toronto (West)") %>% 
-  pull(p_renter) %>% 
-  scales::percent(0.1)
-
-# Toronto West owner %
-toronto_west_owners_pct <- 
-  cmhc %>% 
-  as_tibble() %>% 
-  select(-geometry) %>% 
-  mutate(p_renter = renter_households / total_households) %>% 
-  select(zone_name, p_renter) %>% 
-  filter(zone_name == "Toronto (West)") %>% 
-  pull(p_renter) %>% 
-  {1 - .} %>% 
-  scales::percent(0.1)
-
-# Calculations for figure
-renter_zone <- 
-  cmhc %>% 
-  as_tibble() %>% 
-  select(-geometry) %>% 
-  mutate(p_renter = renter_households / total_households) %>% 
-  select(zone, p_renter)
-
-daily_cmhc <- 
-  property %>% 
-  st_intersection(cmhc) %>% 
-  st_drop_geometry() %>% 
-  select(property_ID, zone) %>% 
-  left_join(daily, .) %>% 
-  filter(housing, date %in% as.Date(c("2019-12-01", "2019-12-31", "2018-12-01",
-                                      "2018-12-31"))) %>% 
-  mutate(FREH_3 = if_else(substr(date, 9, 9) == 0, FREH_3, 0),
-         GH     = if_else(substr(date, 9, 9) == 3, GH, FALSE)) %>% 
-  mutate(date = as.integer(substr(date, 1, 4))) %>% 
-  group_by(zone, date) %>% 
-  summarize(housing_loss = sum(FREH_3) + sum(GH)) %>% 
-  ungroup()
-
-strs_by_zone <- 
-  property %>% 
-  st_intersection(cmhc) %>% 
-  st_drop_geometry() %>% 
-  select(property_ID, zone) %>% 
-  left_join(daily, .) %>% 
-  filter(housing, date >= start_2019, date <= end_2019, 
-         status != "B") %>% 
-  count(zone) %>% 
-  mutate(active_strs = n / 365)
-
-unit_change <-
-  annual_units %>% 
-  filter(dwelling_type == "Total", bedroom == "Total") %>% 
-  arrange(desc(date)) %>% 
-  distinct(date, zone_name, .keep_all = TRUE) %>% 
-  inner_join(daily_cmhc) %>% 
-  left_join(renter_zone) %>%
-  mutate(housing_loss = housing_loss * p_renter) %>%
-  group_by(zone) %>% 
-  summarize(unit_change = units[date == 2019] - units[date == 2018],
-            housing_loss_change = housing_loss[date == 2019] - 
-              housing_loss[date == 2018]) %>% 
-  mutate(net_unit_change = unit_change - housing_loss_change) %>% 
-  left_join(strs_by_zone) %>% 
-  arrange(-active_strs) %>% 
-  slice(1:10) %>% 
-  left_join(st_drop_geometry(cmhc)) %>% 
-  select(zone, zone_name, unit_change:net_unit_change)
-
-total_unit_change <- 
-  sum(unit_change$unit_change) %>% 
-  round(-1)
-
-# Vacancy calculations for map
-vacancy_for_map <-
-  annual_vacancy %>% 
-  filter(dwelling_type == "Total", bedroom == "Total", !is.na(vacancy),
-         quality == "a") %>% 
-  group_by(zone) %>% 
-  filter(date == max(date)) %>% 
-  ungroup() %>% 
-  left_join(cmhc) %>% 
-  mutate(vacant_units = vacancy * renter_households) %>% 
-  left_join(select(filter(daily_cmhc, date == 2019), zone, housing_loss)) %>% 
-  left_join(renter_zone) %>% 
-  filter(housing_loss >= 50) %>% 
-  arrange(zone) %>% 
-  mutate(units_returning = housing_loss * p_renter,
-         new_vacant = vacant_units + units_returning,
-         new_vacancy = new_vacant / renter_households) %>% 
-  select(zone, zone_name, vacancy, new_vacancy, geometry) %>% 
-  rename(`Current vacancy rate` = vacancy, 
-         `Dedicated STRs back to market` = new_vacancy) %>% 
-  pivot_longer(-c(zone, zone_name, geometry), names_to = "status",
-               values_to = "vacancy") %>% 
-  st_as_sf()
-
-
-rm(property, daily, GH, annual_avg_rent, annual_units, annual_vacancy, 
-   city_avg_rent, city_units, city_vacancy, cmhc)
-
-```
-
-In 2019, the City of Toronto’s rental vacancy rate stood at only `r city_vacancy_2019`—a crisis-level rate, albeit slightly higher than the previous few years. The standard rule of thumb is that a healthy rental market should have a vacancy rate of at least 3%, and all 17 of the CMHC's zones in Toronto are substantially below that. `r highest_vacancy_zone` has the highest vacancy rate at only `r highest_vacancy_zone_rate`, which means that, of the zone’s approximately `r highest_vacancy_zone_apts` rental apartments, fewer than `r highest_vacancy_zone_vac_apts` were available to be rented by prospective tenants in October 2019, when CMHC’s survey was conducted. In general, vacancy rates are even lower for family-sized housing units (defined by CMHC as units with two or more bedrooms). For example, the vacancy rate for units with three or more bedrooms was `r toronto_central_vac_3_bed` for the Toronto Central zone.
-
-Given the thousands of housing units which we have documented as having been converted to dedicated STRs in Toronto, it is highly likely that the STR market is negatively affecting rental housing supply and the vacancy rate. One way to evaluate this possibility is to compare the net change in rental housing units in an area with the effective reductions in rental housing supply caused by the growth in dedicated STRs. Figure \@ref(fig:fig-2-6) makes this comparison, showing the change in primary rental housing units (i.e. apartments and townhouses, but not condominiums being used as rentals) per CMHC zone between 2018 and 2019, and the effective change in housing units once the impact of STRs taking housing off of the market is factored in. We assume that STR conversions happen in the same proportion as existing tenure arrangements in the neighbourhood. For example, in the Toronto West zone, `r toronto_west_renters_pct` of households are renters, so we assume that `r toronto_west_renters_pct` of housing units converted to dedicated STRs would have been rental housing, and the remaining `r toronto_west_owners_pct` would have been ownership housing. (We also assume CMHC has not removed dedicated STRs from their counts of primary rental units. In principle CMHC would not consider dedicated STRs to be rental units, but the difficulty in identifying dedicated STRs implies that the safest approach is to assume that dedicated STRs remain in the CMHC rental count.)
-
-``` {r make_fig_2_6}
-
-figure_2_6_fun <- function(regular = "", condensed = "") {
-  
-  unit_change %>%
-    mutate(zone_name = factor(zone_name, levels = zone_name)) %>% 
-    select(-zone) %>% 
-    pivot_longer(-zone_name) %>% 
-    filter(name != "housing_loss_change") %>%
-    mutate(name = factor(name, 
-                         levels = c("unit_change", "net_unit_change"))) %>% 
-    ggplot() +
-    geom_col(aes(zone_name, value, fill = name),
-             position = position_dodge(width = 0.5)) +
-    geom_segment(data = unit_change, 
-                 mapping = aes(x = zone_name, xend = zone_name, y = unit_change, 
-                               yend = net_unit_change),
-                 size = 1.2,
-                 arrow = arrow(length = unit(0.3, "cm")),
-                 position = position_nudge(x = -0.125)) +
-    scale_fill_manual(name = NULL, values = col_palette[c(3, 1)], labels = c(
-      "Rental unit change", "Rental unit change with STRs")) +
-    scale_y_continuous(name = NULL, breaks = c(-200, 0, 200, 400, 600)) +
-    scale_x_discrete(name = NULL,
-                     labels = unit_change$zone_name %>% 
-                       str_replace_all("/", "/\n") %>% 
-                       str_replace("east V", "east\nV") %>% 
-                       str_replace("st H", "st\nH")) +
-    theme_minimal() +
-    theme(legend.position = "bottom",
-          text = element_text(family = regular),
-          axis.text.x = element_text(family = regular, size = 7),
-          panel.grid.minor.x = element_blank(),
-          panel.grid.major.x = element_blank())
-
-}
-
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_2_6.pdf"), 
-         plot = figure_2_6_fun("Futura", "Futura Condensed"), 
-         width = 8, height = 5, units = "in", useDingbats = FALSE)
-  
-  extrafont::embed_fonts(here("output", "figures", "figure_2_6.pdf"))
-}
-
-```
-
-Between 2018 and 2019, the City of Toronto as a whole saw an `r total_unit_change`-unit increase, more than half of which occurred in Toronto Central. In a zone like Toronto Central, where there is a high concentration of STR operations and a growth in housing loss, the zone’s net rental housing change is greatly affected by new STR conversions in 2019. In almost every single of the ten selected CMHC zones (shown in Figure \@ref(fig:fig-2-6)), new STR conversions in 2019 either mostly cancelled out new rental housing production, or substantially decreased the net rental housing supply from 2018 to 2019.
-
-``` {r fig-2-6, include = TRUE, fig.cap = '(ref:fig-2-6)', fig.align = "center"}
-
-figure_2_6_fun()
-
-```
-
-(ref:fig-2-6) _Nominal and effective changes in rental housing supply, 2018-2019, by CMHC zone_
-
-``` {r make_fig_2_7}
-
-figure_2_7_fun <- function(regular = "", condensed = "") {
-  
-  vacancy_for_map %>% 
-  mutate(label = scales::percent(vacancy, accuracy = 0.1)) %>% 
-  ggplot() +
-  geom_sf(data = province, colour = "transparent", fill = "grey93") +
-  # geom_sf(data = streets, size = 0.2, colour = "white") +
-  geom_sf(aes(fill = vacancy), colour = "white", alpha = 0.7) +
-  geom_sf_label(aes(label = label), size = 2, family = regular) +
-  scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
-                       na.value = "grey80",
-                       labels = scales::percent)  +
-  guides(fill = guide_colourbar(title = "% housing\nlost to STR",
-                                title.vjust = 1)) + 
-  facet_wrap(vars(status), nrow = 1) +
-  gg_bbox(vacancy_for_map) +
-  theme_void() +
-  theme(legend.position = "none",
-        text = element_text(family = regular, face = "plain"),
-        legend.title = element_text(family = regular, face = "bold",
-                                    size = 7),
-        legend.title.align = 0.9,
-        legend.text = element_text(family = regular, size = 5),
-        strip.text = element_text(family = regular, face = "bold", size = 12),
-        # panel.border = element_rect(colour = "white", size = 2)
-        )
-
-}
-
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_2_7.pdf"), 
-         plot = figure_2_7_fun("Futura", "Futura Condensed"), 
-         width = 8, height = 4.2, units = "in", useDingbats = FALSE)
-  
-  extrafont::embed_fonts(here("output", "figures", "figure_2_7.pdf"))
-}
-
-```
-
-Another way to contextualize the impact of housing units being converted to dedicated STRs is to examine the relationship between the quantity of dedicated STRs and the rental vacancy rate. The left panel of Figure \@ref(fig:fig-2-7) displays the 2019 rental vacancy rate in the 10 CMHC zones with the largest number of active STR listings. The right panel displays a hypothetical vacancy rate if all dedicated STRs returned to the long-term market in these neighbourhoods. As with the calculations of net housing supply changes above, we assume that these units return to the market in the same proportion as existing tenure arrangements in the neighbourhood. The map shows that, in virtually every zone, the number of dedicated STRs is enough to dramatically increase housing supply if they were to be returned to the housing market. In every zone, the vacancy rate could double. 
-
-``` {r fig-2-7, include = TRUE, fig.cap = '(ref:fig-2-7)', fig.align = "center"}
-
-figure_2_7_fun()
-
-```
-
-(ref:fig-2-7) _2019 vacancy rate in the City of Toronto (L), and hypothetical vacancy rate if 2019 dedicated STRs returned to rental market (R), by CMHC zone_
-
-To be clear, in a scenario where thousands of dedicated STRs returned to the long-term market, these units would not actually remain vacant, but would be absorbed into the rental housing supply. Eventually the result would be a combination of lower rents and a vacancy rate lower than depicted in the map but higher than the current vacancy rate. Nevertheless, Figure \@ref(fig:fig-2-7) demonstrates that the number of housing units which have left Toronto’s long-term market to be operated as STRs is sufficient to significantly constrain housing availability in the city, in 2019 levels.
 
 \newpage

@@ -487,6 +487,66 @@ waterfront_match_as_pct_2020 <-
       length()}} %>%
   scales::percent(0.1)
 
+waterfront_match_as_pct_mar <-
+  {{property %>%
+  st_drop_geometry() %>%
+  filter(!is.na(ltr_ID)) %>%
+  count(ward) %>%
+  mutate(pct = n / sum(n)) %>%
+  filter(ward == "Spadina-Fort York") %>%
+  pull(n)} /
+  {daily %>%
+      filter(housing, ward == "Spadina-Fort York", status != "B",
+             date == "2020-03-01") %>%
+      nrow}} %>%
+  scales::percent(0.1)
+
+waterfront_match_as_pct_2020 <-
+  {{property %>%
+    st_drop_geometry() %>%
+    filter(!is.na(ltr_ID)) %>%
+    count(ward) %>%
+    mutate(pct = n / sum(n)) %>%
+  filter(ward == "Spadina-Fort York") %>%
+    pull(n)} /
+  {daily %>%
+      filter(housing, ward == "Spadina-Fort York", status != "B",
+             date >= start_2020) %>%
+      pull(property_ID) %>%
+      unique() %>%
+      length()}} %>%
+  scales::percent(0.1)
+
+toronto_centre_match_as_pct_mar <-
+  {{property %>%
+  st_drop_geometry() %>%
+  filter(!is.na(ltr_ID)) %>%
+  count(ward) %>%
+  mutate(pct = n / sum(n)) %>%
+  filter(ward == "Toronto Centre") %>%
+  pull(n)} /
+  {daily %>%
+      filter(housing, ward == "Toronto Centre", status != "B",
+             date == "2020-03-01") %>%
+      nrow}} %>%
+  scales::percent(0.1)
+
+toronto_centre_match_as_pct_2020 <-
+  {{property %>%
+    st_drop_geometry() %>%
+    filter(!is.na(ltr_ID)) %>%
+    count(ward) %>%
+    mutate(pct = n / sum(n)) %>%
+  filter(ward == "Toronto Centre") %>%
+    pull(n)} /
+  {daily %>%
+      filter(housing, ward == "Toronto Centre", status != "B",
+             date >= start_2020) %>%
+      pull(property_ID) %>%
+      unique() %>%
+      length()}} %>%
+  scales::percent(0.1)
+
 matches_as_pct_of_str <-
   ltr_unique_property_ID %>%
     select(-geometry) %>%
@@ -565,7 +625,7 @@ if (build_figures) {
 
 ```
 
-Out of the `r unique_str_matches` unique STR listings matched to LTR listings in the City of Toronto, nearly half (`r waterfront_str_match_pct`) were located in the Waterfront area, with the remaining matches more evenly split between the other wards. `r toronto_center_str_match_pct` of matches were in the Toronto Centre, following by `r uni_rosedale_match_pct` in University-Rosedale. The rests of the wards were below 6% each. This distribution is distorted compared to general distribution of STR listings in the city: the waterfront is highly over-represented in these matches. When controlling for the density of STR listings, the waterfront is still slightly over-represented with respect to the number of STRs being relisted as long-term rentals. However, other wards have a listing density close to the waterfront’s (Figure \@ref(fig:fig-6-3)). The number of STR listings matched to LTR listings in the waterfront is equivalent to more than a third (`r waterfront_match_as_pct_mar`) of all the STR listings active in the ward on March 1, 2020, and more than a fifth `r waterfront_match_as_pct_2020` of all the listings active in the borough in 2020.
+Out of the `r unique_str_matches` unique STR listings matched to LTR listings in the City of Toronto, nearly half (`r waterfront_str_match_pct`) were located in the Spadina-Fort York ward, with the remaining matches more evenly split between the other wards. `r toronto_center_str_match_pct` of matches were in the Toronto Centre ward, followed by `r uni_rosedale_match_pct` in University-Rosedale. The rest of the wards were below 6% each. This distribution is distorted compared to general distribution of STR listings in the city: Spadina-Fort York is highly over-represented in these matches. When controlling for the density of STR listings, Spadina-Fort York is still slightly over-represented with respect to the number of STRs being relisted as long-term rentals. However, other wards have a listing density close to Spadina-Fort York’s (Figure \@ref(fig:fig-6-3)). The number of STR listings matched to LTR listings in Spadina-Fort York is equivalent to more than a third (`r waterfront_match_as_pct_mar`) of all the STR listings active in the ward on March 1, 2020, and more than a fifth `r waterfront_match_as_pct_2020` of all the listings active in the ward in 2020. In Toronto Centre, the matches found represent `r toronto_centre_match_as_pct_mar` of all active STR listings on March 1, and `r waterfront_match_as_pct_2020` of all active listings in 2020.
 
 ``` {r fig-6-3, include = TRUE, fig.cap = '(ref:fig-6-3)', fig.align = "center"}
 

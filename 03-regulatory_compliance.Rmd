@@ -28,7 +28,7 @@ build_figures <- FALSE
 
 ```
 
-**Since the beginning of 2021, the percentage of STR listings operating with valid STR licenses increased consistently, from XX% on January 7th to 77.0% on January 28th. Among active active listings at the end of January 2021, 9.9% were operating with a valid license, 7.3% used a valid license for multiple listings, 79.2% displayed no licenses and listings that were either exempt or using a fake license amountd to less than 2% respectively. FREH listings have the highest rate of valid licenses (27.9%) among listing categories. Multilistings have the highest rate of duplicate licenses (17.7%). In total, 10.6% of active entire-home listings displayed a license number used by at least one other active entire-home listing, suggesting that license numbers are being shared in violation of the regulations. Non-conforming listings are concentrated in and around the Spadina Fort-York ward; however, Willowdale is the ward with the highest percentage of non-conforming listings (94.0%). Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019.**
+**Since the beginning of 2021, the percentage of STR listings operating with valid STR licenses increased consistently, from XX% on January 7th to XX% on February 5th. Among active active listings at the beginning of February, XX% were operating with a valid license, XX% used a valid license for multiple listings, XX% displayed no licenses and listings that were either exempt or using a fake license amounted to less than X% respectively. FREH listings have the highest rate of valid licenses (27.9%) among listing categories. Multilistings have the highest rate of duplicate licenses (17.7%). In total, 10.6% of active entire-home listings displayed a license number used by at least one other active entire-home listing, suggesting that license numbers are being shared in violation of the regulations. Non-conforming listings are concentrated in and around the Spadina Fort-York ward; however, Willowdale is the ward with the highest percentage of non-conforming listings (94.0%). Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019.**
 
 ## How many listings have licenses?
 
@@ -39,7 +39,7 @@ qload(here("output", "geometry.qsm"), nthreads = availableCores())
 qload(here("output", "regulation.qsm"), nthreads = availableCores())
 
 january_listings <- 
-  reg_4 %>% 
+  reg_5 %>% 
   select(property_ID, registration, registration_analyzed, postal_code) %>% 
   left_join(., property, by = "property_ID") %>% 
   st_as_sf()
@@ -69,7 +69,13 @@ table_4 <-
   summarize(n=n(), percentage = n()/nrow(reg_4)) %>% 
   mutate(date = as.Date("2021-01-26"))
 
-table <- rbind(table_1, table_2, table_3, table_4)
+table_5 <- 
+  reg_5 %>% 
+  group_by(registration_analyzed) %>% 
+  summarize(n=n(), percentage = n()/nrow(reg_5)) %>% 
+  mutate(date = as.Date("2021-02-05"))
+
+table <- rbind(table_1, table_2, table_3, table_4, table_5)
 
 # listings removed between scrape 2 and 3
 listings_removed_jan_15 <- 
@@ -94,12 +100,12 @@ active_listings_jan_07 <-
   round(digit = -1) %>% 
   prettyNum(",")
 
-# active listings on January 26th
-active_listings_jan_26 <- 
+# active listings on February 5th
+active_listings_feb_5 <- 
   table_total %>%
   group_by(date) %>% 
   summarize(n=sum(n)) %>% 
-  filter(date == "2021-01-26") %>% 
+  filter(date == "2021-02-05") %>% 
   pull(n) %>% 
   round(digit = -1) %>% 
   prettyNum(",")
@@ -126,22 +132,22 @@ conform_listings_jan_7_perc <-
   round(3) %>% 
   scales::percent(0.1)
 
-conform_listings_jan_26 <- 
+conform_listings_feb_5 <- 
   table %>% 
-  filter(date == "2021-01-26", registration_analyzed == "Conform") %>% 
+  filter(date == "2021-02-05", registration_analyzed == "Conform") %>% 
   pull(n) %>%
   round(digit = -1) %>% 
   prettyNum(",")
 
-conform_listings_jan_26_perc <- 
+conform_listings_feb_5_perc <- 
   table %>% 
-  filter(date == "2021-01-26", registration_analyzed == "Conform") %>% 
+  filter(date == "2021-02-05", registration_analyzed == "Conform") %>% 
   pull(percentage) %>%
   round(3) %>% 
   scales::percent(0.1)
 
 increase_conform_listings <- 
-  ((table %>% filter(date == "2021-01-26", registration_analyzed == "Conform") %>% pull(n))-
+  ((table %>% filter(date == "2021-02-05", registration_analyzed == "Conform") %>% pull(n))-
   (table %>% filter(date == "2021-01-07", registration_analyzed == "Conform") %>% pull(n))) %>% 
   round(digit = -1) %>% 
   prettyNum(",")
@@ -150,7 +156,7 @@ rm(property, daily, GH)
 
 ```
 
-As of the first of January 2021, all STR operators in Toronto are required to have a municipal license. This means that all listings displayed on Airbnb (with the exception of properties rented exclusively for 30 days at a time or longer, and hotels and other tourist accommodations which are regulated separately) must have a license. Following the announcement of the coming into effect of the by-law, Airbnb's biggest competitor - VRBO - pulled out of the Toronto market. For listings currently operating in Toronto, license numbers are publicly displayed, and below we compare listing activity with license status. Our team scraped the Airbnb website on five occassions during the month of January 2021 to assess the impact of the new STR by-law on active listing and by listing type (entire-home listings, private rooms, FREH and multilistings). We have connected those scrapes with the City's Short-Term License database (available on Open Data), as well as with AirDNA's dataset until the end of 2020. 
+As of the first of January 2021, all STR operators in Toronto are required to have a municipal license. This means that all listings displayed on Airbnb (with the exception of properties rented exclusively for 30 days at a time or longer, and hotels and other tourist accommodations which are regulated separately) must have a license. Following the announcement of the coming into effect of the by-law, Airbnb's biggest competitor - VRBO - pulled out of the Toronto market. For listings currently operating in Toronto, license numbers are publicly displayed, and below we compare listing activity with license status. Our team scraped the Airbnb website on foue occassions during the month of January 2021 and once at the beginning of February to assess the impact of the new STR by-law on active listing and by listing type (entire-home listings, private rooms, FREH and multilistings). We have connected those scrapes with the City's Short-Term License database (available on Open Data), as well as with AirDNA's dataset until the end of 2020. 
 
 ``` {r make_fig_3_1}
 
@@ -176,7 +182,7 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-3-1) shows the total number of active listings that were displayed on the Airbnb platform during the month of January. Between January 10th and 15th, there were `r listings_removed_jan_15` listings displaying no license that were removed, being most likely a mass removal from Airbnb. Since the beginning of January 2021, the number of active listings have been declining, going from `r active_listings_jan_07` on January 7th to `r active_listings_jan_26` on January 26th. 
+Figure \@ref(fig:fig-3-1) shows the total number of active listings that were displayed on the Airbnb platform during the month of January. Between January 10th and 15th, there were `r listings_removed_jan_15` listings displaying no license that were removed, being most likely a mass removal from Airbnb. Since the beginning of January 2021, the number of active listings have been declining, going from `r active_listings_jan_07` on January 7th to `r active_listings_feb_5` on February 5th. 
 
 ``` {r fig-3-1, include = TRUE, fig.cap = '(ref:fig-3-1)', fig.align = "center"}
 
@@ -246,7 +252,7 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-3-2) shows the repartition of active listings by conformity status (the left figure filters out the listings without license for increased visibility). Throughout the month of January, there has been a decline in the percentage of listings displaying no license information, accompanied by an increase of listings displaying license information. On January 7th, `r conform_listings_jan_7` listings were conform to the regulation. As soon as January 26th, `r conform_listings_jan_26_perc` of all active listings were conforming to the STR regulation (an increase of `r increase_conform_listings`). The number of active listings using conform licenses but for multiple listings increased by the same rate.
+Figure \@ref(fig:fig-3-2) shows the repartition of active listings by conformity status (the left figure filters out the listings without license for increased visibility). Throughout the month of January, there has been a decline in the percentage of listings displaying no license information, accompanied by an increase of listings displaying license information. On January 7th, `r conform_listings_jan_7` listings were conform to the regulation. As soon as February 5th, `r conform_listings_feb_5_perc` of all active listings were conforming to the STR regulation (an increase of `r increase_conform_listings`). The number of active listings using conform licenses but for multiple listings increased by the same rate.
 
 ``` {r fig-3-2, include = TRUE, fig.cap = '(ref:fig-3-1)', fig.align = "center"}
 
@@ -265,7 +271,7 @@ qload(here("output", "geometry.qsm"), nthreads = availableCores())
 qload(here("output", "regulation.qsm"), nthreads = availableCores())
 
 january_listings <- 
-  reg_4 %>% 
+  reg_5 %>% 
   select(property_ID, registration, registration_analyzed, postal_code) %>% 
   left_join(., property, by = "property_ID") %>% 
   st_as_sf()
@@ -436,7 +442,7 @@ rm(property, daily, GH)
 ```
 
 
-In order to analyze the evolution of regulatory compliance among currently active listings, we scraped all Toronto listings that were active on the Airbnb website at the beginning of January 2021 and recorded the license number displayed on each listing. We scraped on multiple occasions throughout the month to look at the evolution of registration compliance among active listings.
+In order to analyze the evolution of regulatory compliance among currently active listings, we scraped all Toronto listings that were active on the Airbnb website at the beginning of January 2021 and recorded the license number displayed on each listing. We scraped on multiple occasions throughout the month and the first week of February to look at the evolution of registration compliance among active listings.
 
 ``` {r make_fig_3_3}
 
@@ -536,7 +542,7 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-3-3) shows the `r scraped_number` active listings that displayed on January 26th when we performed our fourth scrape of license numbers. The top row (A) organizes listings by their license status. Out of the total `r scraped_number` listings, `r valid_pct` had a valid license, which is a 3-point percentage increase since our first scrape on January 7th. A further `r exempt_pct` claimed to be exempt, and `r duplicates_pct` had a city-issued license, but used this license for multiple listings at the same time. This leaves `r problem_pct` of listings which either had a fake license number (an entry which was in the proper format but which did not correspond to an actual license number issued by the City) or no license number at all. FREH listings (either FREH listings or multilistings) are over-represented among listings which have valid licenses and listings using a fake license; multilistings were the ones where there were the most duplicates licenses used; while listings that are neither FREH or multilistings and listings that were displayed on Airbnb but did not receive any activity since October were disproportionately likely to be listings without any license information.
+Figure \@ref(fig:fig-3-3) shows the `r scraped_number` active listings that displayed on February 5th when we performed our fifth scrape of license numbers. The top row (A) organizes listings by their license status. Out of the total `r scraped_number` listings, `r valid_pct` had a valid license, which is a 3-point percentage increase since our first scrape on January 7th. A further `r exempt_pct` claimed to be exempt, and `r duplicates_pct` had a city-issued license, but used this license for multiple listings at the same time. This leaves `r problem_pct` of listings which either had a fake license number (an entry which was in the proper format but which did not correspond to an actual license number issued by the City) or no license number at all. FREH listings (either FREH listings or multilistings) are over-represented among listings which have valid licenses and listings using a fake license; multilistings were the ones where there were the most duplicates licenses used; while listings that are neither FREH or multilistings and listings that were displayed on Airbnb but did not receive any activity since October were disproportionately likely to be listings without any license information.
 
 ``` {r fig-3-3, include = TRUE, fig.cap = '(ref:fig-3-3)', fig.align = "center"}
 
@@ -546,7 +552,7 @@ figure_3_3_fun()
 
 (ref:fig-3-3) _License status and listing status (in December 2020) for listings displayed on Airbnb in end of January 2021_
 
-The bottom row (B) of Figure \@ref(fig:fig-3-3) organizes listings by their activity status on Airbnb in the month of October 2020. It demonstrates that FREH listings are the only category of listings where a significant proportion (`r freh_valid_pct`) had valid licenses. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's regulation, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings and `r pr_multiple_license` (`r pr_multiple_license_pct`) of active private room listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. 
+The bottom row (B) of Figure \@ref(fig:fig-3-3) organizes listings by their activity status on Airbnb in the month of December 2020. It demonstrates that FREH listings are the only category of listings where a significant proportion (`r freh_valid_pct`) had valid licenses. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's regulation, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings and `r pr_multiple_license` (`r pr_multiple_license_pct`) of active private room listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. 
 
 ## Geographic distribution of non-conforming listings
 
@@ -779,7 +785,7 @@ rm(property, daily, GH)
 
 ```
 
-How does registration conformity impact business in the short-term rental market? We analyzed reservation, availability and revenue patterns of all active entire-home listings to understand the relationship between displaying a valid license number and STR activity. Table \@ref(tab:tab-license) summarizes this information. Entire-home listings with valid licenses have significantly higher reservation rates (`r valid_r_pct`) than listings with no displayed licenses (`r no_license_r_pct`). Listings that acquired licenses also earned more revenue per night since the start of 2019 and since the onset of the Covid-19 pandemic. Nevertheless, it is the listings that proclaim that they are exempt from the regulation that have earned more during both time periods (with a nightly average revenue of `r exempt_rev` during the pandemic). Among listings which are not conform, it is listings with fake license numbers (i.e. numbers which follow the correct STR-####-ABCDEF format but do not correspond to a number actually issued by the City) which have been reserved the most on average (`r fake_r_pct`), and the second highest earner among all groups (with a nightly revenue of `r fake_rev` during the pandemic). We can thus say that listings that have been more successful - both in terms of revenue and availability - in the past year are the ones most likely to obtain a business license, or to at least display some form of registration information on their listing.
+How does registration conformity impact business in the short-term rental market? We analyzed reservation, availability and revenue patterns of all active entire-home listings to understand the relationship between displaying a valid license number and STR activity. Table \@ref(tab:tab-license) summarizes this information. Entire-home listings with valid licenses have significantly higher reservation rates (`r valid_r_pct`) than listings with no displayed licenses (`r no_license_r_pct`). Listings that acquired licenses also earned more revenue per night since the start of 2020 and since the onset of the Covid-19 pandemic. Nevertheless, it is the listings that proclaim that they are exempt from the regulation that have earned more during both time periods (with a nightly average revenue of `r exempt_rev` during the pandemic). Among listings which are not conform, it is listings with fake license numbers (i.e. numbers which follow the correct STR-####-AAAAAA format but do not correspond to a number actually issued by the City) which have been reserved the most on average (`r fake_r_pct`), and the second highest earner among all groups (with a nightly revenue of `r fake_rev` during the pandemic). We can thus say that listings that have been more successful - both in terms of revenue and availability - in the past year are the ones most likely to obtain a business license, or to at least display some form of registration information on their listing.
 
 ``` {r tab-license, include = TRUE}
 

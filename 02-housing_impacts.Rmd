@@ -238,7 +238,7 @@ rm(property, daily, GH)
 
 ```
 
-**Prior to the Covid-19 pandemic, there were TKTK housing units operating as dedicated STRs in Toronto. Almost two thirds of all entire-home listings and four in ten private-room listings were dedicated STRs. Because of the general collapse of STR activity in 2020, the number of dedicated STRs has fallen by `r housing_loss_change` to `r housing_loss_2020`. In the Spadina-Fort York area, `r housing_loss_pct_spadina` of all housing was operating as dedicated STRs at the end of 2020, despite the pandemic, while the figure was `r housing_loss_pct_university` in University-Rosedale and `r housing_loss_pct_centre` in Toronto Centre. Between 2015 and 2019, STRs were responsible for a 2.1% increase in average monthly rent, and the average renter household in Toronto paid an additional $1,390 in rent in 2019 because of the impact of STRs.**
+**Prior to the Covid-19 pandemic, there were TKTK housing units operating as dedicated STRs in Toronto. Almost two thirds of all entire-home listings and four in ten private-room listings were dedicated STRs. Because of the general collapse of STR activity in 2020, the number of dedicated STRs has fallen by `r housing_loss_change` to `r housing_loss_2020`. In the Spadina-Fort York area, `r housing_loss_pct_spadina` of all housing was operating as dedicated STRs at the end of 2020, despite the pandemic, while the figure was `r housing_loss_pct_university` in University-Rosedale and `r housing_loss_pct_centre` in Toronto Centre.**
 
 <br>
 

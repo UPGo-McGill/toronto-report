@@ -161,32 +161,37 @@ reg_5 <- left_join(reg_5, str_reg, by = "registration")
 # Select property_IDs that are using duplicate registration numbers
 duplicates_1 <- 
   reg_1 %>% 
+  filter(registration != "Exempt", registration != "HOMEAWAY") %>% 
   count(registration) %>% 
-  filter(n>=2, n<=274) %>% 
+  filter(n>=2) %>% 
   pull(registration)
 
 duplicates_2 <- 
-  reg_2 %>% 
+  reg_2 %>%
+  filter(registration != "Exempt", registration != "HOMEAWAY") %>% 
   count(registration) %>% 
-  filter(n>=2, n<=274) %>% 
+  filter(n>=2) %>% 
   pull(registration)
 
 duplicates_3 <- 
-  reg_3 %>% 
+  reg_3 %>%
+  filter(registration != "Exempt", registration != "HOMEAWAY") %>% 
   count(registration) %>% 
-  filter(n>=2, n<=274) %>% 
+  filter(n>=2) %>% 
   pull(registration)
 
 duplicates_4 <- 
   reg_4 %>% 
+  filter(registration != "Exempt", registration != "HOMEAWAY") %>% 
   count(registration) %>% 
-  filter(n>=2, n<=274) %>% 
+  filter(n>=2) %>% 
   pull(registration)
 
 duplicates_5 <- 
   reg_5 %>% 
+  filter(registration != "Exempt", registration != "HOMEAWAY") %>% 
   count(registration) %>% 
-  filter(n>=2, n<=274) %>% 
+  filter(n>=2) %>% 
   pull(registration)
 
 # Categorize registration licences by type

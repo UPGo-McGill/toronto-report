@@ -252,7 +252,7 @@ monthly_rev_median_status <-
 
 ```
 
-As in the precedent chapter, we separated here the matched listings into three groups: The blocked listings, the ones that were taken down, and the ones that continued their operations on the STR market. This analysis is based on properties listed on the LTR market, and having at least a month of activity in 2020 (a total of `r sum(monthly_rev_median_status$n)` listings).
+As in the precedent chapter, we separated here the matched listings into three groups: The blocked listings, the ones that were taken down, and the ones that continued their operations on the STR market. This analysis is based on properties listed on the LTR market, and which were active at least 5 days during a month in 2020 (a total of `r sum(monthly_rev_median_status$n)` listings).
 
 ``` {r make_fig_5_3}
 

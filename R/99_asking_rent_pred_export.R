@@ -23,17 +23,16 @@ ltr_unique_price <-
 
 # Monthly revenue in 2019
 revenue_2019 <-
-daily %>%
+  daily %>% 
   filter(date >= start_2019, date <= end_2019,
-         status == c("A", "R")) %>%
+         status == c("A", "R")) %>% 
+  mutate(month = month(date)) %>%
+  group_by(property_ID, month) %>% 
+  filter(n() >= 5) %>% 
+  filter(status == "R") %>% 
+  summarize(monthly_revenue_2019 = sum(price)) %>%
   group_by(property_ID) %>%
-  filter(n() >= (365/12)) %>%
-  mutate(max_date_2019 = max(date),
-         min_date_2019 = min(date)) %>%
-  filter(status == "R") %>%
-  summarize(monthly_revenue_2019 = sum(price)/((as.numeric(max_date_2019-min_date_2019)/(365/12)))) %>%
-  distinct() %>%
-  arrange(-monthly_revenue_2019) %>%
+  summarize(monthly_revenue_2019 = mean(monthly_revenue_2019)) %>% 
   ungroup()
 
 # Monthly revenue in 2020
@@ -41,14 +40,13 @@ revenue_2020 <-
   daily %>% 
   filter(date >= start_2020, date <= end_2020,
          status == c("A", "R")) %>% 
-  group_by(property_ID) %>% 
-  filter(n() >= (365/12)) %>% 
-  mutate(max_date_2020 = max(date),
-         min_date_2020 = min(date)) %>% 
+  mutate(month = month(date)) %>%
+  group_by(property_ID, month) %>% 
+  filter(n() >= 5) %>% 
   filter(status == "R") %>% 
-  summarize(monthly_revenue_2020 = sum(price)/((as.numeric(max_date_2020-min_date_2020)/(365/12)))) %>%
-  distinct() %>%
-  arrange(-monthly_revenue_2020) %>% 
+  summarize(monthly_revenue_2020 = sum(price)) %>%
+  group_by(property_ID) %>%
+  summarize(monthly_revenue_2020 = mean(monthly_revenue_2020)) %>% 
   ungroup()
 
 # Monthly revenue variation between 2019 and 2020

@@ -131,6 +131,11 @@ reg_4 <- data.frame(property_ID, date, registration) %>%
   filter(registration != "NO LISTING" | is.na(registration)) %>% 
   as_tibble() 
 
+qload("output/reg_5.qs", nthreads = availableCores())
+reg_5 <- data.frame(property_ID, date, registration) %>% 
+  filter(registration != "NO LISTING" | is.na(registration)) %>% 
+  as_tibble() 
+
 rm(date, registration, property_ID)
 
 # Upload open data's STR file
@@ -151,6 +156,7 @@ reg_1 <- left_join(reg_1, str_reg, by = "registration")
 reg_2 <- left_join(reg_2, str_reg, by = "registration")
 reg_3 <- left_join(reg_3, str_reg, by = "registration")
 reg_4 <- left_join(reg_4, str_reg, by = "registration")
+reg_5 <- left_join(reg_5, str_reg, by = "registration")
 
 # Select property_IDs that are using duplicate registration numbers
 duplicates_1 <- 
@@ -173,6 +179,12 @@ duplicates_3 <-
 
 duplicates_4 <- 
   reg_4 %>% 
+  count(registration) %>% 
+  filter(n>=2, n<=274) %>% 
+  pull(registration)
+
+duplicates_5 <- 
+  reg_5 %>% 
   count(registration) %>% 
   filter(n>=2, n<=274) %>% 
   pull(registration)
@@ -221,13 +233,25 @@ reg_4 <-
            registration == "EXEMPT" ~ "EXEMPT",
            str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
            TRUE ~ "INVALID")
-  ) 
+  )
+
+reg_5 <- 
+  reg_5 %>% 
+  mutate(registration = toupper(registration),
+         registration = case_when(
+           is.na(registration) ~ NA_character_,
+           registration == "NO LISTING" ~ "NO LISTING",
+           registration == "EXEMPT" ~ "EXEMPT",
+           str_detect(registration, "STR-\\d{4}-\\w{6}") ~ registration,
+           TRUE ~ "INVALID")
+  )
 
 # Make sure that duplicates are entered
 reg_1$registration_analyzed <- ifelse(reg_1$registration %in% duplicates_1, "Duplicates", reg_1$registration)
 reg_2$registration_analyzed <- ifelse(reg_2$registration %in% duplicates_2, "Duplicates", reg_2$registration)
 reg_3$registration_analyzed <- ifelse(reg_3$registration %in% duplicates_3, "Duplicates", reg_3$registration)
 reg_4$registration_analyzed <- ifelse(reg_4$registration %in% duplicates_4, "Duplicates", reg_4$registration)
+reg_5$registration_analyzed <- ifelse(reg_5$registration %in% duplicates_5, "Duplicates", reg_5$registration)
 
 # Categorize the rest
 reg_1 <- 
@@ -286,6 +310,20 @@ reg_4 <-
   filter(registration_analyzed != "Invalid") %>% 
   as_tibble()
 
+reg_5 <- 
+  reg_5 %>% 
+  mutate(registration_analyzed = ifelse(registration == "NO LISTING", "Inactive listing", registration_analyzed),
+         registration_analyzed = ifelse(registration == "EXEMPT", "Exempt", registration_analyzed),
+         registration_analyzed = ifelse(registration == "INVALID", "Invalid", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration, "STR-\\d{4}-\\w{6}") & is.na(id), 
+                                        "Fake License", registration_analyzed),
+         registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
+                                        "Conform", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
+  ) %>% 
+  filter(registration_analyzed != "Invalid") %>% 
+  as_tibble()
+
 
 # Save output -------------------------------------------------------------
 
@@ -293,5 +331,5 @@ qsavem(province, CMA, DA, city, WD,
        #streets, BL, BL_expanded, skytrain,
        file = "output/geometry.qsm", nthreads = availableCores())
 
-qsavem(reg_1, reg_2, reg_3, reg_4,
+qsavem(reg_1, reg_2, reg_3, reg_4, reg_5,
        file = "output/regulation.qsm", nthreads = availableCores())

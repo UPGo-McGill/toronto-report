@@ -781,7 +781,7 @@ if (build_figures) {
 
 ```
 
-STR activity in Toronto is highly concentrated in the Spadina-Fort York ward, which includes the Waterfront area (Figure \@ref(fig:fig-1-2)). This ward accounts for `r spadina_listing_pct` of all listings in 2020, and an even higher share of host revenue (`r spadina_rev_pct`). Spadina-Fort York is followed by the University-Rosedale ward (`r university_listing_pct` of active listings and `r university_rev_pct` of revenue) and the Toronto Centre ward (`r centre_listing_pct` of active listings and `r centre_rev_pct` of revenue). When measured in per-capita terms, Spadina-Fort York and University have the highest concentrations of STRs, at `r spadina_per_cap` and `r university_per_cap` respectively. In all other wards STRs account for between `r min_per_cap` and `r max_per_cap` of total dwellings.
+STR activity in Toronto is highly concentrated downtown (Figure \@ref(fig:fig-1-2)). In particular, the Spadina-Fort York ward (which includes the Waterfront area), accounts for `r spadina_listing_pct` of all listings, and an even higher share of host revenue (`r spadina_rev_pct`). Spadina-Fort York is followed by the University-Rosedale ward (`r university_listing_pct` of active listings and `r university_rev_pct` of revenue) and the Toronto Centre ward (`r centre_listing_pct` of active listings and `r centre_rev_pct` of revenue). When measured in per-capita terms, Spadina-Fort York and University-Rosedale have the highest concentrations of STRs, at `r spadina_per_cap` and `r university_per_cap` respectively. In all other wards STRs account for between `r min_per_cap` and `r max_per_cap` of total dwellings.
 
 
 ``` {r fig-1-2, include = TRUE, fig.cap = '(ref:fig-1-2)', fig.align = "center"}
@@ -886,7 +886,7 @@ rm(property, daily, GH)
 
 ```
 
-Table \@ref(tab:tab-1-2) provides the distribution of the listings by listing type in 2019. The majority of STRs in Toronto are entire homes, a category which includes single-family homes, townhouses, apartments and condominiums. Half (`r one_bedrooms`) of these were one-bedroom housing units, and more than a quarter (`r two_bedrooms`) were two-bedrooms units. `r three_bedrooms` were 3 or more bedrooms housing units, and `r studios` were studios. In general, studios and one-bedroom units are overrepresented on STR platforms in comparison with the City’s overall housing stock.
+Table \@ref(tab:tab-1-2) provides the distribution of the listings by listing type in 2020. The majority of STRs in Toronto are entire homes, a category which includes single-family homes, townhouses, apartments and condominiums. Half (`r one_bedrooms`) of these were one-bedroom housing units, and more than a quarter (`r two_bedrooms`) were two-bedrooms units. `r three_bedrooms` had three or more bedrooms, and `r studios` were studios. In general, studios and one-bedroom units are over-represented on STR platforms in comparison with the City’s overall housing stock.
 
 ``` {r tab-1-2, include = TRUE}
 
@@ -947,7 +947,7 @@ if (build_figures) {
 
 ```
 
-Until the end of 2019, the number of active STRs listings steadily increased in the City of Toronto. Figure \@ref(fig:fig-1-3) shows the change in active listings and revenue relative to one year earlier, which is a convenient way to remove seasonal variation to identify underlying growth trends. The figure indicates that, throughout 2017 and the first half of 2018, there was great growth in the revenue earned by hosts. From mid-2018 to late 2019, both active listings and revenue were greater than the year before, albeit with less growth. Both active listings and revenue grew sharply during the 2019 winter season. The pandemic halted Toronto's STR market growth, with active listings and revenue declining since March.
+Until the end of 2019, the number of active STRs listings was steadily increasing in the City of Toronto. Figure \@ref(fig:fig-1-3) shows the change in active listings and revenue relative to one year earlier, which is a convenient way to remove seasonal variation to identify underlying growth trends. The figure indicates that, throughout 2017 and the first half of 2018, there was great growth in the revenue earned by hosts. From mid-2018 to late 2019, both active listings and revenue were greater than the year before, albeit with less growth. Both active listings and revenue grew sharply during the 2019 winter season. The pandemic halted Toronto's STR market growth, with active listings and revenue declining since March.
 
 ``` {r fig-1-3, include = TRUE, fig.cap = '(ref:fig-1-3)', fig.align = "center"}
 
@@ -956,7 +956,6 @@ figure_1_3_fun()
 ```
 
 (ref:fig-1-3) _Change in daily active listings and host revenue compared to one year earlier (14-day average)_
-
 
 ``` {r para_6, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
@@ -1019,7 +1018,7 @@ rm(property, daily, GH)
 
 ```
 
-Overall, the year-over-year change in average active listings from 2016 to 2017 (12 months) was `r listing_growth_2017`, the year-over-year change from 2017 to 2018 was `r listing_growth_2018`, and the year-over-year change from 2018 to 2019 was `r listing_growth_2019`. In 2020, active listings fell thanks to the Covid-19 pandemic: the year-over-year change in active daily listings for 2020 is `r listing_growth_2020`.
+Overall, the year-over-year change in average active listings from 2016 to 2017  was `r listing_growth_2017`, the year-over-year change from 2017 to 2018 was `r listing_growth_2018`, and the year-over-year change from 2018 to 2019 was `r listing_growth_2019`. In 2020, because of the Covid-19 pandemic, the year-over-year change in active daily listings is `r listing_growth_2020`.
 
 ``` {r para_7, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
@@ -1130,50 +1129,6 @@ reserved_nights_increase_jan_feb <-
 rm(property, daily, GH)
 
 ```
-
-``` {r make_fig_1_4}
-
-figure_1_4_fun <- function(regular = "", condensed = "") {
-  
-  active_by_status %>% 
-    group_by(status) %>% 
-    mutate(n = slide_dbl(n, mean, .before = 13)) %>% 
-    ungroup() %>% 
-    filter(date >= "2018-01-01") %>% 
-    ggplot(aes(date, n, color = status)) +
-    geom_line(lwd = 1) +
-    scale_x_date(name = NULL) +
-    scale_y_continuous(name = NULL, limits = c(0, NA), label = scales::comma) +
-    scale_color_manual(name = NULL,
-                       labels = c("Available listings", "Reserved listings"), 
-                       values = col_palette[c(2, 4)]) +
-    theme_minimal() +
-    theme(legend.position = "bottom", 
-          panel.grid.minor.x = element_blank(),
-          text = element_text(face = "plain", family = regular),
-          legend.text = element_text(size = 10, family = regular))
-
-}
-
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_1_4.pdf"), 
-         plot = figure_1_4_fun("Futura", "Futura Condensed"), 
-         width = 8, height = 5, units = "in", useDingbats = FALSE)
-  
-  extrafont::embed_fonts(here("output", "figures", "figure_1_4.pdf"))
-}
-
-```
-
-When it comes to reserved and available listings, reservations generally spike during the winter holidays, but otherwise are low from November to February, and then increase steadily from March to August before reclining again. Available nights follow a roughly opposite pattern, since availability is higher when fewer reservations are made. Figure \@ref(fig:fig-1-4) shows the number of STR listings available and reserved each day in Toronto. While the total reserved nights increased by a rapid `r reserved_nights_increase_jan_feb` in the first two months of 2020, they have overall decreased by `r reserved_nights_decrease_2020` in 2020 compared to 2019. There was `r reservation_change_2020` fewer nights reserved in 2020, from `r reservation_count_2020[1]` reserved nights in 2019 to `r reservation_count_2020[2]` reserved nights in 2020. 
-
-``` {r fig-1-4, include = TRUE, fig.cap = '(ref:fig-1-4)', fig.align = "center"}
-
-figure_1_4_fun()
-
-```
-
-(ref:fig-1-4) _Available and reserved listings since 2018 (14-day average)_
 
 ```{r reservation_trend, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
@@ -1326,7 +1281,7 @@ rm(property, daily, GH)
 
 ```
 
-Figure \@ref(fig:fig-1-5) provides a closer look at daily reservations since 2019, comparing the actual trajectory of reservations during the pandemic with what the trajectory of reservations would have been expected to be in the absence of the pandemic and previous growth in Toronto's STR market. (To do this, we use seasonal decomposition to identify the regular seasonal fluctuations in STR activity and separate them from the underlying patterns of growth or decline.) In total, from March through December 2020, we estimate that there have been `r res_total_pandemic_dif` fewer STR nights reserved than would normally have been expected to occur. The `r res_total_pandemic` total nights reserved in this time period is only `r res_total_pandemic_pct` of the `r res_total_pandemic_trend` nights total that would represent the previous growth trend.
+Figure \@ref(fig:fig-1-5) provides a closer look at daily reservations since 2019, comparing the actual trajectory of reservations during the pandemic with what the trajectory of reservations would have been expected to be, based on previous growth in Toronto's STR market but in the absence of the pandemic. (To do this, we use seasonal decomposition to identify the regular seasonal fluctuations in STR activity and separate them from the underlying patterns of growth or decline.) In total, from March through December 2020, we estimate that there have been `r res_total_pandemic_dif` fewer STR nights reserved than would normally have been expected to occur. The `r res_total_pandemic` total nights reserved in this time period is only `r res_total_pandemic_pct` of the `r res_total_pandemic_trend` nights total that would represent the previous growth trend.
 
 ``` {r fig-1-5, include = TRUE, fig.cap = '(ref:fig-1-5)', fig.align = "center"}
 
@@ -1426,7 +1381,7 @@ rm(property, daily, GH)
 
 ```
 
-In terms of revenue, 2020 revenue decreased by a staggering `r active_yoy_revenue` compared to 2019. To offer some perspective, from 2018 to 2019, STR revenue increased by `r active_yoy_revenue19`. Based on previous growth trends, it is possible to estimate the total loss in revenue incurred by STR hosts, combining the loss of revenue of reservations that never occurred and the lower nightly price of reservations that did occur. Throughout the May-December period of 2020, nightly prices have been an average of `r nightly_price_dif` lower than expected. Spread across the `r res_total_pandemic` nights reserved during this period, this means that STR operators collectively earned `r total_price_dif` less than they would have on their bookings in the absence of the pandemic. When the lower prices on reservations which did occur is combined with the reservations which did not occur, our estimate is that Toronto’s STR hosts lost a total of `r total_revenue_lost` million in revenue between March and December 2020 because of the Covid-19 pandemic.
+STR host revenue decreased by a staggering `r active_yoy_revenue` in 2020 compared to 2019. To offer some perspective, from 2018 to 2019, STR revenue increased by `r active_yoy_revenue19`. Throughout the May-December period of 2020, moreover, nightly prices have been an average of `r nightly_price_dif` lower than expected. Spread across the `r res_total_pandemic` nights reserved during this period, this means that STR operators collectively earned `r total_price_dif` less than they would have on their bookings in the absence of the pandemic. When the lower prices on reservations which did occur is combined with the reservations which did not occur, our estimate is that Toronto’s STR hosts lost a total of `r total_revenue_lost` million in revenue between March and December 2020 because of the Covid-19 pandemic.
 
 <br>
 
@@ -1623,8 +1578,6 @@ rm(property, daily, GH)
 
 ```
 
-We identified one network of hosts which has operated `r top_host_listings` listings in Toronto over the last several years, and which earned approximately `r top_host_rev` in 2020. An investigation into a sample of the host accounts which make up this network suggests links between numerous property management companies and third party operators. The image-matching algorithm also merged hosts that use both Airbnb and Vrbo, allowing for more accurate revenue calculations. Without interviewing actors associated with this host network, it is impossible to describe the level of connection and coordination between the various host accounts, but an operation of this scale would not be unprecedented. Reports from Chicago, USA and London, UK have identified similar host networks behind which were property management companies and realty groups (Conti, 2019). 
-
 ``` {r make_fig_1_6}
 
 figure_1_6_fun <- function(regular = "", condensed = "") {
@@ -1672,31 +1625,7 @@ if (build_figures) {
 
 ```
 
-Among all the STR hosts who earned revenue in the City of Toronto in 2020, the median revenue was `r median_host_rev` (Table \@ref(tab:tab-host-rev)). Throughout the City of Toronto, there were `r n_hosts_over_250` hosts that earned more than $250,000 in 2020, which is `r diff_host_250` less hosts than in 2019. Figure \@ref(fig:fig-1-6) shows the percentage of the total `r annual_rev` in STR revenue which accrued to each decile of hosts. The figure shows that revenue is disproportionately concentrated among a small number of hosts; the top 10% earned `r host_rev_top_10`: the top 5% earned `r host_rev_top_5` of revenue, while the top 1% of hosts earned `r host_rev_top_1` of all revenue. The pandemic has thus not impacted greatly the sharp difference in revenue distribution among STR hosts. To put this revenue distribution in context, Montreal’s top 10% of STR hosts earned 68.8% of all revenue in 2019. On the other hand, Vancouver's top 10% hosts only earned 43.2% of all revenue in 2019. This indicates that Toronto's STR market is dominated by commercial operators compared to its Western peer, but still to a lesser extent than Montreal.
-
-``` {r tab-host-rev, include = TRUE}
-
-library(kableExtra)
-
-host_rev %>% 
-  pull(rev) %>% 
-  quantile() %>% 
-  as.list() %>% 
-  as_tibble() %>% 
-  select(-`0%`) %>% 
-  set_names(c("25th percentile", "Median", "75th percentile", 
-              "100th percentile")) %>% 
-  mutate(across(1:3, scales::dollar, accuracy = 1000, big.mark = ",")) %>% 
-  mutate(`100th percentile` = scales::dollar(`100th percentile`, 0.1, 
-                                             scale = 1 / 1000000, 
-                                             suffix = " million")) %>% 
-  pivot_longer(everything(), names_to = "Host percentile", 
-               values_to = "Annual revenue") %>% 
-  kbl(caption = "Toronto STR host revenue", align = "lr") %>% 
-  kable_styling()
-
-
-```
+Among all the STR hosts who earned revenue in the City of Toronto in 2020, the median revenue was `r median_host_rev`. Throughout the City of Toronto, there were `r n_hosts_over_250` hosts that earned more than $250,000 in 2020, which is `r diff_host_250` less hosts than in 2019. Figure \@ref(fig:fig-1-6) shows the percentage of the total `r annual_rev` in STR revenue which accrued to each decile of hosts. The figure shows that revenue is disproportionately concentrated among a small number of hosts; the top 10% earned `r host_rev_top_10`: the top 5% earned `r host_rev_top_5` of revenue, while the top 1% of hosts earned `r host_rev_top_1` of all revenue. The pandemic has thus not impacted greatly the sharp difference in revenue distribution among STR hosts. To put this revenue distribution in context, Montreal’s top 10% of STR hosts earned 68.8% of all revenue in 2019. On the other hand, Vancouver's top 10% hosts only earned 43.2% of all revenue in 2019.
 
 ``` {r fig-1-6, include = TRUE, fig.cap = '(ref:fig-1-6)', fig.align = "center"}
 
@@ -1710,9 +1639,7 @@ figure_1_6_fun()
 
 ## The commercialization of Toronto’s STR market
 
-Some hosts operate multiple STR units, which can be an indication of a commercial operator rather than a casual home sharer. To take the simplest case, for example, a host with two or more entire-home listings on the same day cannot be operating both listings out of their principal residence, regardless of the frequency they are rented throughout the year. This means that these operators are not respecting the by-law, which prevents a person from operating a STR outside their principal residence.
-
-We consider entire-homes to be "multilistings" if they are operated by hosts who are simultaneously operating other entire-home listings. We define private-room multilistings as cases where a host has three or more private-room listings operating on the same day. Since `r eh_3_bedroom` of entire-home listings have three or fewer bedrooms, there will be extremely few cases where a host operating three private-room STR listings in a dwelling unit has not converted the entire unit into a dedicated STR. 
+Some hosts operate multiple STR units, which strongly suggests that they are commercial operators rather than a casual home sharers. To take the simplest case, a host with two or more entire-home listings on the same day cannot be operating both listings out of their principal residence. We consider entire-homes to be "multilistings" if they are operated by hosts who are simultaneously operating other entire-home listings. We define private-room multilistings as cases where a host has three or more private-room listings operating on the same day. Since `r eh_3_bedroom` of entire-home listings have three or fewer bedrooms, there will be extremely few cases where a host operating three private-room STR listings in a dwelling unit has not converted the entire unit into a dedicated STR. 
 
 ``` {r para_10, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
@@ -1769,7 +1696,7 @@ if (build_figures) {
 
 ```
 
-In 2020, `r ml_listings` of active listings in Toronto were multilistings, earning `r ml_revenue` of total host revenue. Multilistings had been growing steadily since 2017, both in terms of listings and revenue percentage, until the Covid-19 pandemic, where there was first a drop of revenue percentage, later followed by a drop in multilistings percentage (Figure \@ref(fig:fig-1-7)). The share of multilistings in both listings share and revenue caught up during the summer of 2020. Figure \@ref(fig:fig-1-7) also highlights that, amidst generally declining STR activity during the COVID-19 pandemic, multilistings have remained strong, and through the fall of 2020 were earning a bit more than 4 out of every 10 dollars on STR platforms in Toronto. 
+In 2020, `r ml_listings` of active listings in Toronto were multilistings, earning `r ml_revenue` of total host revenue. Multilistings had been growing steadily since 2017, both in terms of listings and revenue percentage, until the Covid-19 pandemic, when their proportion dropped somewhat (Figure \@ref(fig:fig-1-7)). Still, through the fall of 2020 multilistings were earning a bit more than 4 out of every 10 dollars on STR platforms in Toronto. 
 
 ``` {r fig-1-7, include = TRUE, fig.cap = '(ref:fig-1-7)', fig.align = "center"}
 

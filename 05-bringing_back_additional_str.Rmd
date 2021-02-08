@@ -382,14 +382,18 @@ listings_pred <- read_csv("output/listings_pred.csv")
 mean_pred_bedrooms <- 
 listings_pred %>% 
   filter(`Number of bedrooms` <= 4) %>% 
-  group_by(`Number of bedrooms`) %>% 
-  summarize(`Mean asking rent predicted` = mean(`Predicted asking rent`))
+  left_join(rename(select(ward_price_bounds, ward, geo_quant), Ward = ward), by = "Ward") %>% 
+  group_by(`Number of bedrooms`, geo_quant) %>% 
+  summarize(`Mean asking rent predicted` = mean(`Predicted asking rent`)) %>% 
+  spread(geo_quant, `Mean asking rent predicted`) %>% 
+  rename(`Lower-cost ward` = lower,
+         `Higher-cost ward` = higher)
 
 rm(listings_pred)
 
 ```
 
-The model offering an estimation of asking rent if a STR was to move to the LTR was applied to the entire population of entire home STR in Toronto and has been given to the City. For example, Table \@ref(tab:tab-pred) presents the mean asking rent predicted for each size of units. Our estimations of asking rent for all listings also depends on financial performance and location of each listings. 
+The model offering an estimation of asking rent if a STR was to move to the LTR was applied to the entire population of entire home STR in Toronto and has been given to the City. For example, Table \@ref(tab:tab-pred) presents the mean asking rent predicted for each size of units and the ward category it is located (lower-cost ward vs higher-cost ward). Our estimations of asking rent for all listings also depends on financial performance of each listing. 
 
 ``` {r tab-pred, include = TRUE}
 
@@ -397,7 +401,7 @@ library(kableExtra)
 
 mean_pred_bedrooms %>% 
   mutate(across(where(is.numeric), round, 2)) %>%  
-  kbl(caption = "Mean asking rent predicted by number of bedrooms", align = "lrrrr") %>% 
+  kbl(caption = "Mean asking rent predicted by number of bedrooms and location", align = "lrrrr") %>% 
   kable_styling()
 
 ```

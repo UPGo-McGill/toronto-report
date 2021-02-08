@@ -127,7 +127,7 @@ monthly_rev_median_ltr <-
   summarize(monthly_revenue_2020_median = median(monthly_revenue_2020, na.rm = T),
             monthly_revenue_2019_median = median(monthly_revenue_2019, na.rm = T),
             monthly_variation_median = median(monthly_variation, na.rm = T)) %>% 
-  mutate(across(where(is.numeric), round, 2))
+  mutate(across(c(2:3), scales::dollar, 10))
 
 ```
 
@@ -136,17 +136,17 @@ monthly_rev_median_ltr <-
 figure_5_1_fun <- function(regular = "", condensed = "") {
 
 matrice %>% 
-  ggplot()+
-  geom_histogram(aes(monthly_revenue_2020, y=..density.., fill = ltr), position = "dodge") +
+  ggplot() +
+  geom_histogram(aes(monthly_revenue_2020, y=..density.., fill = ltr), 
+                 position = position_dodge(width = 60), alpha = 0.8) +
   geom_vline(data = monthly_rev_median_ltr,
              aes(xintercept = monthly_revenue_2020_median, color = ltr),
-             linetype="dashed", size = 1, show.legend = FALSE)+
-  xlim(0,3000)+
-  scale_fill_manual(name = NULL, labels = c("Not matched on the LTR",
-                                             "Matched on the LTR"),
-                     values= col_palette[c(4,2)]) +
-  ylab("Density")+
-  xlab("Monthly revenue in 2020")+
+             linetype="dashed", size = 1, show.legend = FALSE) +
+  scale_fill_manual(name = NULL, labels = c("Not matched to LTR", "Matched to LTR"),
+                    values= col_palette[c(4,2)]) +
+  scale_x_continuous(name = "Monthly STR revenue (2020)", 
+                     labels = scales::dollar, limits = c(0, 3000)) +
+  scale_y_continuous(name = "Probability density", labels = NULL) +
   theme_minimal() +
     theme(legend.position = "bottom",
           panel.grid.minor.x = element_blank(),
@@ -169,6 +169,8 @@ if (build_figures) {
 
 ```
 
+STR listings moved to the LTR market had significant higher monthly STR revenues in 2020 compared to the STR listings that did not make the move. Non-matched listings had a median revenue (the dashed lines on Figure \@ref(fig:fig-5-1)) of `r monthly_rev_median_ltr[1,2]`, while listings that did match to the LTR market had a median revenue of `r monthly_rev_median_ltr[2,2]`. The difference is larger for pre-pandemic 2019 monthly income, when non-matched and matched listings had median monthly incomes respectively of `r monthly_rev_median_ltr[1,3]` and `r monthly_rev_median_ltr[2,3]`. This pattern is consistent with our previous assessment that it is high-earning STR hosts who disproportionately chose to move their units to the LTR market.
+
 ``` {r fig-5-1, include = TRUE, fig.cap = '(ref:fig-5-1)', fig.align = "center"}
 
 figure_5_1_fun()
@@ -177,7 +179,6 @@ figure_5_1_fun()
 
 (ref:fig-5-1) _Monthly revenue in 2020 for matched and not matched properties_
 
-STR listings placed on the LTR market had significant higher monthly revenues in 2020 compared to the STR listings that did not make the move to the LTR market. Indeed, while the non-matched listings had a median revenue (the dashed lines on Figure \@ref(fig:fig-5-1)) of \$`r monthly_rev_median_ltr[1,2]`, the listings that did match have made $`r monthly_rev_median_ltr[2,2]`. The difference is even greater when looking at the median monthly revenue of the precedent year (2019) for the same listings, when they respectively made \$`r monthly_rev_median_ltr[1,3]` and \$`r monthly_rev_median_ltr[2,3]`. The drop in revenue between the two years, for both group, is also notable. Figure \@ref(fig:fig-5-1) demonstrates how the STR listings that did not match a LTR listing had significant lower monthly revenues in 2020. It is in line with our previous assessment, stating that it is the most affluent hosts which chose to move their lucrative units on the LTR market.
 
 ``` {r make_fig_5_2}
 
@@ -190,8 +191,7 @@ matrice %>%
              aes(xintercept = monthly_variation_median, color = ltr),
              linetype="dashed", size = 1)+
   xlim(-1,1.2)+
-  scale_color_manual(name = NULL, labels = c("Not matched on the LTR", 
-                                             "Matched on the LTR"),
+  scale_color_manual(name = NULL, labels = c("Not matched to LTR", "Matched to LTR"),
                      values= col_palette[c(4,2)]) +
   ylab("Density")+
   xlab("Monthly revenue variation between 2019 and 2020")+
@@ -217,6 +217,8 @@ if (build_figures) {
 
 ```
 
+Monthly revenues in 2020 is not the only relevant factor to consider when looking to explain the behavior of a host moving its STR unit to the LTR market. Indeed, it may be useful to see the relative loss of monthly revenues between 2019 and 2020, again separated between the two groups previously evaluated. While the vast majority of listings had a decrease in monthly revenue, it is the listings matched on the LTR that have had a worse relative loss in monthly revenue, as Figure \@ref(fig:fig-5-2) shows. In brief, listings found on the LTR market made a higher monthly revenue in 2020 than the other listings, but had a greater decrease in monthly revenue when compared to 2019's monthly revenue levels.
+
 ``` {r fig-5-2, include = TRUE, fig.cap = '(ref:fig-5-2)', fig.align = "center"}
 
 figure_5_2_fun()
@@ -225,7 +227,7 @@ figure_5_2_fun()
 
 (ref:fig-5-2) _Variation of monthly revenue between 2019 and 2020 for matched and not matched properties_
 
-Monthly revenues in 2020 is not the only relevant factor to consider when looking to explain the behavior of a host moving its STR unit to the LTR market. Indeed, it may be useful to see the relative loss of monthly revenues between 2019 and 2020, again separated between the two groups previously evaluated. While the vast majority of listings had a decrease in monthly revenue, it is the listings matched on the LTR that have had a worse relative loss in monthly revenue, as Figure \@ref(fig:fig-5-2) shows. In brief, listings found on the LTR market made a higher monthly revenue in 2020 than the other listings, but had a greater decrease in monthly revenue when compared to 2019's monthly revenue levels.
+
 
 ## Breakdown into groups and financial analysis of the matched STR listings
 
@@ -283,7 +285,7 @@ matrice %>%
 
 if (build_figures) {
   ggsave(here("output", "figures", "figure_5_3.pdf"),
-         plot = figure_6_1_fun("Futura", "Futura Condensed"),
+         plot = figure_5_3_fun("Futura", "Futura Condensed"),
          width = 8, height = 5, units = "in", useDingbats = FALSE)
 
   extrafont::embed_fonts(here("output", "figures", "figure_5_3.pdf"))
@@ -332,7 +334,7 @@ matrice %>%
 
 if (build_figures) {
   ggsave(here("output", "figures", "figure_5_4.pdf"),
-         plot = figure_6_1_fun("Futura", "Futura Condensed"),
+         plot = figure_5_4_fun("Futura", "Futura Condensed"),
          width = 8, height = 5, units = "in", useDingbats = FALSE)
 
   extrafont::embed_fonts(here("output", "figures", "figure_5_4.pdf"))

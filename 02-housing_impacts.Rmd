@@ -1,4 +1,4 @@
-# Short-term rentals in Toronto: Housing impacts
+# STR housing impacts
 
 <style type="text/css">
   body{

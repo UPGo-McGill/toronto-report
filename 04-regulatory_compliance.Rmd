@@ -207,7 +207,7 @@ figure_3_1_fun()
 
 ```{r changing_stays, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
-qload(here("output", "property_nov.qs"), nthreads = availableCores())
+property_nov <- qread(here("output", "property_nov.qs"), nthreads = availableCores())
 qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 qload(here("output", "regulation.qsm"), nthreads = availableCores())
 
@@ -250,7 +250,7 @@ perc_bigger_28_feb <-
         pull(perc_days))) %>% 
   scales::percent(0.1)
 
-rm(property, daily, GH)
+rm(property, daily, GH, property_nov)
 
 ```
 

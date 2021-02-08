@@ -161,8 +161,9 @@ top_plot <-
 
 bottom_plot <- 
   matrice %>% 
-  ggplot()+
-  geom_density(aes(monthly_variation, color = ltr), size = 1) +
+  ggplot() +
+  geom_histogram(aes(monthly_variation, y=..density.., fill = ltr), 
+                 position = position_dodge(width = 60), alpha = 0.8) +
   geom_vline(data = mutate(monthly_rev_median_ltr, across(where(is.character), parse_number)),
              aes(xintercept = monthly_variation_median, color = ltr),
              linetype="dashed", size = 1, show.legend = FALSE) +
@@ -206,8 +207,6 @@ figure_5_1_fun()
 ```
 
 (ref:fig-5-1) _Monthly revenue in 2020 (top panel), and variation of monthly revenue between 2019 and 2020 (bottom panel) for matched and not matched properties_
-
-Monthly revenues in 2020 is not the only relevant factor to consider when looking to explain the behavior of a host moving its STR unit to the LTR market. Indeed, it may be useful to see the relative loss of monthly revenues between 2019 and 2020, again separated between the two groups previously evaluated. 
 
 
 ## Breakdown into groups and financial analysis of the matched STR listings

@@ -281,7 +281,7 @@ reg_1 <-
                                         "Fake License", registration_analyzed),
          registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
                                         "Conform", registration_analyzed),
-         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "Shifted to longer-term rental", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "28-day min.", registration_analyzed),
          registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
   ) %>%
   filter(registration_analyzed != "Invalid") %>% 
@@ -296,7 +296,7 @@ reg_2 <-
                                         "Fake License", registration_analyzed),
          registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
                                         "Conform", registration_analyzed),
-         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "Shifted to longer-term rental", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "28-day min.", registration_analyzed),
          registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
   ) %>%
   filter(registration_analyzed != "Invalid") %>% 
@@ -311,7 +311,7 @@ reg_3 <-
                                         "Fake License", registration_analyzed),
          registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
                                         "Conform", registration_analyzed),
-         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "Shifted to longer-term rental", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "28-day min.", registration_analyzed),
          registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
   ) %>%
   filter(registration_analyzed != "Invalid") %>% 
@@ -326,7 +326,7 @@ reg_4 <-
                                         "Fake License", registration_analyzed),
          registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
                                         "Conform", registration_analyzed),
-         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "Shifted to longer-term rental", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "28-day min.", registration_analyzed),
          registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
   ) %>%
   filter(registration_analyzed != "Invalid") %>% 
@@ -341,7 +341,7 @@ reg_5 <-
                                         "Fake License", registration_analyzed),
          registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
                                         "Conform", registration_analyzed),
-         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "Shifted to longer-term rental", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "28-day min.", registration_analyzed),
          registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
   ) %>%
   filter(registration_analyzed != "Invalid") %>% 

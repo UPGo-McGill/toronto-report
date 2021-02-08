@@ -1,4 +1,4 @@
-# Short-term rentals in Vancouver: Regulatory compliance
+# Short-term rentals in Toronto: Regulatory compliance
 
 <style type="text/css">
   body{
@@ -10,7 +10,7 @@
 
 ```{r setup, include = FALSE, echo = FALSE}
 ###### for max to be able to knit
-if(memory.limit()< 20000) {memory.limit(size = 48000)}
+if (memory.limit() < 20000) memory.limit(size = 48000)
 ####
 library(here)
 source(here("R", "01_startup.R"))
@@ -48,13 +48,13 @@ january_listings <-
 table_1 <- 
   reg_1 %>% 
   group_by(registration_analyzed) %>% 
-  summarize(n=n(), percentage = n()/nrow(reg_2)) %>% 
+  summarize(n = n(), percentage = n() / nrow(reg_2)) %>% 
   mutate(date = as.Date("2021-01-07"))
 
 table_2 <- 
   reg_2 %>% 
   group_by(registration_analyzed) %>% 
-  summarize(n=n(), percentage = n()/nrow(reg_2)) %>% 
+  summarize(n = n(), percentage = n() / nrow(reg_2)) %>% 
   mutate(date = as.Date("2021-01-10"))
 
 table_3 <- 
@@ -152,23 +152,30 @@ increase_conform_listings <-
   round(digit = -1) %>% 
   prettyNum(",")
 
+active_listings_2021 <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  count(scraped) %>% 
+  filter(scraped >= "2020-11-01") %>% 
+  mutate(cum_n = slider::slide_dbl(n, sum, .after = 100)) %>% 
+  filter(scraped <= "2021-01-24")
+
 rm(property, daily, GH)
 
 ```
 
-As of the first of January 2021, all STR operators in Toronto are required to have a municipal license. This means that all listings displayed on Airbnb (with the exception of properties rented exclusively for 30 days at a time or longer, and hotels and other tourist accommodations which are regulated separately) must have a license. Following the announcement of the coming into effect of the by-law, Airbnb's biggest competitor - VRBO - pulled out of the Toronto market. For listings currently operating in Toronto, license numbers are publicly displayed, and below we compare listing activity with license status. Our team scraped the Airbnb website on foue occassions during the month of January 2021 and once at the beginning of February to assess the impact of the new STR by-law on active listing and by listing type (entire-home listings, private rooms, FREH and multilistings). We have connected those scrapes with the City's Short-Term License database (available on Open Data), as well as with AirDNA's dataset until the end of 2020. 
+As of 1 January 2021, all STR operators in Toronto are required to have a municipal license. This means that all properties displayed on Airbnb (with the exception of properties rented exclusively for 30 days at a time or longer, and hotels and other tourist accommodations which are regulated separately) must have a license visible on Airbnb.ca. (Vrbo, Airbnb's biggest competitor recently pulled out of the Toronto market.) Our team scraped the Airbnb website on five occasions between January 7 and February 5 to record all publicly visible registration numbers for Toronto STRs. We have connected that information with the City's Short Term Rentals Registration database and with our own data on STR activity in order to assess regulatory compliance. 
 
 ``` {r make_fig_3_1}
 
 figure_3_1_fun <- function(regular = "", condensed = "") {
   
-  fig_3_1 <- 
-    ggplot(data=table_total)+
-    geom_line(aes(x=date, y= n), color=col_palette[5]) + 
-    scale_x_date(name=NULL)+
-    scale_y_continuous(name=NULL, label = scales::comma)+
-    theme_minimal()
-  
+  ggplot(active_listings_2021) +
+    geom_line(aes(scraped, cum_n), color = col_palette[1]) +
+    scale_x_date(name = NULL) +
+    scale_y_continuous(name = NULL, label = scales::comma) +
+    theme_minimal() +
+    theme(text = element_text(face = "plain", family = regular))
   
 }
 
@@ -182,7 +189,7 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-3-1) shows the total number of active listings that were displayed on the Airbnb platform during the month of January. Between January 10th and 15th, there were `r listings_removed_jan_15` listings displaying no license that were removed, being most likely a mass removal from Airbnb. Since the beginning of January 2021, the number of active listings have been declining, going from `r active_listings_jan_07` on January 7th to `r active_listings_feb_5` on February 5th. 
+Figure \@ref(fig:fig-3-1) shows the total number of active listings that were displayed on the Airbnb platform from 1 November 2020 to 24 January 2021 (the last date for which we have complete information). It demonstrates a sharp drop of more than 2,600 listings around January 11, which appears to have been a mass removal initiated by Airbnb of listings without licenses.
 
 ``` {r fig-3-1, include = TRUE, fig.cap = '(ref:fig-3-1)', fig.align = "center"}
 
@@ -190,7 +197,7 @@ figure_3_1_fun()
 
 ```
 
-(ref:fig-3-1) _Active listings displayed on Airbnb during the month of January 2021_
+(ref:fig-3-1) _Displayed listings on Airbnb, 1 November 2020 - 24 January 2021_
 
 ``` {r make_fig_3_2}
 
@@ -441,8 +448,6 @@ rm(property, daily, GH)
 
 ```
 
-
-In order to analyze the evolution of regulatory compliance among currently active listings, we scraped all Toronto listings that were active on the Airbnb website at the beginning of January 2021 and recorded the license number displayed on each listing. We scraped on multiple occasions throughout the month and the first week of February to look at the evolution of registration compliance among active listings.
 
 ``` {r make_fig_3_3}
 

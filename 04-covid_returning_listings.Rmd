@@ -1,4 +1,4 @@
-# Covid-19 and Regulations Expectations: STRs returning to the long-term market
+# STRs returning to the long-term market
 
 <style type="text/css">
   body{
@@ -11,12 +11,13 @@
 ```{r setup, include = FALSE, echo = FALSE}
 
 ###### for max to be able to knit
-if(memory.limit()< 20000) {memory.limit(size = 48000)}
+if (memory.limit() < 20000) memory.limit(size = 48000)
 ####
 
 library(here)
 source(here("R", "01_startup.R"))
 library(imager)
+library(vctrs)
 
 knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(include = FALSE)
@@ -75,101 +76,106 @@ rm(ltr, DA)
 
 ```{r photo_prep, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
-# qload(here("output", "str_processed.qsm"), nthreads = availableCores())
-# ltr <- qread("output/ltr_processed.qs", nthreads = availableCores())
-# qload("output/matches_raw.qsm", nthreads = availableCores())
-# 
-# first_photo_pair <-
-#   cl_matches %>%
-#   filter(confirmation == "match") %>%
-#   filter(x_name == "/Volumes/Data 2/Scrape photos/Toronto/ab/ab-18753643.jpg")
-# 
-# second_photo_pair <-
-#   cl_matches %>%
-#   filter(confirmation == "match") %>%
-#   filter(x_name == "/Volumes/Data 2/Scrape photos/Toronto/ab/ab-10972081.jpg")
-# 
-# titles <- list(
-# 
-#   first_photo_pair$x_name %>%
-#     str_extract('ab-.*(?=\\.jpg)') %>%
-#     {filter(property, property_ID == .)} %>%
-#     pull(listing_title),
-# 
-#   first_photo_pair$y_name %>%
-#     str_extract('cl-.*(?=-[:digit:]\\.jpg)') %>%
-#     {filter(ltr, id == .)} %>%
-#     slice(1) %>%
-#     pull(title) %>%
-#     str_remove(' \\|.*'),
-# 
-#   second_photo_pair$x_name %>%
-#     str_extract('ab-.*(?=\\.jpg)') %>%
-#     {filter(property, property_ID == .)} %>%
-#     pull(listing_title),
-# 
-#   second_photo_pair$y_name %>%
-#     str_extract('cl-.*(?=-[:digit:]\\.jpg)') %>%
-#     {filter(ltr, id == .)} %>%
-#     slice(1) %>%
-#     pull(title) %>%
-#     str_remove(' - apts.*')
-# )
-# 
-# 
-# rm(property, daily, GH, ltr, ab_matches, cl_matches, kj_matches)
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
+ltr <- qread("output/ltr_processed.qs", nthreads = availableCores())
+qload("output/matches_raw.qsm", nthreads = availableCores())
+
+first_photo_pair <-
+  cl_matches %>%
+  filter(match == "match") %>%
+  filter(field(x_sig, "file") == 
+           "/Volumes/Data 2/Scrape photos/toronto/ab/ab-14685177-1.jpg") %>% 
+  slice(1)
+
+second_photo_pair <-
+cl_matches %>%
+  filter(match == "match") %>%
+  filter(field(x_sig, "file") == 
+           "/Volumes/Data 2/Scrape photos/toronto/ab/ab-36199496-1.jpg") %>% 
+  slice(1)
+
+titles <- list(
+  
+  vctrs::field(first_photo_pair$x_sig, "file") %>%
+    str_extract('ab-.*(?=-[:digit:]*\\.jpg)') %>%
+    {filter(property, property_ID == .)} %>%
+    pull(listing_title),
+  
+  vctrs::field(first_photo_pair$y_sig, "file") %>%
+    str_extract('cl-.*(?=-[:digit:]*\\.jpg)') %>%
+    {filter(ltr, id == .)} %>%
+    slice(1) %>%
+    pull(title) %>%
+    str_remove(' \\|.*'),
+  
+  vctrs::field(second_photo_pair$x_sig, "file") %>%
+    str_extract('ab-.*(?=-[:digit:]*\\.jpg)') %>%
+    {filter(property, property_ID == .)} %>%
+    pull(listing_title),
+  
+  vctrs::field(second_photo_pair$y_sig, "file") %>%
+    str_extract('cl-.*(?=-[:digit:]*\\.jpg)') %>%
+    {filter(ltr, id == .)} %>%
+    slice(1) %>%
+    pull(title) %>%
+    str_remove(' - apts.*')
+)
+
+
+rm(property, daily, GH, ltr, ab_matches, cl_matches, kj_matches)
 
 ```
 
 ``` {r make_fig_6_1}
-# 
-# figure_6_1_fun <- function(regular = "", condensed = "") {
-#   
-#   pmap(list(list(first_photo_pair$x_name, first_photo_pair$y_name, 
-#                  second_photo_pair$x_name, second_photo_pair$y_name), 
-#               titles, c("A", "B", "C", "D")), 
-#          ~{.x %>% 
-#              load.image() %>% 
-#              as.data.frame(wide = "c") %>% 
-#              mutate(rgb = rgb(c.1, c.2, c.3)) %>% 
-#              ggplot(aes(x, y)) +
-#              geom_raster(aes(fill = rgb)) + 
-#              scale_fill_identity() +
-#              scale_y_continuous(trans = scales::reverse_trans()) +
-#              ggtitle(paste0(..3, ". ", case_when(
-#                str_detect(..1, "ab-") ~ "Airbnb",
-#                str_detect(..1, "cl-") ~ "Craigslist",
-#                str_detect(..1, "kj-") ~ "Kijiji")),
-#                subtitle = paste0('"', ..2, '"')) +
-#              theme_void() +
-#              theme(plot.title = element_text(family = regular, 
-#                                              face = "bold", size = 9),
-#                    plot.subtitle = element_text(family = condensed,
-#                                                 face = "plain", size = 9))}) %>% 
-#     wrap_plots()
-# 
-# }
-# 
-# if (build_figures) {
-#   ggsave(here("output", "figures", "figure_6_1.pdf"), 
-#          plot = figure_6_1_fun("Futura", "Futura Condensed"), 
-#          width = 8, height = 5, units = "in", useDingbats = FALSE)
-#   
-#   extrafont::embed_fonts(here("output", "figures", "figure_6_1.pdf"))
-# }
+
+figure_6_1_fun <- function(regular = "", condensed = "") {
+
+  pmap(list(list(field(first_photo_pair$x_sig, "file"),
+                 field(first_photo_pair$y_sig, "file"),
+                 field(second_photo_pair$x_sig, "file"),
+                 field(second_photo_pair$y_sig, "file")),
+              titles, c("A", "B", "C", "D")),
+         ~{.x %>%
+             load.image() %>%
+             as.data.frame(wide = "c") %>%
+             mutate(rgb = rgb(c.1, c.2, c.3)) %>%
+             ggplot(aes(x, y)) +
+             geom_raster(aes(fill = rgb)) +
+             scale_fill_identity() +
+             scale_y_continuous(trans = scales::reverse_trans()) +
+             ggtitle(paste0(..3, ". ", case_when(
+               str_detect(..1, "ab-") ~ "Airbnb",
+               str_detect(..1, "cl-") ~ "Craigslist",
+               str_detect(..1, "kj-") ~ "Kijiji")),
+               subtitle = paste0('"', ..2, '"')) +
+             theme_void() +
+             theme(plot.title = element_text(family = regular,
+                                             face = "bold", size = 9),
+                   plot.subtitle = element_text(family = condensed,
+                                                face = "plain", size = 9))}) %>%
+    wrap_plots()
+
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_6_1.pdf"),
+         plot = figure_6_1_fun("Futura", "Futura Condensed"),
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+
+  extrafont::embed_fonts(here("output", "figures", "figure_6_1.pdf"))
+}
 
 ```
 
-As demonstrated in the first section, the COVID-19 pandemic has caused an unprecedented decline in STR activity in Toronto. More recently, the expectations of the new regulation has also contributed to this decline in activity. Under these circumstances, it would be reasonable to imagine that some STR hosts—particularly commercial operators who had come to expect large income streams from their properties—may have decided to return their listings to the long-term housing market, either temporarily or permanently. To investigate this possibility, we collected listing images from all properties posted to Craigslist and Kijiji in Toronto between March and December 2020, and used image recognition analysis to match STR listings on Airbnb and Vrbo to long-term rental (LTR) listings on Craigslist and Kijiji. These latter two platforms represent only a portion of the LTR market, but provide useful insight into how STR hosts have responded to the collapse in accommodation demand during the COVID-19 pandemic, or how they expected the regulation to impact their businesses. If the exact same photo of an apartment’s living room was uploaded to Airbnb in August 2019 and then to Craigslist in April 2020, this provides proof that the property in question has moved from the STR market to the LTR market. The image recognition software we developed is able to identify matches between images which are identical, but also images which the host has modified slightly, and thus allows us to reliably identify every match which exists between STR and LTR platforms 
-<!-- (Figure \@ref(fig:fig-6-1)). -->
+The COVID-19 pandemic has caused an unprecedented decline in STR activity in Toronto. More recently, the impending imposition of the City's STR by-law may also have contributed to a decline in STR activity. Under these circumstances, it would be reasonable to imagine that some STR hosts—particularly commercial operators who had come to expect large income streams from their properties—may have decided to return their listings to the long-term housing market, either temporarily or permanently. To investigate this possibility, we collected listing images from all properties posted to Craigslist and Kijiji in Toronto between April 2020 and January 2021, and used image recognition analysis to match STR listings on Airbnb and Vrbo to long-term rental (LTR) listings on Craigslist and Kijiji. These latter two platforms represent only a portion of the LTR market, but provide useful insight into how STR hosts have responded to the collapse in accommodation demand during the COVID-19 pandemic, or how they expected the regulation to impact their businesses. If the exact same photo of an apartment’s living room was uploaded to Airbnb in August 2019 and then to Craigslist in April 2020, this provides proof that the property in question has moved from the STR market to the LTR market. The image recognition software we developed is able to identify matches between images which are identical, but also images which the host has modified slightly, and thus allows us to reliably identify every match which exists between STR and LTR platforms (Figure \@ref(fig:fig-6-1)).
 
 ``` {r fig-6-1, include = TRUE, fig.cap = '(ref:fig-6-1)', fig.align = "center"}
 
-# figure_6_1_fun()
+figure_6_1_fun()
 
 ```
 
-<!-- (ref:fig-6-1) _Examples of listings matched between STR and LTR platforms. The first pair of images (A & B) is matched despite the images being tinted differently. The second pair of images (C&D) is matched despite the first image being digitally altered._ -->
+(ref:fig-6-1) _Examples of listings matched between STR and LTR platforms. Each pair of images is matched despite one of each pair having text overlays._
 
 ```{r matching, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
@@ -321,7 +327,7 @@ rm(property, daily, GH, ltr)
 
 Our image matching algorithm recognized `r unique_str_matches` unique Airbnb listings which matched with `r unique_ltr_matches` different LTR listings (as some units are posted multiple times) in the City of Toronto. The matching LTR listings were equally found on Kijiji (`r unique_KJ_matches` listings, or `r unique_KJ_pct`) and Craigslist (`r unique_CL_matches` listings, or `r unique_CL_pct`). Out of the `r unique_str_matches` matching Airbnb listings, `r str_matches_still_active_pct` (`r str_matches_still_active` listings) were created or still active in 2020. We suspect that many or most of the remaining properties were also still active under a different listing ID and with a different photo, since commercial STRs are delisted and relisted quite frequently, and we thus consider the `r unique_str_matches` Airbnb listings which we matched to Craigslist and Kijiji to be a lower bound for the number of unique housing units that went from the STR market to the LTR market due to the COVID-19 pandemic and the expectations of the new regulation. (Each listing which we matched is guaranteed to have been listed first on Airbnb and then on either Kijiji or Craigslist, but there are certain to be additional listings which we did not match because they did not reuse the same photographs.) 
 
-All of the Craigslist listings we matched were long-term rentals. Out of the `r kj_matches` Airbnb listings which we matched to Kijiji, `r kj_matches_ltr_pct` were identified by their hosts as “long-term rentals” and `r kj_matches_str_pct` were identified as “short-term rentals”. Among matched Kijiji listings, `r kj_lease_one_year` specified lease lengths of one year, `r kj_lease_month` specified month-to-month, and `r kj_lease_NA` did not specify.
+All of the Craigslist listings we matched were long-term rentals. Out of the `r kj_matches` Airbnb listings which we matched to Kijiji, `r kj_matches_ltr_pct` were identified by their hosts as “long-term rentals” and `r kj_matches_str_pct` were identified as “short-term rentals” (a category which typically indicates month-to-month leases). Among matched Kijiji listings, `r kj_lease_one_year` specified lease lengths of one year, `r kj_lease_month` specified month-to-month, and `r kj_lease_NA` did not specify.
 
 ## When did STR listings move to the long-term market?
 
@@ -412,7 +418,7 @@ if (build_figures) {
 
 ```
 
-The first COVID-19 case in Ontario (and Canada) was confirmed on January 25, 2020, but the pandemic did not fully erupt until the second week of March 2020, when public facilities and private businesses began to close, culminating in a Provincial declaration of public emergency on March 17. Consistent with this timeline, what was in early March a trickle of Airbnb listings moving to Craigslist or Kijiji began to accelerate in the middle of the month (Figure \@ref(fig:fig-6-2)). By the end of the March, the number of daily transfers reached `r march_peak_listings_transfer` listings. Daily numbers remained high through April (its peak being `r peak_listing_transfer` listings transferred on April 21), but even from May through December an average of `r avg_transfer_may_dec` new Airbnb listings were transferred to Craigslist or Kijiji each day. The expectations of the new regulation starting in January 2021 probably also contributed to this transfer in the latest months of the year 2020. 
+The first COVID-19 case in Ontario was confirmed on January 25, 2020, but the pandemic did not fully erupt until the second week of March 2020, when public facilities and private businesses began to close, culminating in a Provincial declaration of public emergency on March 17. Consistent with this timeline, what was in early March a trickle of Airbnb listings moving to Craigslist or Kijiji began to accelerate in the second half of the month (Figure \@ref(fig:fig-6-2)). By the end of the March, the number of daily transfers reached `r march_peak_listings_transfer` listings. Daily numbers remained high through April (its peak being `r peak_listing_transfer` listings transferred on April 21), but even from May through December an average of `r avg_transfer_may_dec` new Airbnb listings were transferred to Craigslist or Kijiji each day. It is likely, although there is no way to be sure, that the knowledge among commercial STR hosts that their listings would be illegal when the City's new by-law took effect on 1 January 2021 contributed to the transfer of STR units to the long-term market in the latter months of 2020. 
 
 ``` {r fig-6-2, include = TRUE, fig.cap = '(ref:fig-6-2)', fig.align = "center"}
 
@@ -625,7 +631,7 @@ if (build_figures) {
 
 ```
 
-Out of the `r unique_str_matches` unique STR listings matched to LTR listings in the City of Toronto, nearly half (`r waterfront_str_match_pct`) were located in the Spadina-Fort York ward, with the remaining matches more evenly split between the other wards. `r toronto_center_str_match_pct` of matches were in the Toronto Centre ward, followed by `r uni_rosedale_match_pct` in University-Rosedale. The rest of the wards were below 6% each. This distribution is distorted compared to general distribution of STR listings in the city: Spadina-Fort York is highly over-represented in these matches. When controlling for the density of STR listings, Spadina-Fort York is still slightly over-represented with respect to the number of STRs being relisted as long-term rentals. However, other wards have a listing density close to Spadina-Fort York’s (Figure \@ref(fig:fig-6-3)). The number of STR listings matched to LTR listings in Spadina-Fort York is equivalent to more than a third (`r waterfront_match_as_pct_mar`) of all the STR listings active in the ward on March 1, 2020, and more than a fifth `r waterfront_match_as_pct_2020` of all the listings active in the ward in 2020. In Toronto Centre, the matches found represent `r toronto_centre_match_as_pct_mar` of all active STR listings on March 1, and `r waterfront_match_as_pct_2020` of all active listings in 2020.
+Out of the `r unique_str_matches` unique STR listings matched to LTR listings in the City of Toronto, nearly half (`r waterfront_str_match_pct`) were located in the Spadina-Fort York ward, with the remaining matches more evenly split between the other wards. `r toronto_center_str_match_pct` of matches were in the Toronto Centre ward, followed by `r uni_rosedale_match_pct` in University-Rosedale. The rest of the wards were below 6% each. Even accounting for the general concentration of STRs in Spadina-Fort York, this ward is still highly over-represented in these matches (Figure \@ref(fig:fig-6-3)). Toronto Centre is likewise over-represented. The number of STR listings matched to LTR listings in Spadina-Fort York is equivalent to more than a third (`r waterfront_match_as_pct_mar`) of all the STR listings active in the ward on March 1, 2020, and more than a fifth `r waterfront_match_as_pct_2020` of all the listings active in the ward in 2020. In Toronto Centre, the matches found represent `r toronto_centre_match_as_pct_mar` of all active STR listings on March 1, and `r waterfront_match_as_pct_2020` of all active listings in 2020.
 
 ``` {r fig-6-3, include = TRUE, fig.cap = '(ref:fig-6-3)', fig.align = "center"}
 
@@ -690,61 +696,63 @@ asking_rents <-
   mutate(geography = "Spadina-Fort York") %>% 
   bind_rows(asking_rents)
 
-asking_rent_mar_13 <- 
+asking_rents <- 
   asking_rents %>% 
-  filter(geography == "City of Toronto", created >= "2020-03-13",
+  filter(created >= "2020-04-01")
+
+asking_rent_apr <- 
+  asking_rents %>% 
+  filter(geography == "City of Toronto", created >= "2020-04-01",
          created <= "2020-04-30") %>% 
   group_by(created) %>% 
   summarize(city = avg_price[status == "All listings"],
             match = avg_price[status == "Matched to STR"],
             dif = avg_price[status == "Matched to STR"] - 
               avg_price[status == "All listings"],
-            dif_pct = match / city - 1, .groups = "drop") %>% 
-  filter(dif == max(dif)) %>% 
+            dif_pct = match / city - 1, .groups = "drop")
+
+asking_rent_apr_city <- 
+  asking_rent_apr %>% 
+  summarize(city = mean(city)) %>% 
   pull(city) %>% 
-  scales::dollar(1)
+  scales::dollar(10)
 
-asking_rent_mar_13_match <- 
-  asking_rents %>% 
-  filter(geography == "City of Toronto", created >= "2020-03-13",
-         created <= "2020-04-30") %>% 
-  group_by(created) %>% 
-  summarize(city = avg_price[status == "All listings"],
-            match = avg_price[status == "Matched to STR"],
-            dif = avg_price[status == "Matched to STR"] - 
-              avg_price[status == "All listings"],
-            dif_pct = match / city - 1, .groups = "drop") %>% 
-  filter(dif == max(dif)) %>% 
+asking_rent_apr_match <- 
+  asking_rent_apr %>% 
+  summarize(match = mean(match)) %>% 
   pull(match) %>% 
-  scales::dollar(1)
+  scales::dollar(10)
 
-asking_rent_mar_13_match_dif_pct <- 
-  asking_rents %>% 
-  filter(geography == "City of Toronto", created >= "2020-03-13",
-         created <= "2020-04-30") %>% 
-  group_by(created) %>% 
-  summarize(city = avg_price[status == "All listings"],
-            match = avg_price[status == "Matched to STR"],
-            dif = avg_price[status == "Matched to STR"] - 
-              avg_price[status == "All listings"],
-            dif_pct = match / city - 1, .groups = "drop") %>% 
-  filter(dif == max(dif)) %>% 
-  pull(dif_pct) %>% 
+asking_rent_apr_dif_pct <- 
+  {parse_number(asking_rent_apr_match) / parse_number(asking_rent_apr_city) - 1} %>% 
   scales::percent(0.1)
 
-asking_rent_dec_31 <- 
+asking_rent_dec <- 
   asking_rents %>% 
-  filter(geography == "City of Toronto", created == "2020-12-31") %>% 
-  filter(status == "All listings") %>% 
-  pull(avg_price) %>% 
-  scales::dollar(1)
+  filter(geography == "City of Toronto", created >= "2020-12-01",
+         created <= "2020-12-31") %>% 
+  group_by(created) %>% 
+  summarize(city = avg_price[status == "All listings"],
+            match = avg_price[status == "Matched to STR"],
+            dif = avg_price[status == "Matched to STR"] - 
+              avg_price[status == "All listings"],
+            dif_pct = match / city - 1, .groups = "drop")
 
-asking_rent_dec_31_match <- 
-  asking_rents %>% 
-  filter(geography == "City of Toronto", created == "2020-12-31") %>% 
-  filter(status == "Matched to STR") %>% 
-  pull(avg_price) %>% 
-  scales::dollar(1)
+asking_rent_dec_city <- 
+  asking_rent_dec %>% 
+  summarize(city = mean(city)) %>% 
+  pull(city) %>% 
+  scales::dollar(10)
+
+asking_rent_dec_match <- 
+  asking_rent_dec %>% 
+  summarize(match = mean(match)) %>% 
+  pull(match) %>% 
+  scales::dollar(10)
+
+asking_rent_dec_dif_pct <- 
+  {parse_number(asking_rent_dec_match) / parse_number(asking_rent_dec_city) - 1} %>% 
+  scales::percent(0.1)
 
 rent_dif_apr_dec <- 
   asking_rents %>% 
@@ -759,40 +767,33 @@ rent_dif_apr_dec <-
 
 rent_dif_apr_dec_waterfront <- 
   asking_rents %>% 
-  filter(geography == "Spadina-Fort York", created >= "2020-03-13", 
-         created <= "2020-07-31", status != "All listings") %>% 
+  filter(geography == "Spadina-Fort York", created >= "2020-04-01", 
+         created <= "2020-12-31", status != "All listings") %>% 
   group_by(status) %>% 
   summarize(avg_price = mean(avg_price)) %>% 
   summarize(dif = max(avg_price) / min(avg_price) - 1) %>% 
   pull(dif) %>% 
   scales::percent(0.1)
 
-rent_decline_pct <- 
+asking_rent_early_apr <- 
   asking_rents %>% 
-  filter(geography == "City of Toronto" & status == "All listings" &
-           ((created >= "2020-03-25" & created <= "2020-03-31") | 
-           (created >= "2020-12-01" & created <= "2020-12-31"))) %>% 
-  group_by(dec = created >= "2020-12-01") %>% 
-  summarize(avg = mean(avg_price)) %>% 
-  summarize(dif = avg[1]/avg[2] - 1) %>% 
-  pull(dif) %>% 
-  scales::percent(0.1)
-
-asking_rent_mar <- 
-  asking_rents %>% 
-  filter(geography == "City of Toronto", created >= "2020-03-25", 
-         created <= "2020-03-31", status == "All listings") %>% 
+  filter(geography == "City of Toronto", created >= "2020-04-01", 
+         created <= "2020-04-14", status == "All listings") %>% 
   summarize(avg = mean(avg_price)) %>% 
   pull(avg) %>% 
   scales::dollar(1)
 
-asking_rent_dec <- 
+asking_rent_dec_end <- 
   asking_rents %>% 
-  filter(geography == "City of Toronto", created >= "2020-12-25", 
+  filter(geography == "City of Toronto", created >= "2020-12-16", 
          created <= "2020-12-31", status == "All listings") %>% 
   summarize(avg = mean(avg_price)) %>% 
   pull(avg) %>% 
   scales::dollar(1)
+
+rent_decline_pct <- 
+  {parse_number(asking_rent_early_apr) / parse_number(asking_rent_dec_end) - 1} %>% 
+  scales::percent(0.1)
 
 rm(ltr)
 
@@ -803,12 +804,14 @@ rm(ltr)
 figure_6_4_fun <- function(regular = "", condensed = "") {
   
   asking_rents %>% 
+    group_by(geography, status) %>% 
     mutate(avg_price = slider::slide_dbl(avg_price, mean, .before = 13)) %>% 
-    filter(created >= "2020-03-13", created <= "2020-12-31") %>% 
+    ungroup() %>%
+    filter(created >= "2020-04-01", created <= "2020-12-31") %>% 
     ggplot(aes(created, avg_price, color = status)) +
     geom_line(lwd = 1) +
-    scale_x_date(name = NULL, limits = c(as.Date("2020-03-01"), NA)) +
-    scale_y_continuous(name = NULL, limits = c(1500, 3800), 
+    scale_x_date(name = NULL, limits = c(as.Date("2020-04-01"), NA)) +
+    scale_y_continuous(name = NULL, limits = c(1500, 3000), 
                        label = scales::dollar) +
     scale_color_manual(name = NULL, values = col_palette[c(5, 1, 3)]) +
     facet_wrap(vars(geography)) +
@@ -834,7 +837,7 @@ if (build_figures) {
 
 ```
 
-The left panel of Figure \@ref(fig:fig-6-4) shows the average asking rents of listings posted to Craigslist and Kijiji between March and December 2020, but since we do not have complete asking rent data for August and September, those months are excluded. The asking rents of the STR-LTR matches have remained dramatically higher than non-matched LTR listings. On March 13, when the average asking rent on LTR platforms in the City of Toronto was `r asking_rent_mar_13`, the average asking rent among listings which we matched to Airbnb was `r asking_rent_mar_13_match`— `r asking_rent_mar_13_match_dif_pct` higher. Over the course of the spring and the rest of the year, average asking rents for LTR listings matched to Airbnb declined continously. At the end of December, the average asking rent was `r asking_rent_dec_31` for all Craigslist and Kijiji listings and `r asking_rent_dec_31_match` for the matches. Overall, from April to December, asking rents for properties matched to STR listings were `r rent_dif_apr_dec` higher than the city-wide average.
+The left panel of Figure \@ref(fig:fig-6-4) shows the average asking rents of listings posted to Craigslist and Kijiji between April and December 2020. The asking rents of the STR-LTR matches have remained significantly higher than non-matched LTR listings. In April 2020, when the average asking rent on LTR platforms in the City of Toronto was `r asking_rent_apr_city`, the average asking rent among listings which we matched to Airbnb was `r asking_rent_apr_match`— `r asking_rent_apr_dif_pct` higher. Over the course of the spring and the rest of the year, average asking rents for LTR listings matched to Airbnb declined continuously. In December, the average asking rent was `r asking_rent_dec_city` for all Craigslist and Kijiji listings and `r asking_rent_dec_match` for the matches. Overall, from April to December, asking rents for properties matched to STR listings were `r rent_dif_apr_dec` higher than the city-wide average.
 
 ``` {r fig-6-4, include = TRUE, fig.cap = '(ref:fig-6-4)', fig.align = "center"}
 
@@ -844,9 +847,7 @@ figure_6_4_fun()
 
 (ref:fig-6-4) _Average asking rents on Craigslist and Kijiji in the City of Toronto (L) and the waterfront (R) (7-day average)_
 
-The right panel of Figure \@ref(fig:fig-6-4) shows asking rents only in the Spadina-Fort York ward. A large portion of the divergence in asking rents between LTR listings matched to Airbnb and listings not matched is a compositional effect of the much greater frequency of a Spadina-Fort York location (which commands higher prices than the rest of the city) among matched listings. Even in this ward, however, LTR listings matched to STRs have been on average `r rent_dif_apr_dec_waterfront` higher than listings not matched. Overall, STRs returning to the long-term market are correlated with a significant decline in asking rents. The average city-wide asking rent on Craigslist and Kijiji declined `r rent_decline_pct` from `r asking_rent_mar` in late March 2020 to `r asking_rent_dec` in late December 2020.
-
-## Listing amenities
+The right panel of Figure \@ref(fig:fig-6-4) shows asking rents only in the Spadina-Fort York ward. A large portion of the divergence in asking rents between LTR listings matched to Airbnb and listings not matched is a compositional effect of the much greater frequency of a Spadina-Fort York location (which commands higher prices than the rest of the city) among matched listings. Even in this ward, however, LTR listings matched to STRs have been on average `r rent_dif_apr_dec_waterfront` more expensive than listings not matched. Overall, STRs returning to the long-term market are correlated with a significant decline in asking rents. The average city-wide asking rent on Craigslist and Kijiji declined `r rent_decline_pct` from `r asking_rent_early_apr` in early April 2020 to `r asking_rent_dec_end` in late December 2020.
 
 ```{r bedrooms, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "ltr_processed.qsm"))}
 
@@ -971,19 +972,6 @@ rm(property, daily, GH, ltr)
 
 ```
 
-_Size:_ Table \@ref(tab:tab-bedrooms) shows the distribution of units by number of bedrooms for entire-home STRs, as well as all the units that were posted for rent on LTR platforms (both the ones that matched with an STR listing and the ones that did not match), and for the City of Toronto’s overall primary (i.e. apartment and townhouse) rental housing stock. Two-bedrooms were overrepresented in both the matches (`r match_2br_pct`) and the non-matches (`r nonmatch_2br_pct`) compared to the STR market (`r str_2br_pct`), but significantly underrepresented compared to the City (`r city_2br_pct`). Studios were overrepresented among LTR listings which matched to Airbnb or Vrbo (`r match_studio_pct`) compared with LTR listings which did not match (`r nonmatch_studio_pct`) and STR listings (`r str_studio_pct`), but there isn't a big variation when compared to Toronto’s rental stock of studios (`r city_studio_pct`). Units with three bedrooms on the STR market and for matches were similar to the City distribution, while one-bedroom units were significantly overrepresented on STR platforms compared to LTR platforms and to the City's primary rental stock. The implication is that two-bedrooms and studios apartments were disproportionately likely to be moved from STR platforms to the long-term rental market, while one-bedroom apartments were disproportionately likely not to have been moved.
-
-``` {r tab-bedrooms, include = TRUE}
-
-library(kableExtra)
-
-bedroom_match_table %>% 
-  mutate(across(where(is.numeric), scales::percent, 0.1)) %>%  
-  kbl(caption = "STR and LTR listings by bedroom count", align = "lrrrr") %>% 
-  kable_styling()
-
-```
-
 ```{r furnished, cache = TRUE, cache.lazy = FALSE}
 
 total_ltr_listings <- 
@@ -1024,8 +1012,6 @@ unfurnished_match_pct <-
   scales::percent(0.1)
 
 ```
-
-_Furnished vs. unfurnished:_ To accommodate temporary guests, STR properties are overwhelmingly furnished. Unsurprisingly, properties that have moved from the STR to LTR market during the pandemic are listed as furnished at much higher rates than other listings on Craigslist and Kijiji. Of the `r total_ltr_listings` LTR listings we analyzed, `r furnished_pct` were listed as furnished and `r unfurnished_pct` as unfurnished. (The remainder did not provide this information.) Listings which matched with STRs had a significantly higher proportion classified as furnished: `r furnished_match_pct` furnished and `r unfurnished_match_pct` unfurnished. These proportions suggest that, in almost 6 out of 10 cases, STR operators listing their units on LTR platforms may intend to return their units to the STR market when demand returns, while in 4 cases out of 10, the move to the LTR market appears to be reasonably permanent, since the host has gone through the effort of emptying the unit of furniture.
 
 ## Are matched listings commercial operations?
 
@@ -1154,7 +1140,7 @@ rm(property, daily, GH, ltr)
 
 ```
 
-Nearly all of the STR listings which we matched to LTR listings on Craigslist or Kijiji are likely to have been dedicated, commercial STRs. This is because it is highly unlikely that a casual home sharer operating a STR out of their principal residence would decide to vacate their home, list it on Craigslist or Kijiji, and reuse the photo they had used to advertise the short-term rental. It is therefore also likely that the STR listings found on LTR platform were non-compliant with the City's STR upcoming regulations, since the fact that they were commercial operators makes it extremely difficult to also have the listing be operated out of a principal residence. We can test this intuition by examining the characteristics of the STR listings which we matched to an LTR platform.
+Nearly all of the STR listings which we matched to LTR listings on Craigslist or Kijiji are likely to have been dedicated, commercial STRs. This is because it is highly unlikely that a casual home sharer operating a STR out of their principal residence would decide to vacate their home, list it on Craigslist or Kijiji, and reuse the photo they had used to advertise the short-term rental. It is therefore also likely that the STR listings found on LTR platform were non-compliant with the City's new STR regulations, since the fact that they were commercial operators makes it extremely difficult to also have the listing be operated out of a principal residence. We can test this intuition by examining the characteristics of the STR listings which we matched to an LTR platform.
 
 Of the `r unique_str_matches` unique STR listings that matched with the LTR market, `r match_eh` (`r match_eh_pct`) are entire-home listings and `r match_pr` (`r match_pr_pct`) are private-room listings. Examining the entire-home listings, `r match_eh_FREH_pct` of them were identified as frequently rented entire-home (FREH) listings at some point, which means they were almost certainly operated commercially. Moreover, `r r_match_eh_multi_pct` of entire-home STR listings which matched to LTR listings were multilistings at some point, which means they were operated by hosts controlling multiple listings simultaneously. In total, more than two thirds (`r match_eh_commercial_pct`) of entire-home listings had one of these two strong indicators of commercial activity.
 
@@ -1592,7 +1578,7 @@ if (build_figures) {
 
 ```
 
-On average, the STR matches found on LTR platforms stayed longer than the non-matches. STR matches were listed an average of `r listing_length_match` days on LTR platforms, while non-matches were listed only four fifths as long—`r listing_length_non_match` days on average. This simplest plausible explanation for this disparity is the fact that listings coming from the STR market were both significantly more expensive than other listings and much more likely to be furnished, both of which factors may have decreased their viability in the rental market. Figure \@ref(fig:fig-6-7) shows the distribution of the length of stay for both matches and non-matches. The figure reveals quantitatively and qualitatively different patterns among matched and non-matched listings. Most non-matched listings were present for less than a week on Craigslist or Kijiji before being removed (and presumably rented), and the number of listings still present declines relatively smoothly as the length of time increases. By contrast, most matched listings were not rented after a week, and in fact the proportion which took a month or more to be taken down is higher not lower than the proportion which were taken down after several weeks. Our conclusion is that, regardless of their host’s intentions, STR units listed on LTR platforms have been relatively unsuccessful at transitioning back to long-term rentals.
+On average, the STR matches found on LTR platforms were listed for rent longer than the non-matches. STR matches were listed an average of `r listing_length_match` days on LTR platforms, while non-matches were listed only four fifths as long—`r listing_length_non_match` days on average. This simplest plausible explanation for this disparity is the fact that listings coming from the STR market were both significantly more expensive than other listings and much more likely to be furnished, both of which factors may have decreased their viability in the rental market. (Of the `r total_ltr_listings` LTR listings we analyzed, `r furnished_pct` were listed as furnished and `r unfurnished_pct` as unfurnished.) Figure \@ref(fig:fig-6-7) shows the distribution of the length of stay for both matches and non-matches. The figure reveals quantitatively and qualitatively different patterns among matched and non-matched listings. Most non-matched listings were present for less than a week on Craigslist or Kijiji before being removed (and presumably rented), and the number of listings still present declines relatively smoothly as the length of time increases. By contrast, most matched listings were not rented after a week, and in fact the proportion which took a month or more to be taken down is higher not lower than the proportion which were taken down after several weeks. Our conclusion is that, regardless of their host’s intentions, STR units listed on LTR platforms have been relatively unsuccessful at transitioning back to long-term rentals.
 
 ``` {r fig-6-7, include = TRUE, fig.cap = '(ref:fig-6-7)', fig.align = "center"}
 
@@ -1602,7 +1588,7 @@ figure_6_7_fun()
 
 (ref:fig-6-7) _LTR listing posting length distributions for listings matched to STR listings (L) and not matched (R)_
 
-Further evidence about the extent to which STR hosts are successfully transferring their listings to the long-term market can be found by examining the activity of the STR listings themselves. Are hosts planning on renting on the long-term only temporarily, leaving the STR listing running for future bookings? Or have they deactivated the STR listing? Out of the total `r unique_str_matches` STR listings which we identified on LTR platforms, `r matches_present_jan` (`r matches_present_jan_pct`) were present on Airbnb or Vrbo at the beginning of 2020. Out of this number, `r matches_present_dec` (`r matches_present_dec_pct`) were still present on December 31, while the other `r matches_deactivated` (`r matches_deactivated_pct`) had been deactivated. Extrapolating this proportion across the entire set of matched listings we identified, we estimate that `r round(extrapolated_deactivated)` matched listings have been deactivated from Airbnb or Vrbo during the pandemic, while `r round(extrapolated_active)` remain on the platforms. Listings removed from STR platforms are likely to have been durably shifted to the long-term market. However, `r furnished_matches_pct` of these listings were rented as furnished rentals on Craigslist or Kijiji. These listings should therefore be considered at relatively high risk of returning to the STR market if demand recovers.
+Further evidence about the extent to which STR hosts are successfully transferring their listings to the long-term market can be found by examining the activity of the STR listings themselves. Are hosts planning on renting on the long-term only temporarily, leaving the STR listing running for future bookings? Or have they deactivated the STR listing? Out of the total `r unique_str_matches` STR listings which we identified on LTR platforms, `r matches_present_jan` (`r matches_present_jan_pct`) were present on Airbnb or Vrbo at the beginning of 2020. Out of this number, `r matches_present_dec` (`r matches_present_dec_pct`) were still present on 31 December 2020, while the other `r matches_deactivated` (`r matches_deactivated_pct`) had been deactivated. Extrapolating this proportion across the entire set of matched listings we identified, we estimate that `r round(extrapolated_deactivated)` matched listings have been deactivated from Airbnb or Vrbo during the pandemic, while `r round(extrapolated_active)` remain on the platforms. Listings removed from STR platforms are likely to have been durably shifted to the long-term market. However, `r furnished_matches_pct` of these listings were rented as furnished rentals on Craigslist or Kijiji. These listings should therefore be considered at relatively high risk of returning to the STR market if demand recovers.
 
 Listings which remain on Airbnb and Vrbo can nevertheless be inactive. If a host successfully rents their listing on Craigslist for several months, they can choose to block their calendar on their STR platform to make sure no new reservations occur, while keeping the listing intact for when the STR market recovers. Of the `r matches_active_jan_and_dec` matched listings present on Airbnb or Vrbo at the beginning of 2020 and still present by the end of December, `r matches_active_jan_and_dec_blocked` (`r matches_active_jan_and_dec_blocked_pct`) were blocked for the entirety of the month of December. This suggests that these listings are not active on the STR market and therefore have been rented on the LTR market, but the fact that the STR listings have not been taken down suggests that the hosts may plan to reactivate their units once STR demand recovers.
 

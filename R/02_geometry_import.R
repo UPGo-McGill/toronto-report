@@ -150,6 +150,12 @@ str_reg <- read.csv("data/str.csv") %>%
                       distinct(registration, .keep_all = TRUE) %>% 
                       lengths())
 
+# Get minimum stay column for properties
+property_minimum_stay <-  
+  property %>% 
+  st_drop_geometry() %>% 
+  select(property_ID, minimum_stay)
+
 
 # Join open data's scrape with Airbnb scrape
 reg_1 <- left_join(reg_1, str_reg, by = "registration")
@@ -157,6 +163,13 @@ reg_2 <- left_join(reg_2, str_reg, by = "registration")
 reg_3 <- left_join(reg_3, str_reg, by = "registration")
 reg_4 <- left_join(reg_4, str_reg, by = "registration")
 reg_5 <- left_join(reg_5, str_reg, by = "registration")
+
+# Join regulation with minimum stay information
+reg_1 <- left_join(reg_1, property_minimum_stay, by = "property_ID")
+reg_2 <- left_join(reg_2, property_minimum_stay, by = "property_ID")
+reg_3 <- left_join(reg_3, property_minimum_stay, by = "property_ID")
+reg_4 <- left_join(reg_4, property_minimum_stay, by = "property_ID")
+reg_5 <- left_join(reg_5, property_minimum_stay, by = "property_ID")
 
 # Select property_IDs that are using duplicate registration numbers
 duplicates_1 <- 
@@ -268,8 +281,9 @@ reg_1 <-
                                         "Fake License", registration_analyzed),
          registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
                                         "Conform", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "Shifted to longer-term rental", registration_analyzed),
          registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
-  ) %>% 
+  ) %>%
   filter(registration_analyzed != "Invalid") %>% 
   as_tibble()
 
@@ -282,8 +296,9 @@ reg_2 <-
                                         "Fake License", registration_analyzed),
          registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
                                         "Conform", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "Shifted to longer-term rental", registration_analyzed),
          registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
-  ) %>% 
+  ) %>%
   filter(registration_analyzed != "Invalid") %>% 
   as_tibble()
 
@@ -296,8 +311,9 @@ reg_3 <-
                                         "Fake License", registration_analyzed),
          registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
                                         "Conform", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "Shifted to longer-term rental", registration_analyzed),
          registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
-  ) %>% 
+  ) %>%
   filter(registration_analyzed != "Invalid") %>% 
   as_tibble()
 
@@ -310,8 +326,9 @@ reg_4 <-
                                         "Fake License", registration_analyzed),
          registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
                                         "Conform", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "Shifted to longer-term rental", registration_analyzed),
          registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
-  ) %>% 
+  ) %>%
   filter(registration_analyzed != "Invalid") %>% 
   as_tibble()
 
@@ -324,8 +341,9 @@ reg_5 <-
                                         "Fake License", registration_analyzed),
          registration_analyzed = ifelse(str_detect(registration_analyzed, "STR-\\d{4}-\\w{6}"), 
                                         "Conform", registration_analyzed),
+         registration_analyzed = ifelse(is.na(registration_analyzed) & minimum_stay >=28, "Shifted to longer-term rental", registration_analyzed),
          registration_analyzed = ifelse(is.na(registration_analyzed), "No license", registration_analyzed)
-  ) %>% 
+  ) %>%
   filter(registration_analyzed != "Invalid") %>% 
   as_tibble()
 

@@ -70,7 +70,7 @@ rm(ltr, DA)
 
 ```
 
-**Using image recognition techniques, we identified 3,476 unique Airbnb listings which were posted as long-term rentals (LTRs) on Craigslist or Kijiji between March and December 2020. These former STRs have asking rents on average 20.9% higher than other LTR listings, but are correlated with a 14.8% decrease in overall asking rents in Toronto. The evidence suggests that the overwhelming majority of STR listings transferred to LTR platforms are commercial operations. We estimate that 42.2% have fully transitioned back to the long-term market, 23.6% have been temporarily blocked on Airbnb and may return to being STRs in the future, and 34.1% failed to be rented on LTR platforms and instead remain active on Airbnb.**
+**Using image recognition techniques, we identified 3,476 unique Airbnb listings which were posted as long-term rentals (LTRs) on Craigslist or Kijiji between March and December 2020. These former STRs have asking rents on average 20.9% higher than other LTR listings, but are correlated with a 14.8% decrease in overall asking rents in Toronto. The evidence suggests that the overwhelming majority of STR listings transferred to LTR platforms are commercial operations. We estimate that 42.2% have fully transitioned back to the long-term market, 23.6% have been temporarily blocked on Airbnb and may return to being STRs in the future, and 34.1% failed to be rented on LTR platforms and instead remain active on Airbnb. This latter figure can be broken down in two: 22.8% have a new minimum stay of 28 nights or more to comply with the new regulation, while 11.3% continue to operate on the shorter-term side on STR platforms.**
 
 ## How many STR listings have returned to the long-term market?
 
@@ -1140,7 +1140,7 @@ rm(property, daily, GH, ltr)
 
 ```
 
-Nearly all of the STR listings which we matched to LTR listings on Craigslist or Kijiji are likely to have been dedicated, commercial STRs. This is because it is highly unlikely that a casual home sharer operating a STR out of their principal residence would decide to vacate their home, list it on Craigslist or Kijiji, and reuse the photo they had used to advertise the short-term rental. It is therefore also likely that the STR listings found on LTR platform were non-compliant with the City's new STR regulations, since the fact that they were commercial operators makes it extremely difficult to also have the listing be operated out of a principal residence. We can test this intuition by examining the characteristics of the STR listings which we matched to an LTR platform.
+Nearly all of the STR listings which we matched to LTR listings on Craigslist or Kijiji are likely to have been dedicated, commercial STRs. This is because it is highly unlikely that a casual home sharer operating a STR out of their principal residence would decide to vacate their home, list it on Craigslist or Kijiji, and reuse the photo they had used to advertise the short-term rental. It is therefore also likely that the STR listings found on LTR platform were non-compliant with the City's new STR regulation, since the fact that they were commercial operators makes it extremely difficult to also have the listing be operated out of a principal residence. We can test this intuition by examining the characteristics of the STR listings which we matched to an LTR platform.
 
 Of the `r unique_str_matches` unique STR listings that matched with the LTR market, `r match_eh` (`r match_eh_pct`) are entire-home listings and `r match_pr` (`r match_pr_pct`) are private-room listings. Examining the entire-home listings, `r match_eh_FREH_pct` of them were identified as frequently rented entire-home (FREH) listings at some point, which means they were almost certainly operated commercially. Moreover, `r r_match_eh_multi_pct` of entire-home STR listings which matched to LTR listings were multilistings at some point, which means they were operated by hosts controlling multiple listings simultaneously. In total, more than two thirds (`r match_eh_commercial_pct`) of entire-home listings had one of these two strong indicators of commercial activity.
 
@@ -1411,8 +1411,8 @@ matches_present_table <-
   filter(scraped >= start_2020) %>% 
   summarize(total = n(),
             total_pct = total / nrow(filter(property, !is.na(ltr_ID))),
-            n_scraped = sum(scraped >= max(scraped) - months(1)),
-            pct_scraped = mean(scraped >= max(scraped) - months(1)),
+            n_scraped = sum(scraped >= "2020-01-23"),
+            pct_scraped = mean(scraped >= "2020-01-23"),
             not_scraped = total - n_scraped,
             pct_not_scraped = 1 - pct_scraped,
             n_gone = pct_not_scraped * nrow(filter(property, !is.na(ltr_ID))),
@@ -1442,7 +1442,7 @@ furnished_matches_pct <-
   property %>% 
   st_drop_geometry() %>% 
   filter(!is.na(ltr_ID)) %>% 
-  filter(scraped >= start_2020, scraped < max(scraped) - months(1)) %>% 
+  filter(scraped >= start_2020, scraped < "2020-01-23") %>% 
   left_join(select(ltr_unique_property_ID, property_ID, furnished)) %>% 
   filter(!is.na(furnished)) %>% 
   summarize(furnished = scales::percent(mean(furnished), 0.1)) %>% 
@@ -1451,7 +1451,7 @@ furnished_matches_pct <-
 matches_active_jan_and_dec <- 
   property %>% 
   st_drop_geometry() %>% 
-  filter(!is.na(ltr_ID), scraped >= max(scraped) - months(1)) %>% 
+  filter(!is.na(ltr_ID), scraped >= "2020-01-23") %>% 
   summarize(total = n(),
             n_inactive = total - sum(active >= max(active, na.rm = T) - days(30), na.rm = TRUE) +
               sum(is.na(active)),
@@ -1461,7 +1461,7 @@ matches_active_jan_and_dec <-
 matches_active_jan_and_dec_blocked <- 
   property %>% 
   st_drop_geometry() %>% 
-  filter(!is.na(ltr_ID), scraped >= max(scraped) - months(1)) %>% 
+  filter(!is.na(ltr_ID), scraped >= "2020-01-23") %>% 
   summarize(total = n(),
             n_inactive = total - sum(active >= max(active, na.rm = T) - days(30), na.rm = TRUE) +
               sum(is.na(active)),
@@ -1471,12 +1471,31 @@ matches_active_jan_and_dec_blocked <-
 matches_active_jan_and_dec_blocked_pct <- 
   property %>% 
   st_drop_geometry() %>% 
-  filter(!is.na(ltr_ID), scraped >= max(scraped) - months(1)) %>% 
+  filter(!is.na(ltr_ID), scraped >= "2020-01-23") %>% 
   summarize(total = n(),
             n_inactive = total - sum(active >= max(active, na.rm = T) - days(30), na.rm = TRUE) +
               sum(is.na(active)),
             pct_inactive = n_inactive / total) %>% 
   pull(pct_inactive) %>% 
+  scales::percent(0.1)
+
+matches_active_jan_and_dec_lt <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID), scraped >= "2020-01-23") %>% 
+  summarize(total = n(),
+            n_lt = sum(active > max(active, na.rm = T) - days(30) & minimum_stay >= 28, na.rm = TRUE),
+            pct_lt = n_lt / total) %>% 
+  pull(n_lt)
+
+matches_active_jan_and_dec_lt_pct <- 
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID), scraped >= "2020-01-23") %>% 
+  summarize(total = n(),
+            n_lt = sum(active > max(active, na.rm = T) - days(30) & minimum_stay >= 28, na.rm = TRUE),
+            pct_lt = n_lt / total) %>% 
+  pull(pct_lt) %>% 
   scales::percent(0.1)
 
 deactivated_pct <- 
@@ -1497,6 +1516,14 @@ blocked_pct <-
                                                      max(scraped, na.rm = T) - months(1))) / n()) %>% 
   pull(pct_blocked)
 
+active_lt_pct <-
+  property %>% 
+  st_drop_geometry() %>% 
+  filter(!is.na(ltr_ID)) %>% 
+  filter(scraped >= start_2020) %>% 
+  summarize(pct_lt_active = sum(active > max(active, na.rm = T) - days(30) & minimum_stay >= 28, na.rm = TRUE) /n()) %>% 
+  pull(pct_lt_active)
+
 total_table <- 
   property %>% 
   st_drop_geometry() %>% 
@@ -1504,7 +1531,8 @@ total_table <-
   summarize(total = n(),
             deactivated = total * deactivated_pct,
             blocked = total * blocked_pct,
-            active = total - deactivated - blocked) %>% 
+            active_28 = total * active_lt_pct,
+            active = total - deactivated - blocked - active_28) %>% 
   mutate(across(where(is.numeric), round, 0)) %>% 
   pivot_longer(-total) %>% 
   mutate(pct = round(value / sum(value), 3))
@@ -1525,6 +1553,15 @@ total_blocked <-
 total_blocked_pct <- 
   total_table %>% 
   filter(name == "blocked") %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+total_active_28 <- 
+  total_table %>% 
+  filter(name == "active_28") %>% 
+  pull(value)
+total_active_28_pct <- 
+  total_table %>% 
+  filter(name == "active_28") %>% 
   pull(pct) %>% 
   scales::percent(0.1)
 total_active <- 
@@ -1592,6 +1629,8 @@ Further evidence about the extent to which STR hosts are successfully transferri
 
 Listings which remain on Airbnb and Vrbo can nevertheless be inactive. If a host successfully rents their listing on Craigslist for several months, they can choose to block their calendar on their STR platform to make sure no new reservations occur, while keeping the listing intact for when the STR market recovers. Of the `r matches_active_jan_and_dec` matched listings present on Airbnb or Vrbo at the beginning of 2020 and still present by the end of December, `r matches_active_jan_and_dec_blocked` (`r matches_active_jan_and_dec_blocked_pct`) were blocked for the entirety of the month of December. This suggests that these listings are not active on the STR market and therefore have been rented on the LTR market, but the fact that the STR listings have not been taken down suggests that the hosts may plan to reactivate their units once STR demand recovers.
 
-In total, taking into account the matched listings which have continued to see activity on Airbnb or Vrbo, we estimate that, of the total `r unique_str_matches` STR listings which were advertised on Craigslist or Kijiji, `r total_deactivated` (`r total_deactivated_pct`) have been deactivated from Airbnb and Vrbo and have likely transitioned back to long-term housing (albeit often as furnished rentals which could be reconverted to STRs), `r total_blocked` (`r total_blocked_pct`) have been temporarily blocked on the STR platforms and have likely been rented in the long-term market but may return to being STRs in the future, and `r total_active` (`r total_active_pct`) failed to be rented on LTR platforms and instead remain active as STRs.
+Furthermore, listings which remain active on Airbnb and Vrbo can also have changed their minimum stay to 28 days or more, which is then legal regarding the new regulation. We found that `r matches_active_jan_and_dec_lt` (`r matches_active_jan_and_dec_lt_pct`) of the matched listings which failed to transfer to the LTR, so are still active on the STR platforms, now have a minimum stay set to 28 days. 
+
+In total, taking into account the matched listings which have continued to see activity on Airbnb or Vrbo, we estimate that, of the total `r unique_str_matches` STR listings which were advertised on Craigslist or Kijiji, `r total_deactivated` (`r total_deactivated_pct`) have been deactivated from Airbnb and Vrbo and have likely transitioned back to long-term housing (albeit often as furnished rentals which could be reconverted to STRs), `r total_blocked` (`r total_blocked_pct`) have been temporarily blocked on the STR platforms and have likely been rented in the long-term market but may return to being STRs in the future, and `r total_active_28` (`r total_active_28_pct`) are still operating on the STR platforms with at least 28 days minimum stay to comply with the new regulation. `r total_active` (`r total_active_pct`) failed to be rented on LTR platforms and instead remain active on the shorter term side (minimum stay of less than 28 days) on the STR platforms.
 
 \newpage

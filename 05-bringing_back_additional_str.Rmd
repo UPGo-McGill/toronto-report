@@ -86,13 +86,14 @@ revenue_2020 %>%
 
 # Property status (still on the platform or not?)
 property_status <- 
-  property %>% 
+property %>% 
   st_drop_geometry() %>% 
   filter(!is.na(ltr_ID)) %>%
   filter(scraped >= "2020-01-01") %>% 
   mutate(status = case_when(scraped <= max(scraped)-days(30) ~ "Taken down", # TKTK date maybe to update, depends on the last scraped date
                             active < "2020-12-01" ~ "Blocked", # Not active during all october
-                            TRUE ~ "Continued")) # what if active = NA ?
+                            TRUE ~ "Continued STR"),
+         status = ifelse(status == "Continued STR" & minimum_stay >= 28, "28-days min.", status))
   
 
 # Matrice creation
@@ -281,7 +282,7 @@ figure_5_3_fun()
 
 (ref:fig-5-3) _Matched listings' 2020 monthly revenue, separated in three groups_
 
-The listings that matched but continued their STR operations are the listings with the smallest monthly revenue in 2020 (a median of \$`r monthly_rev_median_status[1,4]`), while the blocked and taken down listings earned more, with respectively \$`r monthly_rev_median_status[2,4]` and \$`r monthly_rev_median_status[3,4]` of median monthly revenue in 2020. The three numbers are significantly lower than what a landlord could make on the LTR market, which is a motivation to operate the change from STR to LTR. It is the listings that did not succeed their transfer that made a smaller monthly revenue in 2020, probably because they operated longer under the overall COVID situation and during fall, where revenue are overall decreasing on the platform. The listings that are completely taken down are the listings that made the most monthly revenue, TKTK.
+The listings that matched but continued their operations with a minimum stay of 28 days are the listings with the smallest monthly revenue in 2020 (a median of \$`r monthly_rev_median_status[1,4]`), while the continued STR operations made a similar revenue (\$`r monthly_rev_median_status[2,4]`). Taken down and blocked listings earned more, with respectively \$`r monthly_rev_median_status[3,4]` and \$`r monthly_rev_median_status[4,4]` of median monthly revenue in 2020. The four numbers are significantly lower than what a landlord could make on the LTR market, which is a motivation to operate the change from STR to LTR. It is the listings that did not succeed their transfer that made a smaller monthly revenue in 2020, probably because they operated longer under the overall COVID situation and during fall, where revenue are overall decreasing on the platform. The listings that are completely taken down are the listings that made the most monthly revenue, TKTK.
 
 ## Modeling the relationship between listings' characteristics and asking rents
 

@@ -1666,7 +1666,7 @@ rm(property, daily, GH)
 figure_1_7_fun <- function(regular = "", condensed = "") {
   
   ML %>% 
-    filter(date >= "2017-01-01") %>% 
+    filter(date >= "2017-01-01", date <= "2020-11-31") %>% 
     ggplot() +
     geom_line(aes(date, value, colour = `Multilisting percentage`), lwd = 1) +
     annotate("segment", x = key_date_covid, xend = key_date_covid,

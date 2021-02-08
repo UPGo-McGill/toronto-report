@@ -60,26 +60,26 @@ table_2 <-
 table_3 <- 
   reg_3 %>% 
   group_by(registration_analyzed) %>% 
-  summarize(n=n(), percentage = n()/nrow(reg_3)) %>% 
+  summarize(n = n(), percentage = n() / nrow(reg_3)) %>% 
   mutate(date = as.Date("2021-01-15"))
 
 table_4 <- 
   reg_4 %>% 
   group_by(registration_analyzed) %>% 
-  summarize(n=n(), percentage = n()/nrow(reg_4)) %>% 
+  summarize(n = n(), percentage = n() / nrow(reg_4)) %>% 
   mutate(date = as.Date("2021-01-26"))
 
 table_5 <- 
   reg_5 %>% 
   group_by(registration_analyzed) %>% 
-  summarize(n=n(), percentage = n()/nrow(reg_5)) %>% 
+  summarize(n = n(), percentage = n() / nrow(reg_5)) %>% 
   mutate(date = as.Date("2021-02-05"))
 
 table <- rbind(table_1, table_2, table_3, table_4, table_5)
 
 # listings removed between scrape 2 and 3
 listings_removed_jan_15 <- 
-  (table_2 %>% filter(registration_analyzed == "No license") %>% pull(n)-
+  (table_2 %>% filter(registration_analyzed == "No license") %>% pull(n) -
   table_3 %>% filter(registration_analyzed == "No license") %>% pull(n)) %>% 
   round(digit = -1) %>% 
   prettyNum(",")
@@ -88,13 +88,13 @@ listings_removed_jan_15 <-
 table_total <- 
   table %>%
   group_by(date) %>% 
-  summarize(n=sum(n))
+  summarize(n = sum(n))
 
 # active listings on January 7th
 active_listings_jan_07 <- 
   table_total %>%
   group_by(date) %>% 
-  summarize(n=sum(n)) %>% 
+  summarize(n = sum(n)) %>% 
   filter(date == "2021-01-07") %>% 
   pull(n) %>% 
   round(digit = -1) %>% 
@@ -104,7 +104,7 @@ active_listings_jan_07 <-
 active_listings_feb_5 <- 
   table_total %>%
   group_by(date) %>% 
-  summarize(n=sum(n)) %>% 
+  summarize(n = sum(n)) %>% 
   filter(date == "2021-02-05") %>% 
   pull(n) %>% 
   round(digit = -1) %>% 
@@ -114,7 +114,7 @@ active_listings_feb_5 <-
 active_listings_jan_07 <- 
   table_total %>%
   group_by(date) %>% 
-  summarize(n=sum(n)) %>% 
+  summarize(n = sum(n)) %>% 
   filter(date == "2021-01-07")
 
 # Percentage listings with valid licenses
@@ -147,18 +147,22 @@ conform_listings_feb_5_perc <-
   scales::percent(0.1)
 
 increase_conform_listings <- 
-  ((table %>% filter(date == "2021-02-05", registration_analyzed == "Conform") %>% pull(n))-
+  ((table %>% filter(date == "2021-02-05", registration_analyzed == "Conform") %>% pull(n)) -
   (table %>% filter(date == "2021-01-07", registration_analyzed == "Conform") %>% pull(n))) %>% 
   round(digit = -1) %>% 
   prettyNum(",")
 
-active_listings_2021 <- 
-  property %>% 
-  st_drop_geometry() %>% 
-  count(scraped) %>% 
-  filter(scraped >= "2020-11-01") %>% 
-  mutate(cum_n = slider::slide_dbl(n, sum, .after = 100)) %>% 
-  filter(scraped <= "2021-01-24")
+daily_active <- 
+  map_int(as.Date("2019-01-01"):as.Date("2021-01-24"), ~{
+    property %>% 
+      filter(created <= .x, scraped >= .x) %>% 
+      nrow()
+    })
+
+daily_active <- 
+  tibble(date = as.Date(as.Date("2019-01-01"):as.Date("2021-01-24"), 
+                        origin = "1970-01-01"),
+         daily_active = daily_active)
 
 rm(property, daily, GH)
 
@@ -170,8 +174,10 @@ As of 1 January 2021, all STR operators in Toronto are required to have a munici
 
 figure_3_1_fun <- function(regular = "", condensed = "") {
   
-  ggplot(active_listings_2021) +
-    geom_line(aes(scraped, cum_n), color = col_palette[1]) +
+  daily_active %>% 
+    mutate(daily_active = slide_dbl(daily_active, mean, .before = 6)) %>% 
+    ggplot() +
+    geom_line(aes(date, daily_active), color = col_palette[1], lwd = 1) +
     scale_x_date(name = NULL) +
     scale_y_continuous(name = NULL, label = scales::comma) +
     theme_minimal() +
@@ -189,7 +195,7 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-3-1) shows the total number of active listings that were displayed on the Airbnb platform from 1 November 2020 to 24 January 2021 (the last date for which we have complete information). It demonstrates a sharp drop of more than 2,600 listings around January 11, which appears to have been a mass removal initiated by Airbnb of listings without licenses.
+Figure \@ref(fig:fig-3-1) shows the total number of active listings that were displayed on the Airbnb platform from 1 January 2019 to 24 January 2021 (the last date for which we have complete information). It demonstrates the generalized decline of listing numbers during the pandemic, and then a sharp drop of more than 2,600 listings around 11 January 2021, which appears to have been a mass removal initiated by Airbnb of listings without licenses.
 
 ``` {r fig-3-1, include = TRUE, fig.cap = '(ref:fig-3-1)', fig.align = "center"}
 
@@ -197,7 +203,7 @@ figure_3_1_fun()
 
 ```
 
-(ref:fig-3-1) _Displayed listings on Airbnb, 1 November 2020 - 24 January 2021_
+(ref:fig-3-1) _Displayed listings on Airbnb, 1 November 2020 - 24 January 2021 (7-day average)_
 
 ``` {r make_fig_3_2}
 

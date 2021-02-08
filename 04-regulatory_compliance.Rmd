@@ -208,65 +208,74 @@ figure_3_1_fun()
 ```{r changing_stays, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
 qload(here("output", "property_nov.qs"), nthreads = availableCores())
+qload(here("output", "str_processed.qsm"), nthreads = availableCores())
 qload(here("output", "regulation.qsm"), nthreads = availableCores())
 
-november_listings_ms <- 
-  property_nov %>% 
+nov_listings <- 
+  property_nov %>%
   as_tibble() %>% 
-  filter(minimum_stay <= 60) %>% 
+  filter(created <= "2020-11-30", scraped >= "2020-11-01") %>% 
   select(property_ID, minimum_stay) %>%
   mutate(month="November")
 
-january_listings_ms <- 
-  january_listings %>% 
+feb_listings <- 
+  property %>% 
   st_drop_geometry() %>% 
-  filter(minimum_stay <= 60) %>% 
+  filter(scraped >= "2021-01-23") %>% 
+  filter(!is.na(ab_property)) %>% 
   select(property_ID, minimum_stay) %>% 
   mutate(month="February")
 
-minimum_stays <- rbind(january_listings_ms, november_listings_ms)
+minimum_stays <- rbind(feb_listings, nov_listings) %>%
+  group_by(month)%>%
+  count(minimum_stay) %>%
+  mutate(per = n/sum(n, na.rm = T)) %>% 
+  ungroup()
 
 perc_bigger_28_nov <- 
   (1-(property_nov %>% 
-  as_tibble() %>% 
-  #filter(property_ID %in% jan_listings) %>% 
-  select(property_ID, minimum_stay) %>%
-  filter(minimum_stay <= 60) %>% 
-  summarize(perc_days = sum(minimum_stay < 28, na.rm = TRUE) / n()) %>% 
-    pull(perc_days))) %>% 
+        as_tibble() %>% 
+        select(property_ID, minimum_stay) %>%
+        filter(minimum_stay <= 60) %>% 
+        summarize(perc_days = sum(minimum_stay < 28, na.rm = TRUE) / n()) %>% 
+        pull(perc_days))) %>% 
   scales::percent(0.1)
 
 perc_bigger_28_feb <- 
-  (1-(january_listings_ms %>% 
-  as_tibble() %>% 
-  #filter(property_ID %in% jan_listings) %>% 
-  select(property_ID, minimum_stay) %>%
-  filter(minimum_stay <= 60) %>% 
-  summarize(perc_days = sum(minimum_stay < 28, na.rm = TRUE) / n()) %>% 
-    pull(perc_days))) %>% 
+  (1-(feb_listings %>% 
+        as_tibble() %>% 
+        select(property_ID, minimum_stay) %>%
+        filter(minimum_stay <= 60) %>% 
+        summarize(perc_days = sum(minimum_stay < 28, na.rm = TRUE) / n()) %>% 
+        pull(perc_days))) %>% 
   scales::percent(0.1)
+
+rm(property, daily, GH)
 
 ```
 
 ``` {r make_fig_3_1_1}
 
 figure_3_1_1_fun <- function(regular = "", condensed = "") {
-  
+
 minimum_stays %>% 
   ggplot()+
-  geom_col(aes(minimum_stay, per, fill=month), alpha=0.9, size = 1, position=position_dodge(width = 0.75))+ 
+  geom_col(aes(minimum_stay, per, fill=month), alpha= 0.9, size = 0.75, position=position_dodge(width = 0.75)) +
+  theme_minimal()+
   xlab("Minimum stay (days)")+
   xlim(0,45)+
-  scale_y_continuous(name = "Percentage of listings", limits=c(0,1.5), label=scales::percent)+
-  scale_fill_manual(name = "Month", values = col_palette[c(4,5)])+
-  theme_minimal()+
+  scale_fill_manual(name = "Month", values = col_palette[c(5,2)])+
+  scale_y_continuous(name = NULL,
+                     labels = scales::percent)+
   theme(legend.position = "bottom",
         panel.grid.minor.x = element_blank(),
         panel.grid.minor.y = element_blank(),
-        text = element_text(face = "plain", family = regular),
+        text = element_text(face = "plain", family = regular
+        ),
         legend.title = element_text(face = "bold", family = regular,
                                     size = 10),
-        legend.text = element_text(size = 10, family = regular),
+        legend.text = element_text(size = 10, family = regular
+        ),
         strip.text = element_text(face = "bold", family = regular
         ))
   
@@ -296,37 +305,15 @@ figure_3_1_1_fun()
 
 figure_3_2_fun <- function(regular = "", condensed = "") {
   
-fig_left <- 
-  table %>% 
-  ggplot()+ 
-  geom_line(aes(x=date, y= percentage, color=registration_analyzed)) +
-  scale_colour_manual(name = "Conformity Status", values = col_palette[c(1,2,4,5,6)])+
-  scale_x_date(name=NULL)+
+table_5 %>% 
+  ggplot(aes(fill=registration_analyzed, y=percentage, x=date)) + 
+  geom_bar(position="fill", stat="identity")+
+  scale_fill_manual(name = "Conformity Status", values = col_palette[c(1,2,4,5,3,6)])+
+  scale_x_date(name=NULL, labels = NULL)+
   scale_y_continuous(name=NULL, label = scales::percent)+
   theme_minimal()+
-  theme(legend.position = "right",
-        text = element_text(family = regular, 
-          face = "plain"),
-        legend.title = element_text(family = regular, 
-          face = "bold",
-                                    size = 7),
-        legend.title.align = 0.9,
-        legend.text = element_text(family = regular, 
-          size = 7),
-        strip.text = element_text(family = regular, 
-          face = "bold", size = 12)
-  )
-
-fig_right <- 
-  table %>% 
-  filter(registration_analyzed != "No license") %>% 
-  ggplot()+ 
-  geom_line(aes(x=date, y= percentage, color=registration_analyzed)) +
-  scale_colour_manual(name = "Conformity Status", values = col_palette[c(1,2,4,5,6)])+
-  scale_x_date(name=NULL)+
-  scale_y_continuous(name=NULL, label = scales::percent)+
-  theme_minimal()+
-  theme(legend.position = "right",
+  coord_flip()+
+  theme(legend.position = "bottom",
         text = element_text(family = regular, face = "plain"),
         legend.title = element_text(family = regular, face = "bold",
                                     size = 7),
@@ -336,9 +323,6 @@ fig_right <-
         strip.text = element_text(family = regular, 
                                   face = "bold", size = 12)
   )
-
-fig_left + fig_right +  plot_layout(guides = 'collect') & 
-  theme(legend.position = "right")
   
 }
 
@@ -352,7 +336,7 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-3-2) shows the repartition of active listings by conformity status (the left figure filters out the listings without license for increased visibility). Throughout the month of January, there has been a decline in the percentage of listings displaying no license information, accompanied by an increase of listings displaying license information. On January 7th, `r conform_listings_jan_7` listings were conform to the regulation. As soon as February 5th, `r conform_listings_feb_5_perc` of all active listings were conforming to the STR regulation (an increase of `r increase_conform_listings`). The number of active listings using conform licenses but for multiple listings increased by the same rate.
+Figure \@ref(fig:fig-3-2) shows the repartition of active listings by conformity status. Throughout the month of January, there has been a decline in the percentage of listings displaying no license information due to a mass removal from Airbnb, accompanied by a slight increase of listings displaying license information. On January 7th, `r conform_listings_jan_7` listings were conform to the regulation. As soon as February 5th, `r conform_listings_feb_5_perc` of all active listings were conforming to the STR regulation (an increase of `r increase_conform_listings`). The number of active listings using conform licenses but for multiple listings increased by the same rate.
 
 ``` {r fig-3-2, include = TRUE, fig.cap = '(ref:fig-3-1)', fig.align = "center"}
 
@@ -360,7 +344,7 @@ figure_3_2_fun()
 
 ```
 
-(ref:fig-3-2) _Total active listings in January by conformity status (left) and active listings displaying license information by conformity status (right) on Airbnb_
+(ref:fig-3-2) _Total active listings on February 5th by conformity status_
 
 ## Listing regulatory compliance
 

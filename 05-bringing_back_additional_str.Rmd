@@ -376,7 +376,20 @@ rm(listings_pred)
 
 ```
 
-The model offering an estimation of asking rent if a STR was to move to the LTR was applied to the entire population of entire home STR in Toronto and has been given to the City. For example, Table \@ref(tab:tab-pred) presents the mean asking rent predicted for each size of units and the ward category it is located (lower-cost ward vs higher-cost ward). Our estimations of asking rent for all listings also depends on financial performance of each listing. 
+``` {r model-table, include = TRUE}
+
+qload("output/listings_pred_model.qs")
+
+library(stargazer)
+names(model$coefficients) <- c('Constant', '2020 Monthly revenue','Bedrooms','Geography')
+
+stargazer(model, type = "text", single.row = T, dep.var.labels = "Asking rent")
+
+```
+
+Table \@ref(tab:table) presents the statistical model that was used to predict the rent to which a property owner would accept to move his STR property to the LTR market. The constant is \$`r round(as.numeric(model$coefficients["Constant"]), digit = 2)`, and every dollars earned monthly in 2020 rises the asking price by \$`r round(as.numeric(model$coefficients["2020 Monthly revenue"]), digit = 2)`. Moreover, every bedroom accounts for an augmentation of \$`r round(as.numeric(model$coefficients["Bedrooms"]), digit = 2)` in the predicted asking rent. Finally, if the property is located in a more affluent ward, the ones named above, the asking rent is predicted to be higher by an amount of \$`r round(as.numeric(model$coefficients["Geography"]), digit = 2)`.
+
+The model was applied to the entire population of entire home STR in Toronto and has been given to the City. As an example, Table \@ref(tab:tab-pred) presents the mean asking rent predicted for each size of units and the ward category it is located (lower-cost ward vs higher-cost ward). Our estimations of asking rent for all listings also depends on financial performance of each listing. 
 
 ``` {r tab-pred, include = TRUE}
 
@@ -387,7 +400,7 @@ mean_pred_bedrooms %>%
   kbl(caption = "Mean asking rent predicted by number of bedrooms and location", align = "lrrrr") %>% 
   kable_styling()
 
-```
 
+```
 
 \newpage

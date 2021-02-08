@@ -184,3 +184,4 @@ listings_pred <-
 
 write_csv(listings_pred, "output/listings_pred.csv")
 
+qsavem(model, file = "output/listings_pred_model.qs")

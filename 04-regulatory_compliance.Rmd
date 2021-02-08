@@ -273,11 +273,11 @@ minimum_stays %>%
 }
 
 if (build_figures) {
-  ggsave(here("output", "figures", "figure_3_2.pdf"), 
-         plot = figure_3_2_fun("Futura", "Futura Condensed"), 
+  ggsave(here("output", "figures", "figure_3_1_1.pdf"), 
+         plot = figure_3_1_1_fun("Futura", "Futura Condensed"), 
          width = 8, height = 5, units = "in", useDingbats = FALSE)
   
-  extrafont::embed_fonts(here("output", "figures", "figure_3_1.pdf"))
+  extrafont::embed_fonts(here("output", "figures", "figure_3_1_1.pdf"))
 }
 
 ```

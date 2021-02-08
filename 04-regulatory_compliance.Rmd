@@ -28,7 +28,7 @@ build_figures <- TRUE
 
 ```
 
-**Since the beginning of 2021, the percentage of STR listings operating with valid STR licenses increased consistently, from XX% on January 7th to XX% on February 5th. Among active active listings at the beginning of February, XX% were operating with a valid license, XX% used a valid license for multiple listings, XX% displayed no licenses and listings that were either exempt or using a fake license amounted to less than X% respectively. FREH listings have the highest rate of valid licenses (27.9%) among listing categories. Multilistings have the highest rate of duplicate licenses (17.7%). In total, 10.6% of active entire-home listings displayed a license number used by at least one other active entire-home listing, suggesting that license numbers are being shared in violation of the regulations. Non-conforming listings are concentrated in and around the Spadina Fort-York ward; however, Willowdale is the ward with the highest percentage of non-conforming listings (94.0%). Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019.**
+**Since the beginning of 2021, the percentage of STR listings operating with valid STR licenses increased consistently, from 6.9% on January 7th to 9.7% on February 5th. Among active active listings at the beginning of February, 9.7% were operating with a valid license, 7.4% used a valid license for multiple listings, 6.5% displayed no license information, and listings that were either exempt or using a fake license amounted to 1.6% and 2.6% respectively. The greatest trend among short-term rental operators have been to shift to 28+ rentals. On February 6th, 72.2% of all properties were only available for locations of more than 28 days. In November of 2020, only 6.3% of listings were available with a minimum stay of 28 days or more. FREH listings have the highest rate of valid licenses (27.9%) among listing categories. Multilistings have the highest rate of duplicate licenses (17.7%). In total, 10.6% of active entire-home listings displayed a license number used by at least one other active entire-home listing, suggesting that license numbers are being shared in violation of the regulations. Non-conforming listings are concentrated in and around the Spadina Fort-York ward; however, Willowdale is the ward with the highest percentage of non-conforming listings (94.0%). Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019.**
 
 ## How many listings have licenses?
 
@@ -204,6 +204,93 @@ figure_3_1_fun()
 ```
 
 (ref:fig-3-1) _Displayed listings on Airbnb, 1 November 2020 - 24 January 2021 (7-day average)_
+
+```{r changing_stays, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
+
+qload(here("output", "property_nov.qs"), nthreads = availableCores())
+qload(here("output", "regulation.qsm"), nthreads = availableCores())
+
+november_listings_ms <- 
+  property_nov %>% 
+  as_tibble() %>% 
+  filter(minimum_stay <= 60) %>% 
+  select(property_ID, minimum_stay) %>%
+  mutate(month="November")
+
+january_listings_ms <- 
+  january_listings %>% 
+  st_drop_geometry() %>% 
+  filter(minimum_stay <= 60) %>% 
+  select(property_ID, minimum_stay) %>% 
+  mutate(month="February")
+
+minimum_stays <- rbind(january_listings_ms, november_listings_ms)
+
+perc_bigger_28_nov <- 
+  (1-(property_nov %>% 
+  as_tibble() %>% 
+  #filter(property_ID %in% jan_listings) %>% 
+  select(property_ID, minimum_stay) %>%
+  filter(minimum_stay <= 60) %>% 
+  summarize(perc_days = sum(minimum_stay < 28, na.rm = TRUE) / n()) %>% 
+    pull(perc_days))) %>% 
+  scales::percent(0.1)
+
+perc_bigger_28_feb <- 
+  (1-(january_listings_ms %>% 
+  as_tibble() %>% 
+  #filter(property_ID %in% jan_listings) %>% 
+  select(property_ID, minimum_stay) %>%
+  filter(minimum_stay <= 60) %>% 
+  summarize(perc_days = sum(minimum_stay < 28, na.rm = TRUE) / n()) %>% 
+    pull(perc_days))) %>% 
+  scales::percent(0.1)
+
+```
+
+``` {r make_fig_3_1_1}
+
+figure_3_1_1_fun <- function(regular = "", condensed = "") {
+  
+minimum_stays %>% 
+  ggplot()+
+  geom_col(aes(minimum_stay, per, fill=month), alpha=0.9, size = 1, position=position_dodge(width = 0.75))+ 
+  xlab("Minimum stay (days)")+
+  xlim(0,45)+
+  scale_y_continuous(name = "Percentage of listings", limits=c(0,1.5), label=scales::percent)+
+  scale_fill_manual(name = "Month", values = col_palette[c(4,5)])+
+  theme_minimal()+
+  theme(legend.position = "bottom",
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        text = element_text(face = "plain", family = regular),
+        legend.title = element_text(face = "bold", family = regular,
+                                    size = 10),
+        legend.text = element_text(size = 10, family = regular),
+        strip.text = element_text(face = "bold", family = regular
+        ))
+  
+}
+
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_3_2.pdf"), 
+         plot = figure_3_2_fun("Futura", "Futura Condensed"), 
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+  
+  extrafont::embed_fonts(here("output", "figures", "figure_3_1.pdf"))
+}
+
+```
+
+The new regulation has dramatically modified the business strategy of operators. First, prior to the regulation, hosts choosing to rent with long minimum stays were extremely rare. An operator usually asked for a minimum reservation of a few days. However, with the coming into effect of the new regulation, there was a great increase in the number of properties which minimal length of reservation became 28 days or more. Figure \@ref(fig:fig-3-1-1) displays the minimum stay length of properties in November 2020 and February 2021. In November, only `r perc_bigger_28_nov` of listings required a minimum stay of more than 28 days. In February of 2021, this percentage rose to `r perc_bigger_28_feb`.
+
+``` {r fig-3-1-1, include = TRUE, fig.cap = '(ref:fig-3-1-1)', fig.align = "center"}
+
+figure_3_1_1_fun()
+
+```
+
+(ref:fig-3-1-1) _Listings distribution by minimum stay (in days) in November 2020 and February 2021_
 
 ``` {r make_fig_3_2}
 

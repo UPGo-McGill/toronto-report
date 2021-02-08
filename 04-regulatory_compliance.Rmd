@@ -168,7 +168,7 @@ rm(property, daily, GH)
 
 ```
 
-As of 1 January 2021, all STR operators in Toronto are required to have a municipal license. This means that all properties displayed on Airbnb (with the exception of properties rented exclusively for 30 days at a time or longer, and hotels and other tourist accommodations which are regulated separately) must have a license visible on Airbnb.ca. (Vrbo, Airbnb's biggest competitor recently pulled out of the Toronto market.) Our team scraped the Airbnb website on five occasions between January 7 and February 5 to record all publicly visible registration numbers for Toronto STRs. We have connected that information with the City's Short Term Rentals Registration database and with our own data on STR activity in order to assess regulatory compliance. 
+As of 1 January 2021, all STR operators in Toronto are required to have a municipal license. This means that all properties displayed on Airbnb (with the exception of properties rented exclusively for 28 days at a time or longer, and hotels and other tourist accommodations which are regulated separately) must have a license visible on Airbnb.ca. (Vrbo, Airbnb's biggest competitor recently pulled out of the Toronto market.) Our team scraped the Airbnb website on five occasions between January 7 and February 5 to record all publicly visible registration numbers for Toronto STRs. We have connected that information with the City's Short Term Rentals Registration database and with our own data on STR activity in order to assess regulatory compliance. 
 
 ``` {r make_fig_3_1}
 
@@ -188,7 +188,7 @@ figure_3_1_fun <- function(regular = "", condensed = "") {
 if (build_figures) {
   ggsave(here("output", "figures", "figure_3_1.pdf"), 
          plot = figure_3_1_fun("Futura", "Futura Condensed"), 
-         width = 8, height = 5, units = "in", useDingbats = FALSE)
+         width = 8, height = 2.5, units = "in", useDingbats = FALSE)
   
   extrafont::embed_fonts(here("output", "figures", "figure_3_1.pdf"))
 }

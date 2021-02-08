@@ -305,15 +305,15 @@ fig_left <-
   scale_y_continuous(name=NULL, label = scales::percent)+
   theme_minimal()+
   theme(legend.position = "right",
-        text = element_text(#family = regular, 
+        text = element_text(family = regular, 
           face = "plain"),
-        legend.title = element_text(#family = regular, 
+        legend.title = element_text(family = regular, 
           face = "bold",
                                     size = 7),
         legend.title.align = 0.9,
-        legend.text = element_text(#family = regular, 
+        legend.text = element_text(family = regular, 
           size = 7),
-        strip.text = element_text(#family = regular, 
+        strip.text = element_text(family = regular, 
           face = "bold", size = 12)
   )
 
@@ -347,7 +347,7 @@ if (build_figures) {
          plot = figure_3_2_fun("Futura", "Futura Condensed"), 
          width = 8, height = 5, units = "in", useDingbats = FALSE)
   
-  extrafont::embed_fonts(here("output", "figures", "figure_3_1.pdf"))
+  extrafont::embed_fonts(here("output", "figures", "figure_3_2.pdf"))
 }
 
 ```

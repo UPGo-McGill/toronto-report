@@ -27,7 +27,7 @@ knitr::opts_chunk$set(warning = FALSE)
 mtime <- function(files) lapply(Sys.glob(files), function(x) file.info(x)$mtime)
 
 # Set this to TRUE to output PDF figures
-build_figures <- FALSE
+build_figures <- TRUE
 
 ```
 
@@ -115,18 +115,18 @@ rm(daily, GH, ltr, monthly_revenue_variation, property,
 
 **Using a multivariate linear regression model, we estimated specific reasonable amounts at which a STR listing's host would accept to move his unit to the LTR market, using data from web scrapes and the previously explained image recognition techniques, used to build a training dataset. Our significant variables used are the 2020 monthly revenue, the size and the location of the unit.**
 
-## Relative financial performance of STR moving to the LTR market
+Chapter 3, above, established that some combination of the COVID-19 pandemic and the impending implementation of the City of Toronto's STR regulations have resulted in thousands of Toronto STR listing their STR units on the long-term rental market. This final chapter analyzes the financial parameters underlying this decision, and develops a quantitative model to predict the monthly rents at which the hosts of existing dedicated STRs might be induced to convert their listings to long-term rentals, based on the listing's previous financial performance, its size, and its location.
 
-As shown in the previous section, the COVID-19 pandemic and the expectations regarding the new regulation have resulted in hundreds of hosts listing their short-term rental units on the long-term rental market. This final chapter aims at understanding the financial motivations for why a host would choose to operate this change, and to establish a relationship between financial performance, on the STR platforms, and asking rents.
+## The financial performance of STRs which moved to the LTR market
 
 ```{r monthly_rev, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
 monthly_rev_median_ltr <- 
-matrice %>% 
-    group_by(ltr) %>% 
-    summarize(monthly_revenue_2020_median = median(monthly_revenue_2020, na.rm = T),
-              monthly_revenue_2019_median = median(monthly_revenue_2019, na.rm = T),
-              monthly_variation_median = median(monthly_variation, na.rm = T)) %>% 
+  matrice %>% 
+  group_by(ltr) %>% 
+  summarize(monthly_revenue_2020_median = median(monthly_revenue_2020, na.rm = T),
+            monthly_revenue_2019_median = median(monthly_revenue_2019, na.rm = T),
+            monthly_variation_median = median(monthly_variation, na.rm = T)) %>% 
   mutate(across(where(is.numeric), round, 2))
 
 ```
@@ -161,7 +161,7 @@ matrice %>%
 
 if (build_figures) {
   ggsave(here("output", "figures", "figure_5_1.pdf"),
-         plot = figure_6_1_fun("Futura", "Futura Condensed"),
+         plot = figure_5_1_fun("Futura", "Futura Condensed"),
          width = 8, height = 5, units = "in", useDingbats = FALSE)
 
   extrafont::embed_fonts(here("output", "figures", "figure_5_1.pdf"))
@@ -209,7 +209,7 @@ matrice %>%
 
 if (build_figures) {
   ggsave(here("output", "figures", "figure_5_2.pdf"),
-         plot = figure_6_1_fun("Futura", "Futura Condensed"),
+         plot = figure_5_2_fun("Futura", "Futura Condensed"),
          width = 8, height = 5, units = "in", useDingbats = FALSE)
 
   extrafont::embed_fonts(here("output", "figures", "figure_5_2.pdf"))

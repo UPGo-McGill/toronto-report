@@ -443,6 +443,13 @@ duplicates_pct <-
   pull(pct) %>% 
   scales::percent(0.1)
 
+longer_stay_pct <- 
+  license_scrape %>% 
+  st_drop_geometry() %>% 
+  summarize(pct = mean(license_status == "28-day min.")) %>% 
+  pull(pct) %>% 
+  scales::percent(0.1)
+
 problem_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
@@ -624,7 +631,7 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-3-3) shows the `r scraped_number` active listings that displayed on February 5th when we performed our fifth scrape of license numbers. The top row (A) organizes listings by their license status. Out of the total `r scraped_number` listings, `r valid_pct` had a valid license, which is a 3-point percentage increase since our first scrape on January 7th. A further `r exempt_pct` claimed to be exempt, and `r duplicates_pct` had a city-issued license, but used this license for multiple listings at the same time. This leaves `r problem_pct` of listings which either had a fake license number (an entry which was in the proper format but which did not correspond to an actual license number issued by the City) or no license number at all. FREH listings (either FREH listings or multilistings) are over-represented among listings which have valid licenses and listings using a fake license; multilistings were the ones where there were the most duplicates licenses used; while listings that are neither FREH or multilistings and listings that were displayed on Airbnb but did not receive any activity since October were disproportionately likely to be listings without any license information.
+Figure \@ref(fig:fig-3-3) shows the `r scraped_number` listings were displayed on February 5th when we performed our fifth scrape of license numbers. The top row (A) organizes listings by their license status. As seen above, out of the total `r scraped_number` listings, the most popular category is the listings that switched to offering 28-day or more reservations, making up `r longer_stay_pct` of all listings. `r valid_pct` had a valid license, which is a 3-point percentage increase since our first scrape on January 7th. A further `r exempt_pct` claimed to be exempt, and `r duplicates_pct` had a city-issued license, but used this license for multiple listings at the same time. This leaves `r problem_pct` of listings which either had a fake license number (an entry which was in the proper format but which did not correspond to an actual license number issued by the City) or no license number at all. This is a very minimal longer, which leads to believe that Toronto hosts quickly adapted to the new regulation. FREH listings (either FREH listings or multilistings) are over-represented among listings which have valid licenses and listings using a fake license; multilistings were the ones where there were the most duplicates licenses used; while listings that are neither FREH or multilistings and listings that were displayed on Airbnb but did not receive any activity since December were disproportionately likely to be listings without any license information.
 
 ``` {r fig-3-3, include = TRUE, fig.cap = '(ref:fig-3-3)', fig.align = "center"}
 
@@ -634,7 +641,7 @@ figure_3_3_fun()
 
 (ref:fig-3-3) _License status and listing status (in December 2020) for listings displayed on Airbnb in end of January 2021_
 
-The bottom row (B) of Figure \@ref(fig:fig-3-3) organizes listings by their activity status on Airbnb in the month of December 2020. It demonstrates that FREH listings are the only category of listings where a significant proportion (`r freh_valid_pct`) had valid licenses. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's regulation, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings and `r pr_multiple_license` (`r pr_multiple_license_pct`) of active private room listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. 
+The bottom row (B) of Figure \@ref(fig:fig-3-3) organizes listings by their activity status on Airbnb in the month of December 2020. It demonstrates that FREH listings is the only category of listings where a significant proportion (`r freh_valid_pct`) had valid licenses, and also the category with the smallest percentage of listings requiring a minimum stay of 28 days. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's regulation, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings and `r pr_multiple_license` (`r pr_multiple_license_pct`) of active private room listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. 
 
 ## Geographic distribution of non-conforming listings
 

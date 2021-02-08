@@ -28,7 +28,7 @@ build_figures <- TRUE
 
 ```
 
-**Since the beginning of 2021, the percentage of STR listings operating with valid STR licenses increased consistently, from 6.9% on January 7th to 9.7% on February 5th. Among active active listings at the beginning of February, 9.7% were operating with a valid license, 7.4% used a valid license for multiple listings, 6.5% displayed no license information, and listings that were either exempt or using a fake license amounted to 1.6% and 2.6% respectively. The greatest trend among short-term rental operators have been to shift to 28+ rentals. On February 6th, 72.2% of all properties were only available for locations of more than 28 days. In November of 2020, only 6.3% of listings were available with a minimum stay of 28 days or more. FREH listings have the highest rate of valid licenses (27.9%) among listing categories. Multilistings have the highest rate of duplicate licenses (17.7%). In total, 10.6% of active entire-home listings displayed a license number used by at least one other active entire-home listing, suggesting that license numbers are being shared in violation of the regulations. Non-conforming listings are concentrated in and around the Spadina Fort-York ward; however, Willowdale is the ward with the highest percentage of non-conforming listings (94.0%). Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019.**
+**Since the beginning of 2021, the percentage of STR listings operating with valid STR licenses increased consistently, from 6.9% on January 7th to 9.7% on February 5th. Among active active listings at the beginning of February, 9.7% were operating with a valid license, 7.4% used a valid license for multiple listings, 6.5% displayed no license information, and listings that were either exempt or using a fake license amounted to 1.6% and 2.6% respectively. The greatest trend among short-term rental operators have been to shift to 28+ rentals. On February 6th, 72.2% of all properties were only available for locations of more than 28 days. In November of 2020, only 6.3% of listings were available with a minimum stay of 28 days or more. FREH listings have the highest rate of valid licenses (28.8%) among listing categories. Multilistings have the highest rate of duplicate licenses (19.4%). In total, 80.1% of active entire-home listings and 55.6% of active private room listings displayed a license number used by at least one other listing, suggesting that license numbers are being shared in violation of the regulations. Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019, while listings offering reservations for 28 days or more were less reserved and earn less on average compared to listings displaying license information.**
 
 ## How many listings have licenses?
 
@@ -643,99 +643,6 @@ figure_3_3_fun()
 
 The bottom row (B) of Figure \@ref(fig:fig-3-3) organizes listings by their activity status on Airbnb in the month of December 2020. It demonstrates that FREH listings is the only category of listings where a significant proportion (`r freh_valid_pct`) had valid licenses, and also the category with the smallest percentage of listings requiring a minimum stay of 28 days. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's regulation, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings and `r pr_multiple_license` (`r pr_multiple_license_pct`) of active private room listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. 
 
-## Geographic distribution of non-conforming listings
-
-```{r geography, cache = TRUE, cache.lazy = FALSE}
-
-map_table <- 
-  WD %>% 
-  st_join(january_listings %>% select(-ward)) %>% 
-  filter(active >= max(active, na.rm = T) - days(30), 
-         registration_analyzed != "Exempt") %>% 
-  count(ward, valid = registration_analyzed == "Conform") %>% 
-  group_by(ward) %>% 
-  summarize(invalid = n[!valid], invalid_pct = n[!valid] / sum(n))
-
-spadina_illegal_num <- 
-  map_table %>% 
-  filter(ward == "Spadina-Fort York") %>% 
-  pull(invalid) %>%  
-  prettyNum(",")
-
-university_illegal_num <- 
-  map_table %>% 
-  filter(ward == "University-Rosedale") %>% 
-  pull(invalid) %>%  
-  prettyNum(",")
-
-spadina_illegal_pct <- 
-  map_table %>% 
-  filter(ward == "Spadina-Fort York") %>% 
-  pull(invalid_pct) %>% 
-  scales::percent(0.1)
-
-university_illegal_pct <- 
-  map_table %>% 
-  filter(ward == "University-Rosedale") %>% 
-  pull(invalid_pct) %>% 
-  scales::percent(0.1)
-
-willowdale_illegal_pct <- 
-  map_table %>% 
-  filter(ward == "Willowdale") %>% 
-  pull(invalid_pct) %>% 
-  scales::percent(0.1)
-
-scar_n_illegal_pct <- 
-  map_table %>% 
-  filter(ward == "Scarborough North") %>% 
-  pull(invalid_pct) %>% 
-  scales::percent(0.1)
-
-```
-
-
-``` {r make_fig_3_4}
-
-figure_3_4_fun <- function(regular = "", condensed = "") {
-
-map_table %>% 
-  ggplot() +
-  geom_sf(aes(fill = invalid_pct), colour = "white") +
-  scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], na.value = "grey80",
-                       oob = scales::squish, 
-                       labels = scales::percent_format(accuracy = 1))  +
-  geom_sf_text(aes(label = invalid), colour = "black") +
-  guides(fill = guide_colourbar(title = "Non-conforming listings")) + 
-  theme_void() +
-    theme(legend.position = "bottom", 
-          panel.grid.minor.x = element_blank(),
-          text = element_text(face = "plain", family = regular),
-          legend.title = element_text(face = "bold", family = regular, 
-                                      size = 10),
-          legend.text = element_text(size = 8, family = regular))
-
-}
-
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_3_4.pdf"), 
-         plot = figure_3_4_fun("Futura", "Futura Condensed"), 
-         width = 4, height = 4.4, units = "in", useDingbats = FALSE)
-  
-  extrafont::embed_fonts(here("output", "figures", "figure_3_4.pdf"))
-}
-
-```
-
-Listing validity throughout Toronto is overall still low, which is understandable since the new registration has come into effect less than a month ago. Additionally, business uncertainty among STR operators is still extremely high amidst the Covid-19 pandemic and its effects on the STR markets. Still, it is interesting to observe the concentration of non-conforming listings, both in number and percentage, in all of Toronto's wards. The wards with the most non-conforming listings (i.e. listings with fake, invalid, duplicates, or missing license numbers) in absolute terms are Spadina-Fort York with `r spadina_illegal_num` listings (`r spadina_illegal_pct`) and University-Rosedale with `r university_illegal_num` listings (`r university_illegal_pct`). In relative numbers, the wards with highest percentage of non-conforming listings are Willowdale (`r willowdale_illegal_pct`) and Scarborough North (`r scar_n_illegal_pct`) (Figure \@ref(fig:fig-3-4)).
-
-``` {r fig-3-4, include = TRUE, fig.cap = '(ref:fig-3-4)', fig.align = "center"}
-
-figure_3_4_fun()
-
-```
-
-(ref:fig-3-4) _Geographical distribution of non-conforming listings._
 
 ## Daily activity of entire-home listings by regulatory compliance
 
@@ -840,6 +747,12 @@ no_license_r_pct <-
   pull(per_R) %>% 
   scales::percent(0.1)
 
+min_28_r_pct <- 
+  license_activity %>% 
+  filter(registration_analyzed == "28-day min.") %>% 
+  pull(per_R) %>% 
+  scales::percent(0.1)
+
 exempt_r_pct <- 
   license_activity %>% 
   filter(registration_analyzed == "Exempt") %>% 
@@ -849,6 +762,12 @@ exempt_r_pct <-
 exempt_rev <- 
   license_activity %>% 
   filter(registration_analyzed == "Exempt") %>% 
+  pull(revenue) %>% 
+  scales::dollar(1)
+
+duplicate_rev <- 
+  license_activity %>% 
+  filter(registration_analyzed == "Duplicates") %>% 
   pull(revenue) %>% 
   scales::dollar(1)
 
@@ -874,7 +793,7 @@ rm(property, daily, GH)
 
 ```
 
-How does registration conformity impact business in the short-term rental market? We analyzed reservation, availability and revenue patterns of all active entire-home listings to understand the relationship between displaying a valid license number and STR activity. Table \@ref(tab:tab-license) summarizes this information. Entire-home listings with valid licenses have significantly higher reservation rates (`r valid_r_pct`) than listings with no displayed licenses (`r no_license_r_pct`). Listings that acquired licenses also earned more revenue per night since the start of 2020 and since the onset of the Covid-19 pandemic. Nevertheless, it is the listings that proclaim that they are exempt from the regulation that have earned more during both time periods (with a nightly average revenue of `r exempt_rev` during the pandemic). Among listings which are not conform, it is listings with fake license numbers (i.e. numbers which follow the correct STR-####-AAAAAA format but do not correspond to a number actually issued by the City) which have been reserved the most on average (`r fake_r_pct`), and the second highest earner among all groups (with a nightly revenue of `r fake_rev` during the pandemic). We can thus say that listings that have been more successful - both in terms of revenue and availability - in the past year are the ones most likely to obtain a business license, or to at least display some form of registration information on their listing.
+How does registration conformity impact business in the short-term rental market? We analyzed reservation, availability and revenue patterns of all active entire-home listings to understand the relationship between displaying a valid license number and STR activity. Table \@ref(tab:tab-license) summarizes this information. Entire-home listings with valid licenses have significantly higher reservation rates (`r valid_r_pct`) than listings with no displayed licenses (`r no_license_r_pct`), and also listings that switched to offering only 28+ days reservations (`r min_28_r_pct`). Among listings which are not conform, it is listings with fake license numbers (i.e. numbers which follow the correct STR-####-AAAAAA format but do not correspond to a number actually issued by the City) which have been reserved the most on average (`r fake_r_pct`). Listings that acquired licenses also earned more revenue per night since the start of 2020 and since the onset of the Covid-19 pandemic. Nevertheless, it is the listings that display a license information, but that are not considered valid, that have earned the most during both time periods (there are, however fewer listings in those categories). Listings that claimed to be exempt, listings using a fake license and listings using a valid license earned on average `r exempt_rev`, `r fake_rev`, `r duplicate_rev` per night, respectively. from the regulation that have earned more during both time periods (with a nightly average revenue of `r exempt_rev` during the pandemic). We can thus say that listings that have been more successful - both in terms of revenue and availability - in the past year are the ones most likely to obtain a business license, or to at least display some form of registration information on their listing.
 
 ``` {r tab-license, include = TRUE}
 
@@ -893,6 +812,6 @@ license_activity[c(1, 2, 4, 3, 5, 6),] %>%
 
 ```
 
-The implications of this analysis are: 1) displaying a license number is associated with greater previous success in the STR market in Toronto, and 2) it is not important whether the license number is valid. STR operators which took the initiative to either get a license number, use a valid license number for more than one listing or enter a fake license number are the ones that have had more activity on Airbnb and most likely intend to continue operating on short-term rental platforms.
+The implications of this analysis are: 1) displaying a license number is associated with greater previous success in the STR market in Toronto, and 2) it is not important whether the license number is valid. STR operators which took the initiative to either get a license number, use a valid license number for more than one listing or enter a fake license number are the ones that have had more activity on Airbnb and most likely intend to continue operating on short-term rental platforms. Operators that have switched to longer-term reservations earned less revenue since both the start of covid and the beginning of 2019, suggesting a weaker position in the STR market in the past months. 
 
 \newpage

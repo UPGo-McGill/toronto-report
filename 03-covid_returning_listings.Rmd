@@ -566,6 +566,31 @@ rm(property, daily, GH, ltr)
 
 ```
 
+```{r on_water, cache = TRUE, cache.lazy = FALSE}
+
+qload(here("output", "geometry.qsm"), nthreads = availableCores())
+
+ocean <- 
+  read_sf(here("data", "shapefiles", "lhy_000h16a_e.shp")) %>% 
+  st_transform(32617)
+
+ocean <- 
+  ocean %>% 
+  st_filter(rbind(select(CMA, -everything()), select(city, -everything())))
+
+river <- 
+  read_sf(here("data", "shapefiles", "lhy_000c16a_e.shp")) %>% 
+  st_transform(32617)
+
+river <- 
+  river %>% 
+  st_filter(rbind(select(CMA, -everything()), select(city, -everything())))
+
+water <- rbind(select(river, -everything()), select(ocean, -everything()))
+
+rm(ocean, river, city, CMA)
+```
+
 ``` {r make_fig_6_3}
 
 figure_6_3_fun <- function(regular = "", condensed = "") {
@@ -578,6 +603,7 @@ figure_6_3_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = n), colour = "white") +
+    geom_sf(data = water, fill = "white", colour = "transparent") +
     scale_fill_gradientn(colors = col_palette[c(3, 4)],
                          # limits = c(0, 1000),
                          # breaks = c(0, 300, 600, 900),
@@ -599,6 +625,7 @@ figure_6_3_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = pct), colour = "white") +
+    geom_sf(data = water, fill = "white", colour = "transparent") +
     scale_fill_gradientn(colors = col_palette[c(2, 5)], 
                          na.value = "grey80",
                          limits = c(0.05, .45),

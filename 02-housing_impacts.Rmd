@@ -238,7 +238,7 @@ rm(property, daily, GH)
 
 ```
 
-**Prior to the Covid-19 pandemic, there were TKTK housing units operating as dedicated STRs in Toronto. Almost two thirds of all entire-home listings and four in ten private-room listings were dedicated STRs. Because of the general collapse of STR activity in 2020, the number of dedicated STRs has fallen by `r housing_loss_change` to `r housing_loss_2020`. In the Spadina-Fort York area, `r housing_loss_pct_spadina` of all housing was operating as dedicated STRs at the end of 2020, despite the pandemic, while the figure was `r housing_loss_pct_university` in University-Rosedale and `r housing_loss_pct_centre` in Toronto Centre.**
+**Prior to the Covid-19 pandemic, there were 8,300 housing units operating as dedicated STRs in Toronto. Two thirds of all entire-home listings and half of private-room listings were dedicated STRs. Because of the general collapse of STR activity in 2020, the number of dedicated STRs has fallen by `r housing_loss_change` to `r housing_loss_2020`. In the Spadina-Fort York area, `r housing_loss_pct_spadina` of all housing was operating as dedicated STRs at the end of 2020, despite the pandemic, while the figure was `r housing_loss_pct_university` in University-Rosedale and `r housing_loss_pct_centre` in Toronto Centre.**
 
 <br>
 
@@ -313,22 +313,6 @@ figure_2_1_fun <- function(regular = "", condensed = "") {
 housing_loss %>% 
   ggplot(aes(date, `Housing units`, fill = `Listing type`)) +
   geom_col(lwd = 0) +
-  annotate("segment", x = key_date_covid, xend = key_date_covid,
-           y = 0, yend = Inf, alpha = 0.3) +
-  annotate("curve", x = as.Date("2019-08-01"), 
-           xend = key_date_covid - days(10),
-           y = 7000, yend = 6700, curvature = -.2, lwd = 0.25,
-           arrow = arrow(length = unit(0.05, "inches"))) +
-  annotate("text", x = as.Date("2019-05-01"), y = 7000,
-           label = "COVID-19 \nAirbnb's response", family = condensed) +
-  annotate("segment", x = key_date_regulations, xend = key_date_regulations,
-           y = 0, yend = Inf, alpha = 0.3) +
-  annotate("curve", x = as.Date("2020-06-01"), 
-           xend = key_date_regulations - days(10),
-           y = 7200, yend = 7100, curvature = -.2, lwd = 0.25,
-           arrow = arrow(length = unit(0.05, "inches"))) +
-  annotate("text", x = as.Date("2020-06-01"), y = 7100,
-           label = "Regulations", family = condensed) +
   scale_fill_manual(values = col_palette[c(2, 4)]) +
   scale_x_date(name = NULL, limits = c(as.Date("2016-10-01"), NA)) +
   scale_y_continuous(name = NULL, label = scales::comma) +
@@ -440,13 +424,9 @@ figure_2_2_fun <- function(regular = "", condensed = "") {
   housing_loss_share %>% 
     ggplot(aes(date, housing_loss_pct, colour = `Listing type`)) +
     geom_line(lwd = 1) +
-    annotate("segment", x = key_date_covid, xend = key_date_covid,
-             y = 0, yend = Inf, alpha = 0.3) +
-    annotate("segment", x = key_date_regulations, xend = key_date_regulations,
-             y = 0, yend = Inf, alpha = 0.3) +
     scale_x_date(name=NULL) +
     scale_y_continuous(name = NULL, labels = scales::percent) +
-    scale_colour_manual(values = col_palette[c(2, 4)]) +
+    scale_colour_manual(values = col_palette[c(5, 1)]) +
     theme_minimal() +
     theme(legend.position = "bottom",
           panel.grid.minor.x = element_blank(),
@@ -487,23 +467,23 @@ WD_housing_table %>%
     housing_loss_2019 = sum(housing_loss_2019),
     housing_loss_2020 = sum(housing_loss_2020),
     yoy_change = (housing_loss_2020 - housing_loss_2019) / housing_loss_2019,
-    housing_loss_pct_2019 = housing_loss_2020 / dwellings) %>% 
+    housing_loss_pct_2020 = housing_loss_2020 / dwellings) %>% 
   mutate(ward = "City of Toronto") %>% 
   bind_rows(WD_housing_table) %>% 
   relocate(ward) %>% 
   select(-dwellings) %>% 
   filter(housing_loss_2020 > 50) %>% 
   mutate(across(c(housing_loss_2019, housing_loss_2020), round, -1)) %>% 
-  mutate(across(c(yoy_change, housing_loss_pct_2019), round, 4)) %>% 
+  mutate(across(c(yoy_change, housing_loss_pct_2020), round, 4)) %>% 
   arrange(desc(housing_loss_2020)) %>%
   rename(Ward = ward,
-         `Housing loss (2019)` = housing_loss_2020,
-         `Housing loss (2018)` = housing_loss_2019,
+         `Housing loss (2020)` = housing_loss_2020,
+         `Housing loss (2019)` = housing_loss_2019,
          `Annual growth (%)` = yoy_change,
-         `% of housing lost (2019)` = housing_loss_pct_2019) %>% 
-  kbl(caption = paste0("STR-induced housing loss by ward in the City", 
-                       "of Toronto (for boroughs with at least 50 housing ",
-                       "units lost in 2019)"),
+         `% of housing lost (2020)` = housing_loss_pct_2020) %>% 
+  kbl(caption = paste0("STR-induced housing loss by ward in the City ", 
+                       "of Toronto (for wards with at least 50 housing ",
+                       "units lost in 2020)"),
       align = "lrrrr") %>%
   kable_styling(latex_options = "scale_down") %>%
   row_spec(1, background = paste0(col_palette[2], "50"))
@@ -529,6 +509,31 @@ downtown_spadina <-
 
 ```
 
+```{r on_water, cache = TRUE, cache.lazy = FALSE}
+
+qload(here("output", "geometry.qsm"), nthreads = availableCores())
+
+ocean <- 
+  read_sf(here("data", "shapefiles", "lhy_000h16a_e.shp")) %>% 
+  st_transform(32617)
+
+ocean <- 
+  ocean %>% 
+  st_filter(rbind(select(CMA, -everything()), select(city, -everything())))
+
+river <- 
+  read_sf(here("data", "shapefiles", "lhy_000c16a_e.shp")) %>% 
+  st_transform(32617)
+
+river <- 
+  river %>% 
+  st_filter(rbind(select(CMA, -everything()), select(city, -everything())))
+
+water <- rbind(select(river, -everything()), select(ocean, -everything()))
+
+rm(ocean, river, city, CMA)
+```
+
 ``` {r make_fig_2_3}
 
 figure_2_3_fun <- function(regular = "", condensed = "") {
@@ -539,6 +544,7 @@ figure_2_3_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = housing_loss_pct), colour = "white") +
+    geom_sf(data = water, fill = "white", colour = "transparent") +
     scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
                          na.value = "grey80",
                          limits = c(0, 0.03), oob = scales::squish, 
@@ -558,6 +564,7 @@ figure_2_3_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = housing_loss_pct), colour = "transparent") +
+    geom_sf(data = water, fill = "white", colour = "transparent") +
     scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
                          na.value = "grey80",
                          limits = c(0, 0.05), oob = scales::squish, 

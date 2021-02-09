@@ -321,7 +321,7 @@ rm(property, daily, GH)
 
 ```
 
-**There were `r avg_listings_active` active STR listings in Toronto housing units in 2020, which collectively earned `r annual_rev`. A quarter of all listings are in the Downtown ward. More than two thirds (`r eh_listings`) of Toronto’s STR listings are entire homes, and entire homes are responsible for `r eh_revenue` of all revenue. Revenue is concentrated unevenly among hosts, with the top 10% earning `r host_rev_top_10` of revenue, and the top 1% earning `r host_rev_top_1`, but Toronto has much less revenue concentration than other large cities in Canada. Commercial operators who control multiple STR listings account for `r ml_listings` listings and `r ml_revenue` revenue.**
+**There were `r avg_listings_active` active STR listings in Toronto housing units in 2020, which collectively earned `r annual_rev`. This is a dramatic decline in comparison with 2019; the COVID-19 pandemic reduced reservations by TK% and revenue by TK%. A quarter of all listings are in the Spadina-Fort York ward. More than three fifths (`r eh_listings`) of Toronto’s STR listings are entire homes, and entire homes are responsible for `r eh_revenue` of all revenue. Revenue is concentrated unevenly among hosts, with the top 10% earning `r host_rev_top_10` of revenue, and the top 1% earning `r host_rev_top_1`. Commercial operators who control multiple STR listings account for `r ml_listings` of listings and `r ml_revenue` of revenue.**
 
 <br>
 
@@ -457,20 +457,6 @@ figure_1_1_fun <- function(regular = "", condensed = "") {
   
   active_listings %>% 
   ggplot(aes(date, n, colour = listing_type, size = listing_type)) +
-  annotate("segment", x = key_date_covid, xend = key_date_covid,
-           y = -Inf, yend = Inf, alpha = 0.3) +
-  annotate("curve", x = as.Date("2019-08-01"), xend = key_date_covid - days(10),
-           y = 5000, yend = 4700, curvature = -.2, lwd = 0.25,
-           arrow = arrow(length = unit(0.05, "inches"))) +
-  annotate("text", x = as.Date("2019-05-01"), y = 5000,
-           label = "Covid-19 \nAirbnb's response", family = condensed) +
-  annotate("segment", x = key_date_regulations, xend = key_date_regulations,
-           y = -Inf, yend = Inf, alpha = 0.3) +
-  annotate("curve", x = as.Date("2020-10-01"), xend = key_date_regulations - days(10),
-           y = 5200, yend = 5100, curvature = -.2, lwd = 0.25,
-           arrow = arrow(length = unit(0.05, "inches"))) +
-  annotate("text", x = as.Date("2020-08-01"), y = 5200,
-           label = "Regulations", family = condensed)+
   geom_line(na.rm = TRUE) +
   scale_y_continuous(name = NULL, label = scales::comma) +
   scale_x_date(name = NULL, limits = c(as.Date("2016-01-01"), NA)) +
@@ -722,6 +708,31 @@ max_per_cap <-
 
 ```
 
+```{r on_water, cache = TRUE, cache.lazy = FALSE}
+
+qload(here("output", "geometry.qsm"), nthreads = availableCores())
+
+ocean <- 
+  read_sf(here("data", "shapefiles", "lhy_000h16a_e.shp")) %>% 
+  st_transform(32617)
+
+ocean <- 
+  ocean %>% 
+  st_filter(rbind(select(CMA, -everything()), select(city, -everything())))
+
+river <- 
+  read_sf(here("data", "shapefiles", "lhy_000c16a_e.shp")) %>% 
+  st_transform(32617)
+
+river <- 
+  river %>% 
+  st_filter(rbind(select(CMA, -everything()), select(city, -everything())))
+
+water <- rbind(select(river, -everything()), select(ocean, -everything()))
+
+rm(ocean, river, city, CMA)
+```
+
 ``` {r make_fig_1_2}
 
 figure_1_2_fun <- function(regular = "", condensed = "") {
@@ -731,6 +742,7 @@ figure_1_2_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = percentage), colour = "white") +
+    geom_sf(data = water, fill = "white", colour = "transparent") +
     scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
                          na.value = "grey80",
                          limits = c(0, 0.04), oob = scales::squish, 
@@ -751,6 +763,7 @@ figure_1_2_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_sf(data = province, colour = "transparent", fill = "grey93") +
     geom_sf(aes(fill = percentage), colour = "transparent") +
+    geom_sf(data = water, fill = "white", colour = "transparent") +
     scale_fill_gradientn(colors = col_palette[c(3, 4, 5)], 
                          na.value = "grey80",
                          limits = c(0, 0.1), oob = scales::squish, 
@@ -790,7 +803,7 @@ figure_1_2_fun()
 
 ```
 
-(ref:fig-1-2) _Active STRs as a share of all dwelling units in Toronto, by local ward (L) and dissemination area (R)_
+(ref:fig-1-2) _Active STRs as a share of all dwelling units in Toronto, by ward (L) and dissemination area (R)_
 
 ``` {r tab-1-1, include = TRUE}
 
@@ -823,7 +836,7 @@ WD_breakdown %>%
               "Active listings as % of dwellings",
               "Annual revenue (million)",
               "Annual revenue growth")) %>% 
-  kbl(caption = "Local wards with at least 100 daily active listings in 2019",
+  kbl(caption = "Wards with at least 100 daily active listings in 2020",
                align = "lrrrrr") %>% 
   kable_styling(latex_options="scale_down") %>% 
   row_spec(1, background = paste0(col_palette[2], "50"))
@@ -924,8 +937,6 @@ figure_1_3_fun <- function(regular = "", condensed = "") {
   daily_variation %>% 
   ggplot(aes(date, value, colour = var)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
-  annotate("segment", x = key_date_covid, xend = key_date_covid,
-           y = -Inf, yend = Inf, alpha = 0.3) +
   geom_line(lwd = 1, na.rm = TRUE) +
   scale_x_date(name = NULL) +
   scale_y_continuous(name = NULL, limits = c(-1, NA), 
@@ -1244,17 +1255,17 @@ rm(property, daily, GH)
                  data = reservations, fill = col_palette[3], 
                  alpha = 0.3) +
      geom_line(aes(date, value, color = name), lwd = 1) +
-     geom_text(aes(x = as.Date("2020-09-30"), 
-                   y = mean(value[date == as.Date("2020-09-30")]),
+     geom_text(aes(x = as.Date("2020-12-31"), 
+                   y = mean(value[date == as.Date("2020-12-31")]),
                    label = paste(
                      prettyNum(round(abs(diff(
-                       value[date == as.Date("2020-09-30")])), -1), ","),
+                       value[date == as.Date("2020-12-31")])), -1), ","),
                      "fewer", "reservations", "than", "expected", sep = "\n")), 
                inherit.aes = FALSE, hjust = 1, family = condensed, 
                nudge_x = -4) +
-     geom_segment(aes(x = as.Date("2020-09-30"), xend = as.Date("2020-09-30"),
-                      y = min(value[date == as.Date("2020-09-30")]),
-                      yend = max(value[date == as.Date("2020-09-30")])),
+     geom_segment(aes(x = as.Date("2020-12-31"), xend = as.Date("2020-12-31"),
+                      y = min(value[date == as.Date("2020-12-31")]),
+                      yend = max(value[date == as.Date("2020-12-31")])),
                   colour = col_palette[1],
                   arrow = arrow(length = unit(0.1, "cm"), ends = "both",
                                 type = "open")) +
@@ -1262,7 +1273,7 @@ rm(property, daily, GH)
      scale_y_continuous(name = NULL, limits = c(0, NA), label = scales::comma) +
      scale_color_manual(name = NULL, labels = c("Actual reservations", 
                                                 "Expected reservations"), 
-                        values = col_palette[c(4, 2)]) +
+                        values = col_palette[c(5, 1)]) +
      theme_minimal() +
      theme(legend.position = "bottom", 
            panel.grid.minor.x = element_blank(),
@@ -1295,60 +1306,57 @@ figure_1_5_fun()
 
 qload(here("output", "str_processed.qsm"), nthreads = availableCores())
  
- # Get average nightly prices
- average_prices <- 
-   daily %>% 
-   filter(housing, status == "R", date >= "2016-01-01",
-          listing_type == "Entire home/apt") %>% 
-   group_by(date) %>% 
-   summarize(price = mean(price))
- 
- # Create monthly price time series
- monthly_prices <- 
-   average_prices %>% 
-   tsibble::as_tsibble() %>% 
-   tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
-   summarize(price = mean(price))
- 
- # Get March-December seasonal
- mar_dec_price_seasonal <- 
-   monthly_prices %>% 
-   filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
-   model(x11 = feasts:::X11(price, type = "additive")) %>% 
-   components() %>%
-   slice(39:48) %>% 
-   pull(seasonal)
- 
- # Get Feb trend
- feb_price_trend <- 
-   monthly_prices %>% 
-   filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
-   model(x11 = feasts:::X11(price, type = "additive")) %>% 
-   components() %>% 
-   slice(50) %>% 
-   pull(trend)
- 
- # Apply March-Sep seasonal component to Feb trend
- mar_nov_price_trend <- 
-   tibble(
-     date = as.Date(c("2020-03-16", "2020-04-16", "2020-05-16", "2020-06-16",
-                      "2020-07-16", "2020-08-16", "2020-09-16", "2020-10-16",
-                      "2020-11-16", "2020-12-16")),
-     trend = (feb_price_trend + mar_dec_price_seasonal))
-  # Set Oct 31 value to average of October and November
-# mar_nov_price_trend[9,]$trend <- mean(mar_nov_price_trend[8:9,]$trend)
- 
- # Apply to daily averages to get trend
- average_prices <- 
-   average_prices %>% 
-   mutate(yearmon = tsibble::yearmonth(date)) %>% 
-   inner_join(mar_nov_price_trend) %>% 
-   group_by(yearmon) %>% 
-   mutate(trend = price * trend / mean(price)) %>% 
-   ungroup() %>% 
-   select(date, trend) %>% 
-   left_join(average_prices, .)
- 
+# Get average nightly prices
+average_prices <- 
+  daily %>% 
+  filter(housing, status == "R", date >= "2016-01-01",
+         listing_type == "Entire home/apt") %>% 
+  group_by(date) %>% 
+  summarize(price = mean(price))
+
+# Create monthly price time series
+monthly_prices <- 
+  average_prices %>% 
+  tsibble::as_tsibble() %>% 
+  tsibble::index_by(yearmon = tsibble::yearmonth(date)) %>% 
+  summarize(price = mean(price))
+
+# Get March-December seasonal
+mar_dec_price_seasonal <- 
+  monthly_prices %>% 
+  filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
+  model(x11 = feasts:::X11(price, type = "additive")) %>% 
+  components() %>%
+  slice(39:48) %>% 
+  pull(seasonal)
+
+# Get Feb trend
+feb_price_trend <- 
+  monthly_prices %>% 
+  filter(yearmon <= tsibble::yearmonth("2020-02")) %>% 
+  model(x11 = feasts:::X11(price, type = "additive")) %>% 
+  components() %>% 
+  slice(50) %>% 
+  pull(trend)
+
+# Apply March-Sep seasonal component to Feb trend
+mar_dec_price_trend <- 
+  tibble(yearmon = tsibble::yearmonth(c(
+    "2020-03", "2020-04", "2020-05", "2020-06", "2020-07", "2020-08",
+    "2020-09", "2020-10", "2020-11", "2020-12")),
+    trend = (feb_price_trend + mar_dec_price_seasonal))
+
+# Apply to daily averages to get trend
+average_prices <- 
+  average_prices %>% 
+  mutate(yearmon = tsibble::yearmonth(date)) %>% 
+  inner_join(mar_dec_price_trend) %>% 
+  group_by(yearmon) %>% 
+  mutate(trend = price * trend / mean(price)) %>% 
+  ungroup() %>% 
+  select(date, trend) %>% 
+  left_join(average_prices, .)
+
  nightly_price_dif <- 
    average_prices %>% 
    filter(date >= "2020-03-01") %>% 
@@ -1669,10 +1677,6 @@ figure_1_7_fun <- function(regular = "", condensed = "") {
     filter(date >= "2017-01-01", date <= "2020-11-30") %>% 
     ggplot() +
     geom_line(aes(date, value, colour = `Multilisting percentage`), lwd = 1) +
-    annotate("segment", x = key_date_covid, xend = key_date_covid,
-             y = -Inf, yend = Inf, alpha = 0.3) +
-    annotate("segment", x = key_date_regulations, xend = key_date_regulations,
-             y = -Inf, yend = Inf, alpha = 0.3) +
     scale_x_date(name = NULL) +
     scale_y_continuous(name = NULL, 
                        label = scales::percent_format(accuracy = 1)) +

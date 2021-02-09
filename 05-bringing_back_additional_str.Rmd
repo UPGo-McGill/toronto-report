@@ -189,13 +189,13 @@ top_plot + bottom_plot + plot_layout(guides = "collect") &
 
 }
 
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_5_1.pdf"),
-         plot = figure_5_1_fun("Futura", "Futura Condensed"),
-         width = 8, height = 5, units = "in", useDingbats = FALSE)
-
-  extrafont::embed_fonts(here("output", "figures", "figure_5_1.pdf"))
-}
+# if (build_figures) {
+#   ggsave(here("output", "figures", "figure_5_1.pdf"),
+#          plot = figure_5_1_fun("Futura", "Futura Condensed"),
+#          width = 8, height = 5, units = "in", useDingbats = FALSE)
+# 
+#   extrafont::embed_fonts(here("output", "figures", "figure_5_1.pdf"))
+# }
 
 ```
 
@@ -203,11 +203,11 @@ STR listings moved to the LTR market had significant higher monthly STR revenues
 
 ``` {r fig-5-1, include = TRUE, fig.cap = '(ref:fig-5-1)', fig.align = "center"}
 
-figure_5_1_fun()
+# figure_5_1_fun()
 
 ```
 
-(ref:fig-5-1) _Monthly revenue in 2020 (top panel), and variation of monthly revenue between 2019 and 2020 (bottom panel) for matched and not matched properties_
+<!-- (ref:fig-5-1) _Monthly revenue in 2020 (top panel), and variation of monthly revenue between 2019 and 2020 (bottom panel) for matched and not matched properties_ -->
 
 
 ## Breakdown into groups and financial analysis of the matched STR listings

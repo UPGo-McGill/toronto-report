@@ -1,4 +1,4 @@
-# Short-term rentals in Toronto: Regulatory compliance
+# STR regulatory compliance
 
 <style type="text/css">
   body{
@@ -28,7 +28,7 @@ build_figures <- TRUE
 
 ```
 
-**Since the beginning of 2021, all STRs in the City of Toronto must be registered. Airbnb hosts have responded by overwhelmingly switching the percentage of STR listings operating with valid STR licenses increased consistently, from 6.9% on January 7th to 9.7% on February 5th. Among active listings at the beginning of February, 9.7% were operating with a valid license, 7.4% used a valid license for multiple listings, 6.5% displayed no license information, and listings that were either exempt or using a fake license amounted to 1.6% and 2.6% respectively. The greatest trend among short-term rental operators have been to shift to 28+ rentals. On February 6th, 72.2% of all properties were only available for locations of more than 28 days. In November of 2020, only 6.3% of listings were available with a minimum stay of 28 days or more. FREH listings have the highest rate of valid licenses (28.8%) among listing categories. Multilistings have the highest rate of duplicate licenses (19.4%). In total, 80.1% of active entire-home listings and 55.6% of active private room listings displayed a license number used by at least one other listing, suggesting that license numbers are being shared in violation of the regulations. Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019, while listings offering reservations for 28 days or more were less reserved and earn less on average compared to listings displaying license information.**
+**Since the beginning of 2021, all STRs in the City of Toronto must be registered, and in early January Airbnb removed 2,600 Toronto listings which had failed to do so. However, the overwhelming majority of Airbnb hosts have responded not by registering, but by setting a minimum rental length of 28 days, which exempts them from the registration requirement. In November of 2020, only 6.3% of Toronto listings had a minimum stay of 28 days or more, while at the beginning of February 2021 it was 72.2%. 9.7% are operating with a valid license, 7.4% use a valid license but for multiple listings, 6.5% display no license information, and the remainder either claim to be exempt or are using a fake license number. FREH listings have the highest rate of valid licenses (28.8%) among listing categories. Multilistings have the highest rate of duplicate licenses (19.4%). Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most revenue in 2020 and 2019, while listings which have switched to minimum 28-day reservations were previously less frequently reserved than other listings.**
 
 ## How many listings have licenses?
 

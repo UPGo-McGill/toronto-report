@@ -252,7 +252,7 @@ matrice %>%
              linetype="dashed", size = 1)+
   # facet_wrap(~status)+
   scale_color_manual(name = NULL, 
-                     values= col_palette[c(6,4,2)])+
+                     values= col_palette[c(1, 2, 4, 6)])+
   ylab("Density")+
   xlab("Matched listings' monthly revenue in 2020")+
   theme_minimal() +

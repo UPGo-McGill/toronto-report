@@ -799,7 +799,7 @@ How does registration conformity impact business in the short-term rental market
 
 library(kableExtra)
 
-license_activity[c(1, 2, 4, 3, 5, 6),] %>% 
+license_activity[c(1, 3, 2, 4, 5, 6, 7),] %>% 
   mutate(n = prettyNum(n, ",")) %>% 
   mutate(across(per_A:per_B, scales::percent, 0.1)) %>% 
   mutate(across(revenue:revenue_reg, scales::dollar, 1)) %>% 

@@ -11,7 +11,7 @@
 ```{r setup, include = FALSE, echo = FALSE}
 
 ###### for max to be able to knit
-if(memory.limit()< 20000) {memory.limit(size = 48000)}
+if (memory.limit() < 20000) memory.limit(size = 48000)
 ####
 
 library(here)
@@ -115,9 +115,7 @@ rm(daily, GH, ltr, monthly_revenue_variation, property,
 
 ```
 
-**Using a multivariate linear regression model, we estimated specific reasonable amounts at which a STR listing's host would accept to move his unit to the LTR market, using data from web scrapes and the previously explained image recognition techniques, used to build a training dataset. Our significant variables used are the 2020 monthly revenue, the size and the location of the unit.**
-
-Chapter 3, above, established that some combination of the COVID-19 pandemic and the impending implementation of the City of Toronto's STR regulations have resulted in thousands of Toronto STR listing their STR units on the long-term rental market. This final chapter analyzes the financial parameters underlying this decision, and develops a quantitative model to predict the monthly rents at which the hosts of existing dedicated STRs might be induced to convert their listings to long-term rentals, based on the listing's previous financial performance, its size, and its location.
+**Relative to other listings, STR listings which transitioned to the LTR market had higher monthly revenue in 2020 but an greater decrease in year-over-year revenue. Using a multivariate linear regression model, we estimate specific reasonable monthly rents at which remaining STR hosts would plausibly shift their units to the long-term market. These rents range from $1,430 for studio apartments in low-cost areas of the city to $3,890 for 4-bedroom apartments in high-cost areas.**
 
 ## The financial performance of STRs which moved to the LTR market
 
@@ -141,8 +139,10 @@ top_plot <-
   matrice %>% 
   ggplot() +
   geom_histogram(aes(monthly_revenue_2020, y=..density.., fill = ltr), 
-                 position = position_dodge(width = 60), alpha = 0.8) +
-  geom_vline(data = monthly_rev_median_ltr,
+                 position = position_dodge(width = 60), alpha = 0.8,
+                 show.legend = FALSE) +
+  geom_vline(data = mutate(monthly_rev_median_ltr, across(where(is.character), 
+                                                          parse_number)),
              aes(xintercept = monthly_revenue_2020_median, color = ltr),
              linetype="dashed", size = 1, show.legend = FALSE) +
   scale_fill_manual(name = NULL, labels = c("Not matched to LTR", "Matched to LTR"),
@@ -163,16 +163,17 @@ top_plot <-
 bottom_plot <- 
   matrice %>% 
   ggplot() +
-  geom_histogram(aes(monthly_variation, y=..density.., fill = ltr), 
-                 position = position_dodge(width = 60), alpha = 0.8) +
+  geom_density(aes(monthly_variation, color = ltr), size = 1) +
   geom_vline(data = mutate(monthly_rev_median_ltr, across(where(is.character), parse_number)),
              aes(xintercept = monthly_variation_median, color = ltr),
              linetype="dashed", size = 1, show.legend = FALSE) +
   xlim(-1,1.2)+
   scale_color_manual(name = NULL, labels = c("Not matched to LTR", "Matched to LTR"),
                      values = col_palette[c(4,2)]) +
-  ylab("Density")+
-  xlab("Monthly revenue variation between 2019 and 2020") +
+  scale_fill_manual(name = NULL, labels = c("Not matched to LTR", "Matched to LTR"),
+                     values = col_palette[c(4,2)]) +
+  scale_y_continuous(name = "Probability density", labels = NULL) +
+  xlab("Monthly revenue variation (2019 to 2020)") +
   guides(colour = guide_legend(override.aes = list(fill = col_palette[c(4,2)]))) +
   theme_minimal() +
     theme(legend.position = "bottom",
@@ -184,30 +185,32 @@ bottom_plot <-
           legend.text = element_text(size = 10, family = regular),
           strip.text = element_text(face = "bold", family = regular))
 
-top_plot + bottom_plot + plot_layout(guides = "collect") & 
+top_plot / bottom_plot + plot_layout(guides = "collect") & 
   theme(legend.position = "bottom")
 
 }
 
-# if (build_figures) {
-#   ggsave(here("output", "figures", "figure_5_1.pdf"),
-#          plot = figure_5_1_fun("Futura", "Futura Condensed"),
-#          width = 8, height = 5, units = "in", useDingbats = FALSE)
-# 
-#   extrafont::embed_fonts(here("output", "figures", "figure_5_1.pdf"))
-# }
+if (build_figures) {
+  ggsave(here("output", "figures", "figure_5_1.pdf"),
+         plot = figure_5_1_fun("Futura", "Futura Condensed"),
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
+
+  extrafont::embed_fonts(here("output", "figures", "figure_5_1.pdf"))
+}
 
 ```
+
+Chapter 4, above, established that some combination of the COVID-19 pandemic and the impending implementation of the City of Toronto's STR regulations have resulted in thousands of Toronto STR listing their STR units on the long-term rental market. This final chapter analyzes the financial parameters underlying this decision, and develops a quantitative model to predict the monthly rents at which the hosts of existing dedicated STRs might be induced to convert their listings to long-term rentals, based on the listing's previous financial performance, its size, and its location.
 
 STR listings moved to the LTR market had significant higher monthly STR revenues in 2020 compared to the STR listings that did not make the move. Non-matched listings had a median revenue (the dashed lines in the upper panel of Figure \@ref(fig:fig-5-1)) of `r monthly_rev_median_ltr[1,2]`, while listings that did match to the LTR market had a median revenue of `r monthly_rev_median_ltr[2,2]`. The difference is larger for pre-pandemic 2019 monthly income, when non-matched and matched listings had median monthly incomes respectively of `r monthly_rev_median_ltr[1,3]` and `r monthly_rev_median_ltr[2,3]`. This pattern is consistent with our previous assessment that it is high-earning STR hosts who disproportionately chose to move their units to the LTR market. Moreover, while the vast majority of listings experienced a decrease in revenue from 2019 to 2020 because of the pandemic, it is the listings that moved to the long-term market which, on average, experienced larger declines, as the bottom panel in Figure \@ref(fig:fig-5-1) shows. In sum, relative to other listings, STR listings which transitioned to the LTR market had higher monthly revenue in 2020 but a greater decrease in year-over-year revenue.
 
 ``` {r fig-5-1, include = TRUE, fig.cap = '(ref:fig-5-1)', fig.align = "center"}
 
-# figure_5_1_fun()
+figure_5_1_fun()
 
 ```
 
-<!-- (ref:fig-5-1) _Monthly revenue in 2020 (top panel), and variation of monthly revenue between 2019 and 2020 (bottom panel) for matched and not matched properties_ -->
+(ref:fig-5-1) _Monthly revenue in 2020 (top panel), and variation of monthly revenue between 2019 and 2020 (bottom panel) for matched and not matched properties_
 
 
 ## Breakdown into groups and financial analysis of the matched STR listings
@@ -276,11 +279,11 @@ matrice %>%
 
 ``` {r fig-5-3, include = TRUE, fig.cap = '(ref:fig-5-3)', fig.align = "center"}
 
-# figure_5_3_fun()
+figure_5_3_fun()
 
 ```
 
-<!-- (ref:fig-5-3) _Matched listings' 2020 monthly revenue, separated in three groups_ -->
+(ref:fig-5-3) _Matched listings' 2020 monthly revenue, separated in three groups_
 
 The listings that matched but continued their operations with a minimum stay of 28 days are the listings with the smallest monthly revenue in 2020 (a median of \$`r monthly_rev_median_status[1,4]`), while the continued STR operations made a similar revenue (\$`r monthly_rev_median_status[2,4]`). Taken down and blocked listings earned more, with respectively \$`r monthly_rev_median_status[3,4]` and \$`r monthly_rev_median_status[4,4]` of median monthly revenue in 2020. The four numbers are significantly lower than what a landlord could make on the LTR market, which is a motivation to operate the change from STR to LTR. It is the listings that did not succeed their transfer that made a smaller monthly revenue in 2020, probably because they operated longer under the overall COVID situation and during fall, where revenue are overall decreasing on the platform. The listings that are completely taken down are the listings that made the most monthly revenue, TKTK.
 

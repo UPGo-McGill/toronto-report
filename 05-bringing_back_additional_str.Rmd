@@ -376,14 +376,14 @@ rm(listings_pred)
 
 ```
 
-``` {r model-table, include = TRUE}
+```{r model-table, results = "asis", include=T}
 
 qload("output/listings_pred_model.qs")
 
 library(stargazer)
 names(model$coefficients) <- c('Constant', '2020 Monthly revenue','Bedrooms','Geography')
 
-stargazer(model, type = "text", single.row = T, dep.var.labels = "Asking rent")
+stargazer(model, type = "latex", single.row = T, dep.var.labels = "Asking rent")
 
 ```
 

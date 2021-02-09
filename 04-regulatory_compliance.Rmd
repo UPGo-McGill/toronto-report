@@ -28,7 +28,7 @@ build_figures <- TRUE
 
 ```
 
-**Since the beginning of 2021, the percentage of STR listings operating with valid STR licenses increased consistently, from 6.9% on January 7th to 9.7% on February 5th. Among active active listings at the beginning of February, 9.7% were operating with a valid license, 7.4% used a valid license for multiple listings, 6.5% displayed no license information, and listings that were either exempt or using a fake license amounted to 1.6% and 2.6% respectively. The greatest trend among short-term rental operators have been to shift to 28+ rentals. On February 6th, 72.2% of all properties were only available for locations of more than 28 days. In November of 2020, only 6.3% of listings were available with a minimum stay of 28 days or more. FREH listings have the highest rate of valid licenses (28.8%) among listing categories. Multilistings have the highest rate of duplicate licenses (19.4%). In total, 80.1% of active entire-home listings and 55.6% of active private room listings displayed a license number used by at least one other listing, suggesting that license numbers are being shared in violation of the regulations. Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019, while listings offering reservations for 28 days or more were less reserved and earn less on average compared to listings displaying license information.**
+**Since the beginning of 2021, all STRs in the City of Toronto must be registered. Airbnb hosts have responded by overwhelmingly switching the percentage of STR listings operating with valid STR licenses increased consistently, from 6.9% on January 7th to 9.7% on February 5th. Among active listings at the beginning of February, 9.7% were operating with a valid license, 7.4% used a valid license for multiple listings, 6.5% displayed no license information, and listings that were either exempt or using a fake license amounted to 1.6% and 2.6% respectively. The greatest trend among short-term rental operators have been to shift to 28+ rentals. On February 6th, 72.2% of all properties were only available for locations of more than 28 days. In November of 2020, only 6.3% of listings were available with a minimum stay of 28 days or more. FREH listings have the highest rate of valid licenses (28.8%) among listing categories. Multilistings have the highest rate of duplicate licenses (19.4%). In total, 80.1% of active entire-home listings and 55.6% of active private room listings displayed a license number used by at least one other listing, suggesting that license numbers are being shared in violation of the regulations. Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019, while listings offering reservations for 28 days or more were less reserved and earn less on average compared to listings displaying license information.**
 
 ## How many listings have licenses?
 
@@ -179,7 +179,7 @@ figure_3_1_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_line(aes(date, daily_active), color = col_palette[1], lwd = 1) +
     scale_x_date(name = NULL) +
-    scale_y_continuous(name = NULL, label = scales::comma) +
+    scale_y_continuous(name = NULL, label = scales::comma, limits = c(15000, 30000)) +
     theme_minimal() +
     theme(text = element_text(face = "plain", family = regular))
   

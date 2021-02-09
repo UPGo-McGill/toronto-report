@@ -1,4 +1,4 @@
-# STR regulatory compliance
+# Short-term rentals in Toronto: Regulatory compliance
 
 <style type="text/css">
   body{
@@ -28,9 +28,9 @@ build_figures <- TRUE
 
 ```
 
-**Since the beginning of 2021, all STRs in the City of Toronto must be registered, and in early January Airbnb removed 2,600 Toronto listings which had failed to do so. However, the overwhelming majority of Airbnb hosts have responded not by registering, but by setting a minimum rental length of 28 days, which exempts them from the registration requirement. In November of 2020, only 6.3% of Toronto listings had a minimum stay of 28 days or more, while at the beginning of February 2021 it was 72.2%. 9.7% are operating with a valid license, 7.4% use a valid license but for multiple listings, 6.5% display no license information, and the remainder either claim to be exempt or are using a fake license number. FREH listings have the highest rate of valid licenses (28.8%) among listing categories. Multilistings have the highest rate of duplicate licenses (19.4%). Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most revenue in 2020 and 2019, while listings which have switched to minimum 28-day reservations were previously less frequently reserved than other listings.**
+**Since the beginning of 2021, the percentage of STR listings operating with valid STR licenses increased consistently, from 6.9% on January 7th to 9.7% on February 5th. Among active active listings at the beginning of February, 9.7% were operating with a valid license, 7.4% used a valid license for multiple listings, 6.5% displayed no license information, and listings that were either exempt or using a fake license amounted to 1.6% and 2.6% respectively. The greatest trend among short-term rental operators have been to shift to 28+ rentals. On February 6th, 72.2% of all properties were only available for locations of more than 28 days. In November of 2020, only 6.3% of listings were available with a minimum stay of 28 days or more. FREH listings have the highest rate of valid licenses (28.8%) among listing categories. Multilistings have the highest rate of duplicate licenses (19.4%). In total, 80.1% of active entire-home listings and 55.6% of active private room listings displayed a license number used by at least one other listing, suggesting that license numbers are being shared in violation of the regulations. Listings that categorized themselves as exempt from the new short-term rental by-law are the ones that earned the most on average during both Covid and since the start of 2019, while listings offering reservations for 28 days or more were less reserved and earn less on average compared to listings displaying license information.**
 
-## Airbnb's mass removal of non-registered listings
+## How many listings have licenses?
 
 ```{r listings_licenses, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
@@ -168,7 +168,7 @@ rm(property, daily, GH)
 
 ```
 
-As of 1 January 2021, all STR operators in Toronto are required to have a municipal license. This means that all properties displayed on Airbnb (with the exception of properties rented exclusively for 28 days at a time or longer, and hotels and other tourist accommodations which are regulated separately) must have a license visible on Airbnb.ca. (Vrbo, Airbnb's biggest competitor recently pulled out of the Toronto market.) Our team scraped the Airbnb website on five occasions between January 7 and February 5 to record all publicly visible registration numbers for Toronto STRs. We have connected that information with the City's Short Term Rentals Registration database and with our own data on STR activity in order to assess regulatory compliance. We have identified two major developments in Toronto's STR market following the implementation of the City's regulations. The first is that Airbnb removed approximately 2,600 listings in mid-January, presumably for failing to display a license number. The second is that the vast majority of Airbnb listings in Toronto have been converted to 28-day minimum rental lengths in order to avoid registering. The result is that relatively few listings have registered, but also relatively few listings are demonstrably in violation of the regulations.
+As of 1 January 2021, all STR operators in Toronto are required to have a municipal license. This means that all properties displayed on Airbnb (with the exception of properties rented exclusively for 28 days at a time or longer, and hotels and other tourist accommodations which are regulated separately) must have a license visible on Airbnb.ca. (Vrbo, Airbnb's biggest competitor recently pulled out of the Toronto market.) Our team scraped the Airbnb website on five occasions between January 7 and February 5 to record all publicly visible registration numbers for Toronto STRs. We have connected that information with the City's Short Term Rentals Registration database and with our own data on STR activity in order to assess regulatory compliance. 
 
 ``` {r make_fig_3_1}
 
@@ -179,7 +179,7 @@ figure_3_1_fun <- function(regular = "", condensed = "") {
     ggplot() +
     geom_line(aes(date, daily_active), color = col_palette[1], lwd = 1) +
     scale_x_date(name = NULL) +
-    scale_y_continuous(name = NULL, label = scales::comma, limits = c(15000, 30000)) +
+    scale_y_continuous(name = NULL, label = scales::comma) +
     theme_minimal() +
     theme(text = element_text(face = "plain", family = regular))
   
@@ -195,7 +195,7 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-3-1) shows the total number of active listings that were displayed on the Airbnb platform from 1 January 2019 to 24 January 2021 (the last date for which we have complete information). It demonstrates a steady increase in displayed listings through 2019, a rapid decline of listing numbers during the COVID-19 pandemic, and then a sharp drop of more than 2,600 listings around 11 January 2021, which appears to have been a mass removal initiated by Airbnb of listings without licenses.
+Figure \@ref(fig:fig-3-1) shows the total number of active listings that were displayed on the Airbnb platform from 1 January 2019 to 24 January 2021 (the last date for which we have complete information). It demonstrates the generalized decline of listing numbers during the pandemic, and then a sharp drop of more than 2,600 listings around 11 January 2021, which appears to have been a mass removal initiated by Airbnb of listings without licenses.
 
 ``` {r fig-3-1, include = TRUE, fig.cap = '(ref:fig-3-1)', fig.align = "center"}
 
@@ -204,9 +204,6 @@ figure_3_1_fun()
 ```
 
 (ref:fig-3-1) _Displayed listings on Airbnb, 1 November 2020 - 24 January 2021 (7-day average)_
-
-
-## The conversion of Toronto's STR market to 28-day minimum stays
 
 ```{r changing_stays, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
@@ -219,25 +216,24 @@ nov_listings <-
   as_tibble() %>% 
   filter(created <= "2020-11-30", scraped >= "2020-11-01") %>% 
   select(property_ID, minimum_stay) %>%
-  mutate(month = "November")
+  mutate(month="November")
 
-jan_listings <- 
+feb_listings <- 
   property %>% 
   st_drop_geometry() %>% 
   filter(scraped >= "2021-01-23") %>% 
   filter(!is.na(ab_property)) %>% 
   select(property_ID, minimum_stay) %>% 
-  mutate(month = "January")
+  mutate(month="February")
 
-minimum_stays <- 
-  rbind(jan_listings, nov_listings) %>%
-  group_by(month) %>%
+minimum_stays <- rbind(feb_listings, nov_listings) %>%
+  group_by(month)%>%
   count(minimum_stay) %>%
-  mutate(per = n / sum(n, na.rm = TRUE)) %>% 
+  mutate(per = n/sum(n, na.rm = T)) %>% 
   ungroup()
 
 perc_bigger_28_nov <- 
-  (1 - (property_nov %>% 
+  (1-(property_nov %>% 
         as_tibble() %>% 
         select(property_ID, minimum_stay) %>%
         filter(minimum_stay <= 60) %>% 
@@ -245,8 +241,8 @@ perc_bigger_28_nov <-
         pull(perc_days))) %>% 
   scales::percent(0.1)
 
-perc_bigger_28_jan <- 
-  (1 - (jan_listings %>% 
+perc_bigger_28_feb <- 
+  (1-(feb_listings %>% 
         as_tibble() %>% 
         select(property_ID, minimum_stay) %>%
         filter(minimum_stay <= 60) %>% 
@@ -263,23 +259,25 @@ rm(property, daily, GH, property_nov)
 figure_3_1_1_fun <- function(regular = "", condensed = "") {
 
 minimum_stays %>% 
-  group_by(month, minimum_stay = floor(minimum_stay / 2) * 2) %>% 
-  summarize(n = sum(n), per = sum(per)) %>% 
-  ggplot() +
-  geom_col(aes(minimum_stay, per, fill = month), alpha = 0.8, width = 2, 
-           position=position_dodge(width = 1)) +
-  theme_minimal() +
+  ggplot()+
+  geom_col(aes(minimum_stay, per, fill=month), alpha= 0.9, size = 0.75, position=position_dodge(width = 0.75)) +
+  theme_minimal()+
   xlab("Minimum stay (days)")+
-  xlim(-1, 34)+
-  scale_fill_manual(name = "Month", values = col_palette[c(5, 2)]) +
-  scale_y_continuous(name = NULL, labels = scales::percent) +
+  xlim(0,45)+
+  scale_fill_manual(name = "Month", values = col_palette[c(5,2)])+
+  scale_y_continuous(name = NULL,
+                     labels = scales::percent)+
   theme(legend.position = "bottom",
         panel.grid.minor.x = element_blank(),
         panel.grid.minor.y = element_blank(),
-        text = element_text(face = "plain", family = regular),
-        legend.title = element_text(face = "bold", family = regular, size = 10),
-        legend.text = element_text(size = 10, family = regular),
-        strip.text = element_text(face = "bold", family = regular))
+        text = element_text(face = "plain", family = regular
+        ),
+        legend.title = element_text(face = "bold", family = regular,
+                                    size = 10),
+        legend.text = element_text(size = 10, family = regular
+        ),
+        strip.text = element_text(face = "bold", family = regular
+        ))
   
 }
 
@@ -293,7 +291,7 @@ if (build_figures) {
 
 ```
 
-Toronto's STR registration requirement is quite strict, and the only plausible pathway for a listing to remain operational without being registered is for it to cease operating as a "short-term" rental, by increasing the minimum reservation length to 28 days. Prior to January, hosts choosing to rent with long minimum stays were extremely rare on Airbnb in Toronto, since the vast majority of demand for these accommodations comes from short-term tourist stays and local parties. However, since January 1, listings on Airbnb in Toronto have undergone a dramatic and unprecedented transformation to long-term rentals. Figure \@ref(fig:fig-3-1-1) displays the minimum stay length of properties in mid-November 2020 and mid-January 2021. In November, only `r perc_bigger_28_nov` of listings required a minimum stay of more than 28 days. In January, this percentage rose to `r perc_bigger_28_jan`. The result is that most Airbnb listings in Toronto are now no longer operating as short-term rentals. Both before and after this transformation, minimum stays of between 8 and 27 days were more or less non-existent, which means Toronto's Airbnb market flipped from one where nearly every listing has a minimum rental length of one week or less to one where nearly every listing has a minimum rental length of 28 days. It is possible that, for many hosts who would be unable to register their listings because they violate the principal residence exclusion, this is a delaying tactic, allowing them to keep their listing operational in the hopes that they will be able to reduce the minimum stay in the future. Given the extremely low level of STR demand due to the ongoing pandemic, these hosts might not actually be foregoing much revenue by switching to 28 day minimums. Still, this is an unprecedented situation in our experience with STRs in Canada and elsewhere in the world, and it bears close scrutiny in the weeks and months ahead, since there is significant risk of hosts attempting to return their listings to short-term rental status if regulatory oversight falters.
+The new regulation has dramatically modified the business strategy of operators. First, prior to the regulation, hosts choosing to rent with long minimum stays were extremely rare. An operator usually asked for a minimum reservation of a few days. However, with the coming into effect of the new regulation, there was a great increase in the number of properties which minimal length of reservation became 28 days or more. Figure \@ref(fig:fig-3-1-1) displays the minimum stay length of properties in November 2020 and February 2021. In November, only `r perc_bigger_28_nov` of listings required a minimum stay of more than 28 days. In February of 2021, this percentage rose to `r perc_bigger_28_feb`.
 
 ``` {r fig-3-1-1, include = TRUE, fig.cap = '(ref:fig-3-1-1)', fig.align = "center"}
 
@@ -301,28 +299,21 @@ figure_3_1_1_fun()
 
 ```
 
-(ref:fig-3-1-1) _Listings distribution by minimum stay (in days) in November 2020 and January 2021_
-
-## Listing regulatory compliance
+(ref:fig-3-1-1) _Listings distribution by minimum stay (in days) in November 2020 and February 2021_
 
 ``` {r make_fig_3_2}
 
 figure_3_2_fun <- function(regular = "", condensed = "") {
   
 table_5 %>% 
-  mutate(registration_analyzed = if_else(registration_analyzed == "Conform", 
-                                         "Valid", registration_analyzed),
-  registration_analyzed = if_else(registration_analyzed == "Duplicates", 
-                                  "Duplicate", registration_analyzed)) %>% 
   ggplot(aes(fill=registration_analyzed, y=percentage, x=date)) + 
-  geom_bar(position="fill", stat="identity") +
-  scale_fill_manual(name = "License status", values = col_palette[c(1,2,4,5,3,6)]) +
-  scale_x_date(name=NULL, labels = NULL) +
-  scale_y_continuous(name=NULL, label = scales::percent) +
-  theme_minimal() +
-  coord_flip() +
+  geom_bar(position="fill", stat="identity")+
+  scale_fill_manual(name = "Conformity Status", values = col_palette[c(1,2,4,5,3,6)])+
+  scale_x_date(name=NULL, labels = NULL)+
+  scale_y_continuous(name=NULL, label = scales::percent)+
+  theme_minimal()+
+  coord_flip()+
   theme(legend.position = "bottom",
-        panel.grid.major.y = element_blank(),
         text = element_text(family = regular, face = "plain"),
         legend.title = element_text(family = regular, face = "bold",
                                     size = 7),
@@ -338,23 +329,24 @@ table_5 %>%
 if (build_figures) {
   ggsave(here("output", "figures", "figure_3_2.pdf"), 
          plot = figure_3_2_fun("Futura", "Futura Condensed"), 
-         width = 8, height = 2.5, units = "in", useDingbats = FALSE)
+         width = 8, height = 5, units = "in", useDingbats = FALSE)
   
   extrafont::embed_fonts(here("output", "figures", "figure_3_2.pdf"))
 }
 
 ```
 
-Figure \@ref(fig:fig-3-2) shows the license status of Airbnb listings active in Toronto on 5 February 2021. This follows both the mass conversion of most listings to 28-day minimums and a slow trickle of new registrations of the remaining short-term rentals. On January 7th, `r conform_listings_jan_7` listings had valid licenses—`r conform_listings_jan_7_perc` of all active listings. By February 5th, that number had increased to `r conform_listings_feb_5`, or `r conform_listings_feb_5_perc`. The number of active listings using the same valid license number for multiple listings increased by the same rate.
+Figure \@ref(fig:fig-3-2) shows the repartition of active listings by conformity status. Throughout the month of January, there has been a decline in the percentage of listings displaying no license information due to a mass removal from Airbnb, accompanied by a slight increase of listings displaying license information. On January 7th, `r conform_listings_jan_7` listings were conform to the regulation. As soon as February 5th, `r conform_listings_feb_5_perc` of all active listings were conforming to the STR regulation (an increase of `r increase_conform_listings`). The number of active listings using conform licenses but for multiple listings increased by the same rate.
 
-``` {r fig-3-2, include = TRUE, fig.cap = '(ref:fig-3-2)', fig.align = "center"}
+``` {r fig-3-2, include = TRUE, fig.cap = '(ref:fig-3-1)', fig.align = "center"}
 
 figure_3_2_fun()
 
 ```
 
-(ref:fig-3-2) _Total active listings on 5 February 2021 by license status_
+(ref:fig-3-2) _Total active listings on February 5th by conformity status_
 
+## Listing regulatory compliance
 
 ```{r listing_compliance, cache = TRUE, cache.lazy = FALSE, cache.extra = mtime(here("output", "str_processed.qsm"))}
 
@@ -406,8 +398,6 @@ license_scrape <-
   left_join(FREH_01) %>% 
   left_join(multi_10) %>% 
   left_join(multi_01) %>% 
-  mutate(registration_analyzed = if_else(registration_analyzed == "Conform", 
-                                         "Valid", registration_analyzed)) %>% 
   mutate(
     status_10 = case_when(
       active < max(active, na.rm = T) - days(31) ~ "Inactive",
@@ -426,7 +416,7 @@ license_scrape <-
                                                   "Multilisting", "FREH")),
          license_status = factor(registration_analyzed, 
                                  levels = c("No license", "Fake License", "Invalid", 
-                                            "Duplicates", "Exempt", "Valid", "28-day min.")))
+                                            "Duplicates", "Exempt", "Conform")))
 
 scraped_number <- 
   nrow(license_scrape) %>% 
@@ -435,7 +425,7 @@ scraped_number <-
 valid_pct <- 
   license_scrape %>% 
   st_drop_geometry() %>% 
-  summarize(pct = mean(license_status == "Valid")) %>% 
+  summarize(pct = mean(license_status == "Conform")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
 
@@ -472,7 +462,7 @@ freh_valid_pct <-
   license_scrape %>% 
   st_drop_geometry() %>% 
   filter(status_10 == "FREH") %>% 
-  summarize(pct = mean(license_status == "Valid")) %>% 
+  summarize(pct = mean(license_status == "Conform")) %>% 
   pull(pct) %>% 
   scales::percent(0.1)
 
@@ -542,6 +532,7 @@ rm(property, daily, GH)
 
 ```
 
+
 ``` {r make_fig_3_3}
 
 figure_3_3_fun <- function(regular = "", condensed = "") {
@@ -558,7 +549,6 @@ figure_3_3_fun <- function(regular = "", condensed = "") {
     theme_minimal() +    
     theme(legend.position = "bottom", 
           panel.grid.minor.x = element_blank(),
-          axis.text.x = element_text(angle = 45, hjust = 1),
           text = element_text(face = "plain", family = regular),
           legend.title = element_text(face = "bold", family = regular, 
                                       size = 10),
@@ -576,7 +566,6 @@ figure_3_3_fun <- function(regular = "", condensed = "") {
     theme_minimal() +
     theme(legend.position = "bottom", 
           panel.grid.minor.x = element_blank(),
-          axis.text.x = element_text(angle = 45, hjust = 1),
           text = element_text(face = "plain", family = regular),
           legend.title = element_text(face = "bold", family = regular, 
                                       size = 10),
@@ -589,12 +578,11 @@ figure_3_3_fun <- function(regular = "", condensed = "") {
                        fill = license_status), stat = "count") + 
     xlab(NULL) +
     scale_fill_manual(name = "License status", 
-                      values = col_palette[c(6, 3, 2, 1, 5, 4, 7)]) +
+                      values = col_palette[c(6, 3, 2, 1, 4, 5, 7)]) +
     scale_y_continuous(name = NULL, labels = scales::comma) +
     theme_minimal() +
     theme(legend.position = "bottom", 
           panel.grid.minor.x = element_blank(),
-          axis.text.x = element_text(angle = 45, hjust = 1),
           text = element_text(face = "plain", family = regular),
           legend.title = element_text(face = "bold", family = regular, 
                                       size = 10),
@@ -607,12 +595,11 @@ figure_3_3_fun <- function(regular = "", condensed = "") {
              position = "fill", stat = "count") +
     xlab(NULL) +
     scale_fill_manual(name = "License status", 
-                      values = col_palette[c(6, 3, 2, 1, 5, 4, 7)]) +
+                      values = col_palette[c(6, 3, 2, 1, 4, 5, 7)]) +
     scale_y_continuous(name = NULL, labels = scales::percent) +
     theme_minimal() +
     theme(legend.position = "bottom", 
           panel.grid.minor.x = element_blank(),
-          axis.text.x = element_text(angle = 45, hjust = 1),
           text = element_text(face = "plain", family = regular),
           legend.title = element_text(face = "bold", family = regular, 
                                       size = 10),
@@ -644,7 +631,7 @@ if (build_figures) {
 
 ```
 
-Figure \@ref(fig:fig-3-3) shows the same `r scraped_number` listings which were displayed on February 5 as the previous figure, but organized by license status and activity status. The top row (A) organizes listings by their license status. Most listings (`r longer_stay_pct`) avoid the need to register by setting a minimum stay of 28 days or more reservations. `r valid_pct` had a valid license, `r exempt_pct` claimed to be exempt, and `r duplicates_pct` had a city-issued license, but used this license for multiple listings at the same time. This leaves `r problem_pct` of listings which either had a fake license number (an entry which was in the proper format but which did not correspond to an actual license number issued by the City) or no license number at all. In total, the number of listings operating in direct defiance of the regulations is significantly lower than other cities with similar registration systems, although we are not aware of other cities where so many listings have switched to 28-day minimum reservations. Commercial listings (either FREH listings or multilistings) are over-represented among both listings which have valid licenses and listings using a fake license. Non-commercial and inactive listings were disproportionately likely to lack a license.
+Figure \@ref(fig:fig-3-3) shows the `r scraped_number` listings were displayed on February 5th when we performed our fifth scrape of license numbers. The top row (A) organizes listings by their license status. As seen above, out of the total `r scraped_number` listings, the most popular category is the listings that switched to offering 28-day or more reservations, making up `r longer_stay_pct` of all listings. `r valid_pct` had a valid license, which is a 3-point percentage increase since our first scrape on January 7th. A further `r exempt_pct` claimed to be exempt, and `r duplicates_pct` had a city-issued license, but used this license for multiple listings at the same time. This leaves `r problem_pct` of listings which either had a fake license number (an entry which was in the proper format but which did not correspond to an actual license number issued by the City) or no license number at all. This is a very minimal longer, which leads to believe that Toronto hosts quickly adapted to the new regulation. FREH listings (either FREH listings or multilistings) are over-represented among listings which have valid licenses and listings using a fake license; multilistings were the ones where there were the most duplicates licenses used; while listings that are neither FREH or multilistings and listings that were displayed on Airbnb but did not receive any activity since December were disproportionately likely to be listings without any license information.
 
 ``` {r fig-3-3, include = TRUE, fig.cap = '(ref:fig-3-3)', fig.align = "center"}
 
@@ -652,9 +639,9 @@ figure_3_3_fun()
 
 ```
 
-(ref:fig-3-3) _License status and listing status (in December 2020) for listings displayed on Airbnb on 5 February 2021_
+(ref:fig-3-3) _License status and listing status (in December 2020) for listings displayed on Airbnb in end of January 2021_
 
-The bottom row (B) of Figure \@ref(fig:fig-3-3) organizes listings by their activity status on Airbnb in the month of December 2020. A majority of listings in all activity statuses have converted to 28-day minimums. FREH listings are the only category where a significant proportion (`r freh_valid_pct`) had valid licenses, and also the category with the smallest percentage of listings requiring a minimum stay of 28 days. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's rules, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings and `r pr_multiple_license` (`r pr_multiple_license_pct`) of active private room listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. 
+The bottom row (B) of Figure \@ref(fig:fig-3-3) organizes listings by their activity status on Airbnb in the month of December 2020. It demonstrates that FREH listings is the only category of listings where a significant proportion (`r freh_valid_pct`) had valid licenses, and also the category with the smallest percentage of listings requiring a minimum stay of 28 days. To be clear, all commercial operations are per se non-compliant with the City's licensing rules, since a host cannot operate a frequently rented entire-home listing or multiple entire-home listings in their principal residence. But these listings were disproportionately likely to have a license. Only `r freh_no_license_pct` of FREH listings were missing a license, compared to the `r min_no_license_pct` of other listings which were missing a license. It is not a safe assumption that listings displaying a valid number are in fact operating in conformity with the City's regulation, however. `r eh_multiple_license` (`r eh_multiple_license_pct`) of active entire-home listings and `r pr_multiple_license` (`r pr_multiple_license_pct`) of active private room listings displayed a license number which was being used by at least one other active listing. Unless these listings are duplicates of the same property, most of them must be operating in violation of the City's regulations. 
 
 
 ## Daily activity of entire-home listings by regulatory compliance
@@ -715,17 +702,17 @@ license_activity <-
   inner_join(license_activity, revenue_covid, by = "property_ID") %>% 
   mutate(revenue = if_else(is.na(revenue), 0, revenue))
 
-revenue_start_2020 <-
+revenue_start_2019 <-
   daily %>% 
-  filter(status == "R", date >= start_2020,
+  filter(status == "R", date >= start_2019,
          property_ID %in% eh_license$property_ID) %>%
   group_by(property_ID) %>% 
   summarize(revenue = sum(price)) %>% 
   left_join(st_drop_geometry(select(january_listings, property_ID, created)), 
             by = "property_ID") %>% 
   mutate(created_or_regulations = 
-           as.Date(if_else(created <= start_2020, 
-                           start_2020, created), 
+           as.Date(if_else(created <= start_2019, 
+                           start_2019, created), 
                    origin = "1970-01-01")) %>% 
   mutate(revenue = revenue / as.numeric(max(daily$date) - 
                                           created_or_regulations)) %>% 
@@ -733,7 +720,7 @@ revenue_start_2020 <-
   select(property_ID, revenue_reg = revenue)
 
 license_activity <- 
-  inner_join(license_activity, revenue_start_2020, by = "property_ID") %>% 
+  inner_join(license_activity, revenue_start_2019, by = "property_ID") %>% 
   mutate(revenue_reg = if_else(is.na(revenue_reg), 0, revenue_reg))
 
 all_listings <- 
@@ -806,21 +793,21 @@ rm(property, daily, GH)
 
 ```
 
-How does registration status relate to listing activity? We analyzed reservation, availability and revenue patterns of all active entire-home listings in Toronto since the beginning of the COVID-19 pandemic to understand the relationship between displaying a valid license number and STR activity. Table \@ref(tab:tab-license) summarizes this information. Entire-home listings with valid licenses have significantly higher reservation rates (`r valid_r_pct`) than both listings with no displayed licenses (`r no_license_r_pct`) and listings that switched to 28-day minimum stays (`r min_28_r_pct`). Among listings which do not have unique valid licenses, it is listings with fake license numbers (i.e. numbers which follow the correct STR-####-AAAAAA format but do not correspond to a number actually issued by the City) which have been reserved the most on average (`r fake_r_pct`). Listings that acquired licenses also earned disproportionately more revenue per night since the start of 2020 and since the onset of the Covid-19 pandemic. Listings that claimed to be exempt, listings using a fake license and listings using a valid but duplicated license earned on average `r exempt_rev`, `r fake_rev`, `r duplicate_rev` per night, respectively. We can thus say that listings that have been more active on Airbnb—both in terms of revenue and availability—in the past year are the ones most likely to have obtained a business license, or to at least display some form of registration information on their listing.
+How does registration conformity impact business in the short-term rental market? We analyzed reservation, availability and revenue patterns of all active entire-home listings to understand the relationship between displaying a valid license number and STR activity. Table \@ref(tab:tab-license) summarizes this information. Entire-home listings with valid licenses have significantly higher reservation rates (`r valid_r_pct`) than listings with no displayed licenses (`r no_license_r_pct`), and also listings that switched to offering only 28+ days reservations (`r min_28_r_pct`). Among listings which are not conform, it is listings with fake license numbers (i.e. numbers which follow the correct STR-####-AAAAAA format but do not correspond to a number actually issued by the City) which have been reserved the most on average (`r fake_r_pct`). Listings that acquired licenses also earned more revenue per night since the start of 2020 and since the onset of the Covid-19 pandemic. Nevertheless, it is the listings that display a license information, but that are not considered valid, that have earned the most during both time periods (there are, however fewer listings in those categories). Listings that claimed to be exempt, listings using a fake license and listings using a valid license earned on average `r exempt_rev`, `r fake_rev`, `r duplicate_rev` per night, respectively. from the regulation that have earned more during both time periods (with a nightly average revenue of `r exempt_rev` during the pandemic). We can thus say that listings that have been more successful - both in terms of revenue and availability - in the past year are the ones most likely to obtain a business license, or to at least display some form of registration information on their listing.
 
 ``` {r tab-license, include = TRUE}
 
 library(kableExtra)
 
-license_activity[c(1, 3, 2, 4, 5, 6, 7),] %>% 
+license_activity[c(1, 2, 4, 3, 5, 6),] %>% 
   mutate(n = prettyNum(n, ",")) %>% 
   mutate(across(per_A:per_B, scales::percent, 0.1)) %>% 
   mutate(across(revenue:revenue_reg, scales::dollar, 1)) %>% 
   set_names(c("License status","Number of entire-home listings", "Nights available", 
               "Nights reserved", "Nights blocked", 
               "Revenue per night since Covid-19", 
-              "Revenue per night since the start of 2020")) %>% 
-  kbl(caption = "STR activity since the beginning of the COVID-19 pandemic by license status", align = "lrrrrrr") %>%
+              "Revenue per night since the start of 2019")) %>% 
+  kbl(caption = "STR activity by license status", align = "lrrrrrr") %>%
   kable_styling(latex_options = "scale_down")
 
 ```

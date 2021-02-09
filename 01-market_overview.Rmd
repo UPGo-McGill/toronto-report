@@ -321,7 +321,7 @@ rm(property, daily, GH)
 
 ```
 
-**There were `r avg_listings_active` active STR listings in Toronto housing units in 2020, which collectively earned `r annual_rev`. This is a dramatic decline in comparison with 2019; the COVID-19 pandemic reduced reservations by TK% and revenue by TK%. A quarter of all listings are in the Spadina-Fort York ward. More than three fifths (`r eh_listings`) of Toronto’s STR listings are entire homes, and entire homes are responsible for `r eh_revenue` of all revenue. Revenue is concentrated unevenly among hosts, with the top 10% earning `r host_rev_top_10` of revenue, and the top 1% earning `r host_rev_top_1`. Commercial operators who control multiple STR listings account for `r ml_listings` of listings and `r ml_revenue` of revenue.**
+**There were `r avg_listings_active` active STR listings in Toronto housing units in 2020, which collectively earned `r annual_rev`. This is a dramatic decline in comparison with 2019; the COVID-19 pandemic reduced reservations by 68.4%. A quarter of all listings are in the Spadina-Fort York ward. More than three fifths (`r eh_listings`) of Toronto’s STR listings are entire homes, and entire homes are responsible for `r eh_revenue` of all revenue. Revenue is concentrated unevenly among hosts, with the top 10% earning `r host_rev_top_10` of revenue, and the top 1% earning `r host_rev_top_1`. Commercial operators who control multiple STR listings account for `r ml_listings` of listings and `r ml_revenue` of revenue. Toronto has the largest STR market of any Canadian city.**
 
 <br>
 

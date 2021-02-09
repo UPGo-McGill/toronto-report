@@ -264,23 +264,23 @@ matrice %>%
 
 }
 
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_5_3.pdf"),
-         plot = figure_5_3_fun("Futura", "Futura Condensed"),
-         width = 8, height = 5, units = "in", useDingbats = FALSE)
-
-  extrafont::embed_fonts(here("output", "figures", "figure_5_3.pdf"))
-}
+# if (build_figures) {
+#   ggsave(here("output", "figures", "figure_5_3.pdf"),
+#          plot = figure_5_3_fun("Futura", "Futura Condensed"),
+#          width = 8, height = 5, units = "in", useDingbats = FALSE)
+# 
+#   extrafont::embed_fonts(here("output", "figures", "figure_5_3.pdf"))
+# }
 
 ```
 
 ``` {r fig-5-3, include = TRUE, fig.cap = '(ref:fig-5-3)', fig.align = "center"}
 
-figure_5_3_fun()
+# figure_5_3_fun()
 
 ```
 
-(ref:fig-5-3) _Matched listings' 2020 monthly revenue, separated in three groups_
+<!-- (ref:fig-5-3) _Matched listings' 2020 monthly revenue, separated in three groups_ -->
 
 The listings that matched but continued their operations with a minimum stay of 28 days are the listings with the smallest monthly revenue in 2020 (a median of \$`r monthly_rev_median_status[1,4]`), while the continued STR operations made a similar revenue (\$`r monthly_rev_median_status[2,4]`). Taken down and blocked listings earned more, with respectively \$`r monthly_rev_median_status[3,4]` and \$`r monthly_rev_median_status[4,4]` of median monthly revenue in 2020. The four numbers are significantly lower than what a landlord could make on the LTR market, which is a motivation to operate the change from STR to LTR. It is the listings that did not succeed their transfer that made a smaller monthly revenue in 2020, probably because they operated longer under the overall COVID situation and during fall, where revenue are overall decreasing on the platform. The listings that are completely taken down are the listings that made the most monthly revenue, TKTK.
 
@@ -312,20 +312,20 @@ matrice %>%
           strip.text = element_text(face = "bold", family = regular))
 
 }
-
-if (build_figures) {
-  ggsave(here("output", "figures", "figure_5_4.pdf"),
-         plot = figure_5_4_fun("Futura", "Futura Condensed"),
-         width = 8, height = 5, units = "in", useDingbats = FALSE)
-
-  extrafont::embed_fonts(here("output", "figures", "figure_5_4.pdf"))
-}
+# 
+# if (build_figures) {
+#   ggsave(here("output", "figures", "figure_5_4.pdf"),
+#          plot = figure_5_4_fun("Futura", "Futura Condensed"),
+#          width = 8, height = 5, units = "in", useDingbats = FALSE)
+# 
+#   extrafont::embed_fonts(here("output", "figures", "figure_5_4.pdf"))
+# }
 
 ```
 
 ``` {r fig-5-4, include = TRUE, fig.cap = '(ref:fig-5-4)', fig.align = "center"}
 
-figure_5_4_fun()
+# figure_5_4_fun()
 
 ```
 
@@ -362,13 +362,13 @@ The last variable is location. Intrinsically, the monthly revenue variable holds
 
 listings_pred <- read_csv("output/listings_pred.csv")
 
-mean_pred_bedrooms <- 
-listings_pred %>% 
-  filter(`Number of bedrooms` <= 4) %>% 
-  left_join(rename(select(ward_price_bounds, ward, geo_quant), Ward = ward), by = "Ward") %>% 
-  group_by(`Number of bedrooms`, geo_quant) %>% 
-  summarize(`Mean asking rent predicted` = mean(`Predicted asking rent`)) %>% 
-  spread(geo_quant, `Mean asking rent predicted`) %>% 
+mean_pred_bedrooms <-
+listings_pred %>%
+  filter(`Number of bedrooms` <= 4) %>%
+  left_join(rename(select(ward_price_bounds, ward, geo_quant), Ward = ward), by = "Ward") %>%
+  group_by(`Number of bedrooms`, geo_quant) %>%
+  summarize(`Mean asking rent predicted` = mean(`Predicted asking rent`)) %>%
+  spread(geo_quant, `Mean asking rent predicted`) %>%
   rename(`Lower-cost ward` = lower,
          `Higher-cost ward` = higher)
 
@@ -383,21 +383,21 @@ qload("output/listings_pred_model.qs")
 library(stargazer)
 names(model$coefficients) <- c('Constant', '2020 Monthly revenue','Bedrooms','Geography')
 
-stargazer(model, type = "latex", single.row = T, dep.var.labels = "Asking rent")
+# stargazer(model, type = "latex", single.row = T, dep.var.labels = "Asking rent")
 
 ```
 
 Table \@ref(tab:table) presents the statistical model that was used to predict the rent to which a property owner would accept to move his STR property to the LTR market. The constant is \$`r round(as.numeric(model$coefficients["Constant"]), digit = 2)`, and every dollars earned monthly in 2020 rises the asking price by \$`r round(as.numeric(model$coefficients["2020 Monthly revenue"]), digit = 2)`. Moreover, every bedroom accounts for an augmentation of \$`r round(as.numeric(model$coefficients["Bedrooms"]), digit = 2)` in the predicted asking rent. Finally, if the property is located in a more affluent ward, the ones named above, the asking rent is predicted to be higher by an amount of \$`r round(as.numeric(model$coefficients["Geography"]), digit = 2)`.
 
-The model was applied to the entire population of entire home STR in Toronto and has been given to the City. As an example, Table \@ref(tab:tab-pred) presents the mean asking rent predicted for each size of units and the ward category it is located (lower-cost ward vs higher-cost ward). Our estimations of asking rent for all listings also depends on financial performance of each listing. 
+The model was applied to the entire population of entire home STR in Toronto and has been given to the City. As an example, Table \@ref(tab:tab-pred) presents the mean asking rent predicted for each size of units and the ward category it is located (lower-cost ward vs higher-cost ward). Our estimations of asking rent for all listings also depends on financial performance of each listing.
 
 ``` {r tab-pred, include = TRUE}
 
 library(kableExtra)
 
-mean_pred_bedrooms %>% 
-  mutate(across(where(is.numeric), round, 2)) %>%  
-  kbl(caption = "Mean asking rent predicted by number of bedrooms and location", align = "lrrrr") %>% 
+mean_pred_bedrooms %>%
+  mutate(across(where(is.numeric), round, 2)) %>%
+  kbl(caption = "Mean asking rent predicted by number of bedrooms and location", align = "lrrrr") %>%
   kable_styling()
 
 

@@ -1067,11 +1067,11 @@ figure_2_4_fun <- function(regular = "", condensed = "") {
                      colour = ramp), data = fig_segments, inherit.aes = FALSE) +
     geom_text(aes(x, y, group = variable, label = label), data = fig_labels,
               colour = "white", size = 2, family = regular) + 
-    scale_colour_gradientn(colours = col_palette[c(5, 3, 5, 2, 5, 1)]) +
+    scale_colour_gradientn(colours = col_palette[c(5, 4, 5, 2, 5, 1)]) +
     scale_fill_manual(values = c("total listings" = col_palette[5], 
                                  "active" = col_palette[1],
                                  "blocked" = col_palette[2],
-                                 "deactivated" = col_palette[3])) +
+                                 "deactivated" = col_palette[4])) +
     facet_grid(rows = vars(group), cols = vars(year), switch = "y",
                scales = "free_y", space = "free_y") +
     theme_void() +

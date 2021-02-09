@@ -416,7 +416,7 @@ license_scrape <-
                                                   "Multilisting", "FREH")),
          license_status = factor(registration_analyzed, 
                                  levels = c("No license", "Fake License", "Invalid", 
-                                            "Duplicates", "Exempt", "Conform")))
+                                            "Duplicates", "Exempt", "Conform", "28-day min.")))
 
 scraped_number <- 
   nrow(license_scrape) %>% 
@@ -578,7 +578,7 @@ figure_3_3_fun <- function(regular = "", condensed = "") {
                        fill = license_status), stat = "count") + 
     xlab(NULL) +
     scale_fill_manual(name = "License status", 
-                      values = col_palette[c(6, 3, 2, 1, 4, 5, 7)]) +
+                      values = col_palette[c(6, 3, 2, 1, 5, 4, 7)]) +
     scale_y_continuous(name = NULL, labels = scales::comma) +
     theme_minimal() +
     theme(legend.position = "bottom", 
@@ -595,7 +595,7 @@ figure_3_3_fun <- function(regular = "", condensed = "") {
              position = "fill", stat = "count") +
     xlab(NULL) +
     scale_fill_manual(name = "License status", 
-                      values = col_palette[c(6, 3, 2, 1, 4, 5, 7)]) +
+                      values = col_palette[c(6, 3, 2, 1, 5, 4, 7)]) +
     scale_y_continuous(name = NULL, labels = scales::percent) +
     theme_minimal() +
     theme(legend.position = "bottom", 
